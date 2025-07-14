@@ -1,0 +1,22 @@
+{
+  "name": "safeguard",
+  "version": "1.0.0",
+  "description": "A visitor tracking application",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm run test "
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hassandahiru/SafeGuard.git"
+  },
+  "keywords": [
+    "node.js"
+  ],
+  "author": "Hassan Dahiru Ado",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Hassandahiru/SafeGuard/issues"
+  },
+  "homepage": "https://github.com/Hassandahiru/SafeGuard#readme"
+}
