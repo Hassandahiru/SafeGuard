@@ -5,3 +5,20 @@ dist/
 build/
 *.log
 .cache/
+
+
+
+# Ignore all files with certain extensions
+*.log
+*.tmp
+*.cache
+*.env
+*.key
+
+
+# Ignore specific files in specific directories
+src/config/database.js
+logs/error.log
+uploads/temp.txt
+backend/database/safe-guard-ddl.sql
+CLAUDE.md

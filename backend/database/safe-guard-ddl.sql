@@ -12,10 +12,13 @@ CREATE EXTENSION IF NOT EXISTS "postgis";
 CREATE TYPE user_role AS ENUM ('super_admin', 'building_admin', 'resident', 'security', 'visitor');
 CREATE TYPE visit_status AS ENUM ('pending', 'confirmed', 'active', 'completed', 'cancelled', 'expired');
 CREATE TYPE license_status AS ENUM ('active', 'inactive', 'suspended', 'expired');
-CREATE TYPE notification_type AS ENUM ('visit_created', 'visitor_arrival', 'visitor_entered', 'visitor_exited', 'emergency', 'security_alert', 'system');
+CREATE TYPE notification_type AS ENUM ('visit_created', 'visitor_arrival', 'visitor_entered', 'visitor_exited', 'emergency', 'security_alert', 'system', 'visitor_banned', 'visitor_unbanned');
 CREATE TYPE payment_status AS ENUM ('pending', 'completed', 'failed', 'refunded');
 CREATE TYPE emergency_type AS ENUM ('fire', 'medical', 'security', 'evacuation', 'other');
 CREATE TYPE visit_type AS ENUM ('single', 'group', 'recurring');
+CREATE TYPE ban_severity AS ENUM ('low', 'medium', 'high');
+CREATE TYPE ban_type AS ENUM ('manual', 'automatic');
+CREATE TYPE visitor_log_type AS ENUM ('qr_scanned', 'arrived', 'entered', 'exited', 'departed', 'ban_expired', 'ban_created', 'ban_removed');
 
 -- =============================================
 -- CORE TABLES
@@ -170,17 +173,44 @@ CREATE TABLE frequent_visitors (
     UNIQUE(user_id, visitor_id)
 );
 
--- Visitor bans (personal blacklist)
+-- Visitor bans (phone-centric personal blacklist)
 CREATE TABLE visitor_bans (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    visitor_id UUID REFERENCES visitors(id) ON DELETE CASCADE,
+    building_id UUID NOT NULL REFERENCES buildings(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    
+    -- Phone-centric fields (stores visitor info directly)
+    name VARCHAR(255) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    
+    -- Ban details
     reason TEXT NOT NULL,
-    banned_until TIMESTAMP WITH TIME ZONE,
-    is_permanent BOOLEAN DEFAULT false,
+    severity ban_severity NOT NULL DEFAULT 'medium',
+    ban_type ban_type NOT NULL DEFAULT 'manual',
+    
+    -- Status and timing
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    banned_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP WITH TIME ZONE, -- NULL for permanent bans
+    
+    -- Unban tracking
+    unbanned_at TIMESTAMP WITH TIME ZONE,
+    unban_reason TEXT,
+    unbanned_by UUID REFERENCES users(id),
+    
+    -- Additional fields
+    notes TEXT,
+    trigger_event VARCHAR(255), -- For automatic bans
+    metadata JSONB DEFAULT '{}', -- For extensibility
+    
+    -- Audit fields
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, visitor_id)
+    
+    -- Constraints
+    CONSTRAINT visitor_bans_phone_format CHECK (phone ~ '^\+?[0-9]{10,15}$'),
+    CONSTRAINT visitor_bans_expires_after_banned CHECK (expires_at IS NULL OR expires_at > banned_at),
+    CONSTRAINT visitor_bans_unbanned_after_banned CHECK (unbanned_at IS NULL OR unbanned_at >= banned_at)
 );
 
 -- System-wide blacklist
@@ -365,6 +395,19 @@ CREATE INDEX idx_frequent_visitors_user_id ON frequent_visitors(user_id);
 CREATE INDEX idx_frequent_visitors_visitor_id ON frequent_visitors(visitor_id);
 CREATE INDEX idx_frequent_visitors_priority ON frequent_visitors(priority);
 
+-- Visitor bans indexes
+CREATE INDEX idx_visitor_bans_building_id ON visitor_bans(building_id);
+CREATE INDEX idx_visitor_bans_user_id ON visitor_bans(user_id);
+CREATE INDEX idx_visitor_bans_phone ON visitor_bans(phone);
+CREATE INDEX idx_visitor_bans_is_active ON visitor_bans(is_active);
+CREATE INDEX idx_visitor_bans_severity ON visitor_bans(severity);
+CREATE INDEX idx_visitor_bans_banned_at ON visitor_bans(banned_at);
+CREATE INDEX idx_visitor_bans_expires_at ON visitor_bans(expires_at);
+CREATE INDEX idx_visitor_bans_building_phone ON visitor_bans(building_id, phone);
+CREATE INDEX idx_visitor_bans_user_phone ON visitor_bans(user_id, phone);
+CREATE INDEX idx_visitor_bans_active_building ON visitor_bans(building_id, is_active);
+CREATE INDEX idx_visitor_bans_name_search ON visitor_bans USING gin(to_tsvector('english', name));
+
 -- Audit logs indexes
 CREATE INDEX idx_audit_logs_user_id ON audit_logs(user_id);
 CREATE INDEX idx_audit_logs_building_id ON audit_logs(building_id);
@@ -390,12 +433,12 @@ CREATE INDEX idx_visits_expected_range ON visits(building_id, expected_start, ex
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER AS $$$
 BEGIN
     NEW.updated_at = CURRENT_TIMESTAMP;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$$ LANGUAGE plpgsql;
 
 -- Function to generate QR code data
 CREATE OR REPLACE FUNCTION generate_qr_code_data(visit_uuid UUID)
@@ -424,23 +467,28 @@ BEGIN
     
     RETURN qr_data;
 END;
-$$ LANGUAGE plpgsql;
+$$$ LANGUAGE plpgsql;
 
--- Function to check if visitor is banned
-CREATE OR REPLACE FUNCTION is_visitor_banned(
+-- Function to check if visitor is banned (phone-centric)
+CREATE OR REPLACE FUNCTION is_visitor_banned_by_phone(
     p_building_id UUID,
     p_user_id UUID,
-    p_visitor_id UUID
+    p_phone VARCHAR(20)
 ) RETURNS BOOLEAN AS $$
 DECLARE
     is_banned BOOLEAN := false;
+    formatted_phone VARCHAR(20);
 BEGIN
+    -- Format phone number
+    formatted_phone := format_phone_number(p_phone);
+    
     -- Check personal ban
     SELECT EXISTS(
         SELECT 1 FROM visitor_bans 
         WHERE user_id = p_user_id 
-        AND visitor_id = p_visitor_id
-        AND (banned_until IS NULL OR banned_until > CURRENT_TIMESTAMP)
+        AND phone = formatted_phone
+        AND is_active = true
+        AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
     ) INTO is_banned;
     
     IF is_banned THEN
@@ -451,13 +499,98 @@ BEGIN
     SELECT EXISTS(
         SELECT 1 FROM system_blacklist 
         WHERE building_id = p_building_id 
-        AND visitor_id = p_visitor_id
+        AND visitor_id IN (
+            SELECT id FROM visitors WHERE phone = formatted_phone
+        )
         AND (banned_until IS NULL OR banned_until > CURRENT_TIMESTAMP)
     ) INTO is_banned;
     
     RETURN is_banned;
 END;
-$$ LANGUAGE plpgsql;
+$$$ LANGUAGE plpgsql;
+
+-- Function to format phone numbers consistently
+CREATE OR REPLACE FUNCTION format_phone_number(phone_input TEXT)
+RETURNS TEXT AS $$
+BEGIN
+    -- Remove all non-digits except +
+    phone_input := regexp_replace(phone_input, '[^0-9+]', '', 'g');
+    
+    -- Add +234 prefix for Nigerian numbers if not present
+    IF phone_input ~ '^[0-9]{10,11}$' THEN
+        IF length(phone_input) = 11 AND phone_input ~ '^0' THEN
+            phone_input := '+234' || substring(phone_input from 2);
+        ELSIF length(phone_input) = 10 THEN
+            phone_input := '+234' || phone_input;
+        END IF;
+    END IF;
+    
+    RETURN phone_input;
+END;
+$$$ LANGUAGE plpgsql;
+
+-- Function to expire visitor bans automatically
+CREATE OR REPLACE FUNCTION expire_visitor_bans()
+RETURNS INTEGER AS $$
+DECLARE
+    expired_count INTEGER;
+BEGIN
+    UPDATE visitor_bans 
+    SET is_active = false,
+        unbanned_at = CURRENT_TIMESTAMP,
+        unban_reason = 'Automatic expiry - ban period ended',
+        updated_at = CURRENT_TIMESTAMP
+    WHERE is_active = true 
+    AND expires_at IS NOT NULL 
+    AND expires_at <= CURRENT_TIMESTAMP;
+    
+    GET DIAGNOSTICS expired_count = ROW_COUNT;
+    
+    RETURN expired_count;
+END;
+$$$ LANGUAGE plpgsql;
+
+-- Function to check if visitor is banned by user
+CREATE OR REPLACE FUNCTION is_visitor_banned_by_user(
+    p_user_id UUID,
+    p_phone TEXT
+) RETURNS BOOLEAN AS $$
+DECLARE
+    ban_exists BOOLEAN;
+BEGIN
+    SELECT EXISTS(
+        SELECT 1 
+        FROM visitor_bans 
+        WHERE user_id = p_user_id 
+        AND phone = format_phone_number(p_phone)
+        AND is_active = true
+        AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+    ) INTO ban_exists;
+    
+    RETURN ban_exists;
+END;
+$$$ LANGUAGE plpgsql;
+
+-- Function to check if visitor is banned in building
+CREATE OR REPLACE FUNCTION is_visitor_banned_in_building(
+    p_building_id UUID,
+    p_phone TEXT
+) RETURNS BOOLEAN AS $$
+DECLARE
+    ban_exists BOOLEAN;
+BEGIN
+    SELECT EXISTS(
+        SELECT 1 
+        FROM visitor_bans 
+        WHERE building_id = p_building_id 
+        AND phone = format_phone_number(p_phone)
+        AND is_active = true
+        AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+    ) INTO ban_exists;
+    
+    RETURN ban_exists;
+END;
+$$$ LANGUAGE plpgsql;
 
 -- Function to check license availability
 CREATE OR REPLACE FUNCTION check_license_availability(p_building_id UUID)
@@ -473,7 +606,7 @@ BEGIN
     
     RETURN used_licenses < total_licenses;
 END;
-$$ LANGUAGE plpgsql;
+$$$ LANGUAGE plpgsql;
 
 -- Function to create notification
 CREATE OR REPLACE FUNCTION create_notification(
@@ -485,7 +618,7 @@ CREATE OR REPLACE FUNCTION create_notification(
     p_title TEXT,
     p_message TEXT,
     p_data JSONB DEFAULT '{}'::jsonb
-) RETURNS UUID AS $$
+) RETURNS UUID AS $$$
 DECLARE
     notification_id UUID;
 BEGIN
@@ -495,7 +628,7 @@ BEGIN
     
     RETURN notification_id;
 END;
-$$ LANGUAGE plpgsql;
+$$$ LANGUAGE plpgsql;
 
 -- Function to log visit action
 CREATE OR REPLACE FUNCTION log_visit_action(
@@ -506,7 +639,7 @@ CREATE OR REPLACE FUNCTION log_visit_action(
     p_gate_number VARCHAR(20) DEFAULT NULL,
     p_security_officer UUID DEFAULT NULL,
     p_notes TEXT DEFAULT NULL
-) RETURNS UUID AS $$
+) RETURNS UUID AS $$$
 DECLARE
     log_id UUID;
     building_id UUID;
@@ -522,7 +655,7 @@ BEGIN
     
     RETURN log_id;
 END;
-$$ LANGUAGE plpgsql;
+$$$ LANGUAGE plpgsql;
 
 -- Function to get or create visitor
 CREATE OR REPLACE FUNCTION get_or_create_visitor(
@@ -531,7 +664,7 @@ CREATE OR REPLACE FUNCTION get_or_create_visitor(
     p_name VARCHAR(255),
     p_phone VARCHAR(20),
     p_email VARCHAR(255) DEFAULT NULL
-) RETURNS UUID AS $$
+) RETURNS UUID AS $$$
 DECLARE
     visitor_id UUID;
 BEGIN
@@ -556,7 +689,7 @@ BEGIN
     
     RETURN visitor_id;
 END;
-$$ LANGUAGE plpgsql;
+$$$ LANGUAGE plpgsql;
 
 -- Function to create visit with visitors
 CREATE OR REPLACE FUNCTION create_visit_with_visitors(
@@ -574,7 +707,7 @@ CREATE OR REPLACE FUNCTION create_visit_with_visitors(
     qr_code TEXT,
     message TEXT,
     visitor_count INTEGER
-) AS $$
+) AS $$$
 DECLARE
     new_visit_id UUID;
     visitor_data JSONB;
@@ -642,7 +775,7 @@ BEGIN
         'Visit created successfully',
         added_visitors;
 END;
-$$ LANGUAGE plpgsql;
+$$$ LANGUAGE plpgsql;
 
 -- Function to process QR code scan
 CREATE OR REPLACE FUNCTION process_qr_scan(
@@ -655,7 +788,7 @@ CREATE OR REPLACE FUNCTION process_qr_scan(
     message TEXT,
     visit_data JSONB,
     visitors JSONB
-) AS $$
+) AS $$$
 DECLARE
     visit_record visits%ROWTYPE;
     host_record users%ROWTYPE;
@@ -747,7 +880,7 @@ BEGIN
         ),
         visitor_list;
 END;
-$$ LANGUAGE plpgsql;
+$$$ LANGUAGE plpgsql;
 
 -- Function to update visitor status in visit
 CREATE OR REPLACE FUNCTION update_visit_visitor_status(
@@ -760,7 +893,7 @@ CREATE OR REPLACE FUNCTION update_visit_visitor_status(
 ) RETURNS TABLE(
     success BOOLEAN,
     message TEXT
-) AS $
+) AS $$
 DECLARE
     visit_record visits%ROWTYPE;
     current_status VARCHAR(50);
@@ -809,7 +942,7 @@ BEGIN
     
     RETURN QUERY SELECT true, 'Visitor status updated to ' || p_new_status;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Function to get building analytics
 CREATE OR REPLACE FUNCTION get_building_analytics(
@@ -823,7 +956,7 @@ CREATE OR REPLACE FUNCTION get_building_analytics(
     peak_hour INTEGER,
     most_active_host TEXT,
     visit_completion_rate DECIMAL
-) AS $
+) AS $$
 BEGIN
     RETURN QUERY
     WITH visit_stats AS (
@@ -881,7 +1014,7 @@ BEGIN
          WHERE v.building_id = p_building_id 
          AND v.created_at BETWEEN p_start_date AND p_end_date);
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Function to add visitor to frequent list
 CREATE OR REPLACE FUNCTION add_to_frequent_visitors(
@@ -890,7 +1023,7 @@ CREATE OR REPLACE FUNCTION add_to_frequent_visitors(
     p_nickname VARCHAR(100) DEFAULT NULL,
     p_relationship VARCHAR(100) DEFAULT NULL,
     p_priority INTEGER DEFAULT 3
-) RETURNS UUID AS $
+) RETURNS UUID AS $$
 DECLARE
     frequent_id UUID;
 BEGIN
@@ -910,7 +1043,7 @@ BEGIN
     
     RETURN frequent_id;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Function to create emergency alert
 CREATE OR REPLACE FUNCTION create_emergency_alert(
@@ -923,7 +1056,7 @@ CREATE OR REPLACE FUNCTION create_emergency_alert(
     p_coordinates POINT DEFAULT NULL,
     p_severity INTEGER DEFAULT 3,
     p_visit_id UUID DEFAULT NULL
-) RETURNS UUID AS $
+) RETURNS UUID AS $$
 DECLARE
     alert_id UUID;
     user_record RECORD;
@@ -963,7 +1096,7 @@ BEGIN
     
     RETURN alert_id;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- =============================================
 -- TRIGGERS
@@ -1022,7 +1155,7 @@ CREATE TRIGGER tr_emergency_alerts_updated_at
 
 -- Trigger to update building license usage
 CREATE OR REPLACE FUNCTION update_building_license_count()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         IF NEW.uses_license = true THEN
@@ -1076,7 +1209,7 @@ BEGIN
     
     RETURN NULL;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 CREATE TRIGGER tr_user_license_count
     AFTER INSERT OR UPDATE OR DELETE ON users
@@ -1085,7 +1218,7 @@ CREATE TRIGGER tr_user_license_count
 
 -- Trigger to update visit current visitor count
 CREATE OR REPLACE FUNCTION update_visit_visitor_count()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         UPDATE visits 
@@ -1118,7 +1251,7 @@ BEGIN
     
     RETURN NULL;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 CREATE TRIGGER tr_visit_visitor_count
     AFTER INSERT OR UPDATE OR DELETE ON visit_visitors
@@ -1127,7 +1260,7 @@ CREATE TRIGGER tr_visit_visitor_count
 
 -- Trigger to auto-complete visits
 CREATE OR REPLACE FUNCTION auto_complete_visits()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 DECLARE
     visit_record visits%ROWTYPE;
     all_exited BOOLEAN;
@@ -1152,7 +1285,7 @@ BEGIN
     
     RETURN NEW;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 CREATE TRIGGER tr_auto_complete_visits
     AFTER UPDATE ON visit_visitors
@@ -1162,7 +1295,7 @@ CREATE TRIGGER tr_auto_complete_visits
 
 -- Trigger to create audit log
 CREATE OR REPLACE FUNCTION create_audit_log()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 DECLARE
     building_id UUID;
     user_id UUID;
@@ -1228,7 +1361,7 @@ BEGIN
     
     RETURN COALESCE(NEW, OLD);
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Apply audit trigger to important tables
 CREATE TRIGGER tr_users_audit
@@ -1253,7 +1386,7 @@ CREATE TRIGGER tr_visitor_bans_audit
 
 -- Trigger to create analytics events
 CREATE OR REPLACE FUNCTION create_analytics_event()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 DECLARE
     building_id UUID;
     visit_id UUID;
@@ -1316,7 +1449,7 @@ BEGIN
     
     RETURN COALESCE(NEW, OLD);
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 CREATE TRIGGER tr_visits_analytics
     AFTER INSERT OR UPDATE ON visits
@@ -1477,6 +1610,60 @@ LEFT JOIN audit_logs al ON b.id = al.building_id
 LEFT JOIN user_sessions us ON us.user_id IN (SELECT id FROM users WHERE building_id = b.id)
 GROUP BY b.id, b.name;
 
+-- View for active visitor bans only
+CREATE VIEW active_visitor_bans AS
+SELECT 
+    id,
+    building_id,
+    user_id,
+    name,
+    phone,
+    reason,
+    severity,
+    ban_type,
+    banned_at,
+    expires_at,
+    notes,
+    created_at,
+    updated_at
+FROM visitor_bans 
+WHERE is_active = true;
+
+-- View for building-wide ban statistics
+CREATE VIEW building_ban_stats AS
+SELECT 
+    b.id as building_id,
+    b.name as building_name,
+    COUNT(*) as total_bans,
+    COUNT(*) FILTER (WHERE vb.is_active = true) as active_bans,
+    COUNT(*) FILTER (WHERE vb.severity = 'high') as high_severity_bans,
+    COUNT(*) FILTER (WHERE vb.severity = 'medium') as medium_severity_bans,
+    COUNT(*) FILTER (WHERE vb.severity = 'low') as low_severity_bans,
+    COUNT(DISTINCT vb.phone) as unique_banned_visitors,
+    COUNT(DISTINCT vb.user_id) as users_who_banned,
+    MAX(vb.banned_at) as last_ban_date
+FROM buildings b
+LEFT JOIN visitor_bans vb ON b.id = vb.building_id
+GROUP BY b.id, b.name;
+
+-- View for user ban statistics
+CREATE VIEW user_ban_stats AS
+SELECT 
+    u.id as user_id,
+    u.first_name,
+    u.last_name,
+    u.apartment_number,
+    COUNT(*) as total_bans_created,
+    COUNT(*) FILTER (WHERE vb.is_active = true) as active_bans,
+    COUNT(*) FILTER (WHERE vb.severity = 'high') as high_severity_bans,
+    COUNT(DISTINCT vb.phone) as unique_visitors_banned,
+    MAX(vb.banned_at) as last_ban_date,
+    MIN(vb.banned_at) as first_ban_date
+FROM users u
+LEFT JOIN visitor_bans vb ON u.id = vb.user_id
+WHERE u.role = 'resident'
+GROUP BY u.id, u.first_name, u.last_name, u.apartment_number;
+
 -- =============================================
 -- MATERIALIZED VIEWS FOR PERFORMANCE
 -- =============================================
@@ -1505,11 +1692,11 @@ CREATE INDEX idx_daily_visit_stats_building_date ON daily_visit_stats(building_i
 
 -- Refresh function for materialized views
 CREATE OR REPLACE FUNCTION refresh_daily_stats()
-RETURNS void AS $
+RETURNS void AS $$
 BEGIN
     REFRESH MATERIALIZED VIEW CONCURRENTLY daily_visit_stats;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- =============================================
 -- CLEANUP AND MAINTENANCE FUNCTIONS
@@ -1520,7 +1707,7 @@ CREATE OR REPLACE FUNCTION cleanup_expired_data()
 RETURNS TABLE(
     table_name TEXT,
     deleted_count BIGINT
-) AS $
+) AS $$
 DECLARE
     deleted_sessions BIGINT;
     deleted_notifications BIGINT;
@@ -1559,11 +1746,11 @@ BEGIN
         ('audit_logs', deleted_audit_logs),
         ('expired_visits', expired_visits);
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Function to archive old visit data
 CREATE OR REPLACE FUNCTION archive_old_visits()
-RETURNS BIGINT AS $
+RETURNS BIGINT AS $$
 DECLARE
     archived_count BIGINT;
 BEGIN
@@ -1578,7 +1765,7 @@ BEGIN
     
     RETURN archived_count;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Function to get visitor recommendations based on history
 CREATE OR REPLACE FUNCTION get_visitor_recommendations(
@@ -1593,7 +1780,7 @@ CREATE OR REPLACE FUNCTION get_visitor_recommendations(
     avg_rating DECIMAL,
     is_frequent BOOLEAN,
     recommendation_score INTEGER
-) AS $
+) AS $$
 BEGIN
     RETURN QUERY
     WITH visitor_stats AS (
@@ -1625,8 +1812,9 @@ BEGIN
         AND NOT EXISTS (
             SELECT 1 FROM visitor_bans vb 
             WHERE vb.user_id = p_user_id 
-            AND vb.visitor_id = v.id
-            AND (vb.banned_until IS NULL OR vb.banned_until > CURRENT_TIMESTAMP)
+            AND vb.phone = v.phone
+            AND vb.is_active = true
+            AND (vb.expires_at IS NULL OR vb.expires_at > CURRENT_TIMESTAMP)
         )
         GROUP BY v.id, v.name, v.phone, v.visit_count, v.last_visit, v.rating, v.is_frequent
     )
@@ -1643,7 +1831,7 @@ BEGIN
     ORDER BY vs.score DESC, vs.last_visit DESC
     LIMIT p_limit;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Function to bulk update visit status (for maintenance)
 CREATE OR REPLACE FUNCTION bulk_update_visit_status(
@@ -1651,7 +1839,7 @@ CREATE OR REPLACE FUNCTION bulk_update_visit_status(
     p_old_status visit_status,
     p_new_status visit_status,
     p_condition_date TIMESTAMP WITH TIME ZONE DEFAULT NULL
-) RETURNS BIGINT AS $
+) RETURNS BIGINT AS $$
 DECLARE
     updated_count BIGINT;
 BEGIN
@@ -1666,7 +1854,7 @@ BEGIN
     
     RETURN updated_count;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- =============================================
 -- SECURITY AND PERFORMANCE OPTIMIZATIONS
@@ -1718,14 +1906,14 @@ CREATE POLICY visitor_ban_access_policy ON visitor_bans
 
 -- Function to get current user ID (would be set by application)
 CREATE OR REPLACE FUNCTION current_user_id()
-RETURNS UUID AS $
+RETURNS UUID AS $$
 BEGIN
     RETURN COALESCE(
         current_setting('app.current_user_id', true)::UUID,
         '00000000-0000-0000-0000-000000000000'::UUID
     );
 END;
-$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Create role for application users
 CREATE ROLE authenticated_users;
@@ -1743,7 +1931,7 @@ RETURNS TABLE(
     index_size TEXT,
     last_vacuum TIMESTAMP WITH TIME ZONE,
     last_analyze TIMESTAMP WITH TIME ZONE
-) AS $
+) AS $$
 BEGIN
     RETURN QUERY
     SELECT 
@@ -1757,7 +1945,7 @@ BEGIN
     WHERE schemaname = 'public'
     ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Function to identify slow queries (requires pg_stat_statements extension)
 CREATE OR REPLACE FUNCTION get_slow_queries(
@@ -1768,7 +1956,7 @@ CREATE OR REPLACE FUNCTION get_slow_queries(
     total_time DOUBLE PRECISION,
     mean_time DOUBLE PRECISION,
     max_time DOUBLE PRECISION
-) AS $
+) AS $$
 BEGIN
     -- Check if pg_stat_statements extension is available
     IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_stat_statements') THEN
@@ -1788,7 +1976,7 @@ BEGIN
     ORDER BY pg_stat_statements.mean_exec_time DESC
     LIMIT 20;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Function to get building license utilization
 CREATE OR REPLACE FUNCTION get_license_utilization()
@@ -1800,7 +1988,7 @@ RETURNS TABLE(
     available_licenses INTEGER,
     utilization_percentage DECIMAL,
     status TEXT
-) AS $
+) AS $$
 BEGIN
     RETURN QUERY
     SELECT 
@@ -1820,7 +2008,7 @@ BEGIN
     WHERE b.is_active = true
     ORDER BY (b.used_licenses::DECIMAL / b.total_licenses) DESC;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- =============================================
 -- INITIAL DATA AND SETUP
@@ -1831,7 +2019,7 @@ INSERT INTO buildings (id, name, address, city, state, country, total_licenses) 
 (uuid_generate_v4(), 'Demo Building', '1 Demo Street', 'Lagos', 'Lagos', 'Nigeria', 250);
 
 -- Get the building ID for demo data
-DO $
+DO $$
 DECLARE
     demo_building_id UUID;
     admin_id UUID;
@@ -1860,7 +2048,7 @@ BEGIN
     INSERT INTO licenses (building_id, license_key, plan_type, starts_at, expires_at, total_licenses, amount) VALUES
     (demo_building_id, 'DEMO_LICENSE_2024', 'standard', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '1 year', 250, 50000.00);
     
-END $;
+END $$;
 
 -- =============================================
 -- SCHEDULED MAINTENANCE PROCEDURES
@@ -1872,7 +2060,7 @@ RETURNS TABLE(
     task TEXT,
     status TEXT,
     details TEXT
-) AS $
+) AS $$
 DECLARE
     cleanup_results RECORD;
     expired_count BIGINT;
@@ -1919,7 +2107,7 @@ BEGIN
         RETURN QUERY SELECT 'update_frequent_status', 'ERROR', SQLERRM;
     END;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- =============================================
 -- FINAL NOTES AND DOCUMENTATION

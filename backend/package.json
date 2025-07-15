@@ -1,22 +1,90 @@
 {
-  "name": "safeguard",
+  "name": "safeguard-backend",
   "version": "1.0.0",
-  "description": "A visitor tracking application",
-  "main": "index.js",
+  "description": "SafeGuard Backend API - A comprehensive visitor management system for gated communities",
+  "main": "src/app.js",
+  "type": "module",
   "scripts": {
-    "test": "npm run test "
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "test": "node tests/run-all-tests.js",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:unit": "jest",
+    "test:config": "node tests/config-test.js",
+    "test:auth": "node tests/auth-complete-test.js",
+    "test:api": "node tests/api-test-suite.js",
+    "test:setup": "node tests/setup-test-environment.js",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "db:migrate": "node scripts/migrate.js",
+    "db:seed": "node scripts/seed.js",
+    "docs:generate": "node scripts/generate-docs.js"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Hassandahiru/SafeGuard.git"
   },
   "keywords": [
-    "node.js"
+    "node.js",
+    "express",
+    "socket.io",
+    "postgresql",
+    "visitor-management",
+    "qr-code",
+    "real-time"
   ],
   "author": "Hassan Dahiru Ado",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/Hassandahiru/SafeGuard/issues"
   },
-  "homepage": "https://github.com/Hassandahiru/SafeGuard#readme"
+  "homepage": "https://github.com/Hassandahiru/SafeGuard#readme",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.4",
+    "pg": "^8.11.3",
+    "jsonwebtoken": "^9.0.2",
+    "bcrypt": "^5.1.1",
+    "joi": "^17.11.0",
+    "winston": "^3.11.0",
+    "winston-daily-rotate-file": "^4.7.1",
+    "qrcode": "^1.5.3",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.1.5",
+    "compression": "^1.7.4",
+    "dotenv": "^16.3.1",
+    "uuid": "^9.0.1",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.7",
+    "crypto": "^1.0.1",
+    "express-validator": "^7.0.1",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
+    "eslint": "^8.55.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.0.1",
+    "prettier": "^3.1.0",
+    "@types/jest": "^29.5.8",
+    "axios": "^1.6.2",
+    "socket.io-client": "^4.7.4"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "coverageDirectory": "coverage",
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/app.js",
+      "!src/config/**/*.js"
+    ]
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  }
 }

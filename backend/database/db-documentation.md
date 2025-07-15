@@ -154,16 +154,54 @@ Key Fields:
 - priority (INT): 1-5 priority ranking (1 = highest)
 ```
 
-### 7. Visitor Bans (`visitor_bans`) & System Blacklist (`system_blacklist`)
-**Purpose**: Multi-level visitor restriction system
+### 7. Visitor Bans (`visitor_bans`) 🚫 **PHONE-CENTRIC BAN SYSTEM**
+**Purpose**: Advanced phone-centric visitor restriction system with personal blacklists
 
-**Personal Bans** (`visitor_bans`):
-- Individual residents can ban specific visitors
-- Only affects that resident's visits
+```sql
+Key Fields:
+- id (UUID, PK): Unique ban identifier
+- building_id (UUID, FK): Reference to building  
+- user_id (UUID, FK): User who created the ban
+- name (VARCHAR): Visitor's name (stored directly)
+- phone (VARCHAR): Visitor's phone number (primary identifier)
+- reason (TEXT): Why visitor was banned
+- severity (ban_severity): 'low', 'medium', 'high' - escalation levels
+- ban_type (ban_type): 'manual' (user-created) or 'automatic' (system-generated)
+- is_active (BOOLEAN): Current ban status
+- banned_at (TIMESTAMPTZ): When ban was created
+- expires_at (TIMESTAMPTZ): When ban expires (NULL for permanent)
+- unbanned_at (TIMESTAMPTZ): When ban was lifted
+- unban_reason (TEXT): Why ban was removed
+- unbanned_by (UUID, FK): Who removed the ban
+- notes (TEXT): Additional context
+- trigger_event (VARCHAR): For automatic bans - what triggered it
+- metadata (JSONB): Extensible data storage
+```
 
-**System Bans** (`system_blacklist`):
+**Business Rules**:
+- **Phone-Centric**: Bans target phone numbers directly, not visitor profiles
+- **Personal Blacklists**: Each resident maintains their own ban list
+- **Building-wide Visibility**: Residents can see if others have banned the same visitor
+- **Severity Escalation**: low → medium → high based on incidents
+- **Temporary Bans**: Automatic expiry with `expires_at` field
+- **Complete Audit Trail**: Full tracking of ban creation, updates, and removal
+- **Flexible Storage**: Direct phone/name storage eliminates visitor profile dependencies
+
+**Key Features**:
+1. **Individual Control**: Residents can ban visitors independently
+2. **Cross-resident Awareness**: Check if visitor is banned by others in building
+3. **Automatic Expiry**: Temporary bans with configurable duration
+4. **Severity Levels**: Escalating restriction levels (low/medium/high)
+5. **Unban Tracking**: Complete audit trail for ban removal
+6. **Performance Optimized**: Direct phone lookups without JOINs
+
+### 8. System Blacklist (`system_blacklist`)
+**Purpose**: Building-wide restrictions managed by admins and security
+
+**System Bans**:
 - Building-wide restrictions
 - Managed by admins and security
+- Affects all residents in the building
 
 ### 8. Visit Logs (`visit_logs`)
 **Purpose**: Detailed tracking of all visitor actions
@@ -315,22 +353,72 @@ SELECT get_or_create_visitor(
 3. If not found, creates new visitor profile
 4. Enforces unique constraint per building
 
-#### 5. `is_visitor_banned()`
-**Purpose**: Multi-level ban checking
+#### 5. Phone-Centric Ban Checking Functions 🚫
+**Purpose**: Advanced ban checking for phone-centric visitor restriction system
 
+##### `is_visitor_banned_by_phone()`
 ```sql
-SELECT is_visitor_banned(
+SELECT is_visitor_banned_by_phone(
     p_building_id UUID,
     p_user_id UUID,
-    p_visitor_id UUID
+    p_phone VARCHAR(20)
 ) RETURNS BOOLEAN;
 ```
 
 **What it does**:
-1. Checks personal bans (`visitor_bans`)
-2. Checks system-wide bans (`system_blacklist`)
-3. Considers ban expiration dates
-4. Returns true if visitor is banned at any level
+1. Formats phone number for consistency
+2. Checks personal bans (`visitor_bans`) by phone
+3. Checks system-wide bans (`system_blacklist`) by phone  
+4. Considers ban expiration dates and active status
+5. Returns true if visitor is banned at any level
+
+##### `is_visitor_banned_by_user()`
+```sql
+SELECT is_visitor_banned_by_user(
+    p_user_id UUID,
+    p_phone TEXT
+) RETURNS BOOLEAN;
+```
+
+**What it does**:
+1. Checks if specific user has banned this phone number
+2. Considers only active bans with valid expiration
+3. Used for personal blacklist checking
+
+##### `is_visitor_banned_in_building()`
+```sql
+SELECT is_visitor_banned_in_building(
+    p_building_id UUID,
+    p_phone TEXT
+) RETURNS BOOLEAN;
+```
+
+**What it does**:
+1. Checks if any resident in building has banned this phone number
+2. Returns true if visitor is banned by anyone in the building
+3. Used for building-wide ban visibility
+
+##### `format_phone_number()`
+```sql
+SELECT format_phone_number(phone_input TEXT) RETURNS TEXT;
+```
+
+**What it does**:
+1. Standardizes phone number format for consistency
+2. Adds +234 prefix for Nigerian numbers
+3. Removes non-digit characters except +
+4. Ensures uniform storage and comparison
+
+##### `expire_visitor_bans()`
+```sql
+SELECT expire_visitor_bans() RETURNS INTEGER;
+```
+
+**What it does**:
+1. Automatically expires temporary bans past their expiry date
+2. Sets `is_active = false` and records unban details
+3. Returns count of expired bans
+4. Intended for automated/scheduled execution
 
 ### Analytics Functions
 
@@ -484,6 +572,38 @@ ORDER BY visit_date;
 SELECT * FROM security_monitoring WHERE building_id = ?;
 ```
 **Includes**: Ban counts, active emergencies, overdue visits, audit events
+
+### 6. Visitor Ban Views 🚫
+
+#### `active_visitor_bans`
+**Purpose**: Active visitor bans only (filtered view)
+```sql
+SELECT * FROM active_visitor_bans WHERE building_id = ?;
+```
+**Includes**: All active bans with complete ban details (excludes expired/inactive bans)
+
+#### `building_ban_stats`
+**Purpose**: Building-wide ban statistics and analytics
+```sql
+SELECT * FROM building_ban_stats WHERE building_id = ?;
+```
+**Includes**: 
+- Total bans, active bans, severity breakdown
+- Unique banned visitors count
+- Users who have created bans
+- Last ban date for trending
+
+#### `user_ban_stats`
+**Purpose**: Per-user ban statistics for residents
+```sql
+SELECT * FROM user_ban_stats WHERE user_id = ?;
+```
+**Includes**:
+- Individual resident ban activity
+- Total bans created, active bans
+- High severity ban count
+- Unique visitors banned
+- First and last ban dates
 
 ### Materialized Views
 
@@ -665,34 +785,150 @@ SELECT add_to_frequent_visitors(
 SELECT * FROM get_visitor_recommendations(host_user_uuid, 10);
 ```
 
+### Visitor Ban Management Examples 🚫
+
+#### Creating and Managing Bans
+```sql
+-- Create a visitor ban (would be done via API, shown for reference)
+INSERT INTO visitor_bans (building_id, user_id, name, phone, reason, severity, ban_type, notes)
+VALUES (
+    'building-uuid',
+    'user-uuid', 
+    'John Problem Visitor',
+    '+2348123456789',
+    'Inappropriate behavior during last visit',
+    'medium',
+    'manual',
+    'Resident requested permanent ban due to security concerns'
+);
+
+-- Check if visitor is banned by specific user
+SELECT is_visitor_banned_by_user('user-uuid', '+2348123456789');
+
+-- Check if visitor is banned anywhere in building
+SELECT is_visitor_banned_in_building('building-uuid', '+2348123456789');
+
+-- Create temporary ban with expiry
+INSERT INTO visitor_bans (building_id, user_id, name, phone, reason, severity, expires_at)
+VALUES (
+    'building-uuid',
+    'user-uuid',
+    'Jane Temp Ban',
+    '+2348987654321', 
+    'Noise complaints from neighbors',
+    'low',
+    CURRENT_TIMESTAMP + INTERVAL '7 days'
+);
+
+-- Manually unban a visitor
+UPDATE visitor_bans 
+SET is_active = false,
+    unbanned_at = CURRENT_TIMESTAMP,
+    unban_reason = 'Issue resolved, apology accepted',
+    unbanned_by = 'unbanning-user-uuid'
+WHERE phone = '+2348123456789' 
+AND user_id = 'banning-user-uuid'
+AND is_active = true;
+```
+
+#### Ban Analytics and Monitoring
+```sql
+-- Get building ban statistics
+SELECT * FROM building_ban_stats WHERE building_id = ?;
+
+-- Get user's ban activity
+SELECT * FROM user_ban_stats WHERE user_id = ?;
+
+-- Monitor ban trends
+SELECT 
+    DATE(banned_at) as ban_date,
+    COUNT(*) as bans_created,
+    COUNT(*) FILTER (WHERE severity = 'high') as high_severity,
+    COUNT(DISTINCT phone) as unique_visitors_banned
+FROM visitor_bans 
+WHERE building_id = ? 
+AND banned_at >= CURRENT_DATE - INTERVAL '30 days'
+GROUP BY DATE(banned_at)
+ORDER BY ban_date DESC;
+
+-- Find visitors banned by multiple residents
+SELECT 
+    phone,
+    name,
+    COUNT(*) as ban_count,
+    ARRAY_AGG(DISTINCT u.apartment_number) as banned_by_apartments,
+    MAX(vb.severity) as highest_severity
+FROM visitor_bans vb
+JOIN users u ON vb.user_id = u.id
+WHERE vb.building_id = ? AND vb.is_active = true
+GROUP BY phone, name
+HAVING COUNT(*) > 1
+ORDER BY ban_count DESC;
+```
+
+#### Automated Ban Management
+```sql
+-- Run automatic ban expiry (for scheduled jobs)
+SELECT expire_visitor_bans();
+
+-- Check for expiring bans (within next 24 hours)
+SELECT 
+    name,
+    phone,
+    expires_at,
+    CONCAT(u.first_name, ' ', u.last_name) as banned_by
+FROM visitor_bans vb
+JOIN users u ON vb.user_id = u.id
+WHERE vb.is_active = true
+AND vb.expires_at IS NOT NULL
+AND vb.expires_at <= CURRENT_TIMESTAMP + INTERVAL '24 hours'
+ORDER BY expires_at;
+```
+
 ### Analytics Queries
 ```sql
 -- Building dashboard data
 SELECT 
     bs.*,
     va.total_visits as visits_today,
-    sm.active_emergencies
+    sm.active_emergencies,
+    bbs.total_bans,
+    bbs.active_bans
 FROM building_stats bs
 LEFT JOIN visit_analytics va ON bs.building_id = va.building_id 
     AND va.visit_date = CURRENT_DATE
 LEFT JOIN security_monitoring sm ON bs.building_id = sm.building_id
+LEFT JOIN building_ban_stats bbs ON bs.building_id = bbs.building_id
 WHERE bs.building_id = ?;
 
--- User activity summary
-SELECT * FROM user_activity_dashboard 
-WHERE building_id = ? 
-ORDER BY visits_this_week DESC;
+-- User activity summary with ban information
+SELECT 
+    uad.*,
+    ubs.total_bans_created,
+    ubs.active_bans,
+    ubs.unique_visitors_banned
+FROM user_activity_dashboard uad
+LEFT JOIN user_ban_stats ubs ON uad.user_id = ubs.user_id
+WHERE uad.building_id = ? 
+ORDER BY uad.visits_this_week DESC;
 
--- Visit trends
+-- Visit trends with ban correlation
 SELECT 
     visit_date,
     total_visits,
     total_visitors,
     avg_visitors_per_visit,
-    completed_visits::float / total_visits * 100 as completion_rate
-FROM visit_analytics 
-WHERE building_id = ? 
-AND visit_date >= CURRENT_DATE - INTERVAL '30 days'
+    completed_visits::float / total_visits * 100 as completion_rate,
+    COALESCE(ban_counts.daily_bans, 0) as bans_created
+FROM visit_analytics va
+LEFT JOIN (
+    SELECT DATE(banned_at) as ban_date, COUNT(*) as daily_bans
+    FROM visitor_bans 
+    WHERE building_id = ? 
+    GROUP BY DATE(banned_at)
+) ban_counts ON va.visit_date = ban_counts.ban_date
+WHERE va.building_id = ? 
+AND va.visit_date >= CURRENT_DATE - INTERVAL '30 days'
 ORDER BY visit_date;
 ```
 

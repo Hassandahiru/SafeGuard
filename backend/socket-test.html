@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeGuard Socket.io Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section { 
+            margin-bottom: 20px; 
+            padding: 15px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #17a2b8; }
+        .warning { color: #ffc107; }
+        pre { 
+            background: #f8f9fa; 
+            padding: 10px; 
+            border-radius: 3px; 
+            overflow-x: auto;
+            border-left: 4px solid #007bff;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { 
+            background: #6c757d; 
+            cursor: not-allowed; 
+        }
+        #log {
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 SafeGuard Socket.io Test Suite</h1>
+        
+        <div class="test-section">
+            <h2>📊 Connection Status</h2>
+            <p>Status: <span id="connectionStatus" class="warning">Not Connected</span></p>
+            <p>Socket ID: <span id="socketId">-</span></p>
+            <p>Server: <code>http://localhost:3000</code></p>
+        </div>
+
+        <div class="test-section">
+            <h2>🧪 Test Controls</h2>
+            <button onclick="connectSocket()">Connect to Server</button>
+            <button onclick="disconnectSocket()" disabled id="disconnectBtn">Disconnect</button>
+            <button onclick="testAuthentication()" disabled id="authBtn">Test Authentication</button>
+            <button onclick="testBanCheck()" disabled id="banBtn">Test Ban Check</button>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+
+        <div class="test-section">
+            <h2>📱 Socket.io Events</h2>
+            <p>The following events are available for testing:</p>
+            <ul>
+                <li><strong>visitor:ban-check</strong> - Check if visitor is banned</li>
+                <li><strong>notification:new</strong> - Receive new notifications</li>
+                <li><strong>user:online</strong> - User status updates</li>
+                <li><strong>error</strong> - Error handling</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2>📜 Test Log</h2>
+            <div id="log"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔧 Manual Testing Commands</h2>
+            <p>You can also run these commands in the browser console:</p>
+            <pre>
+// Connect to Socket.io
+const socket = io('http://localhost:3000');
+
+// Listen for connection
+socket.on('connect', () => {
+  console.log('✅ Connected to SafeGuard Socket.io server');
+  console.log('Socket ID:', socket.id);
+});
+
+// Test visitor ban check
+socket.emit('visitor:ban-check', { 
+  phone: '+2348123456789' 
+}, (response) => {
+  console.log('🚫 Ban check response:', response);
+});
+
+// Listen for notifications
+socket.on('notification:new', (notification) => {
+  console.log('📢 New notification:', notification);
+});
+
+// Listen for errors
+socket.on('error', (error) => {
+  console.error('❌ Socket error:', error);
+});
+            </pre>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script>
+        let socket = null;
+        let testToken = null;
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                success: '#00ff00',
+                error: '#ff4444',
+                warning: '#ffaa00',
+                info: '#00aaff'
+            };
+            
+            logDiv.innerHTML += `<div style="color: ${colors[type]};">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus(status, color) {
+            const statusElement = document.getElementById('connectionStatus');
+            statusElement.textContent = status;
+            statusElement.className = color;
+        }
+
+        function updateButtons(connected) {
+            document.getElementById('disconnectBtn').disabled = !connected;
+            document.getElementById('authBtn').disabled = !connected;
+            document.getElementById('banBtn').disabled = !connected;
+        }
+
+        function connectSocket() {
+            if (socket) {
+                socket.disconnect();
+            }
+
+            log('🔌 Attempting to connect to SafeGuard Socket.io server...', 'info');
+            updateStatus('Connecting...', 'warning');
+
+            socket = io('http://localhost:3000', {
+                timeout: 10000,
+                transports: ['websocket', 'polling']
+            });
+
+            socket.on('connect', () => {
+                log('✅ Successfully connected to SafeGuard server!', 'success');
+                log(`🆔 Socket ID: ${socket.id}`, 'info');
+                updateStatus('Connected', 'success');
+                document.getElementById('socketId').textContent = socket.id;
+                updateButtons(true);
+            });
+
+            socket.on('disconnect', (reason) => {
+                log(`❌ Disconnected from server. Reason: ${reason}`, 'error');
+                updateStatus('Disconnected', 'error');
+                document.getElementById('socketId').textContent = '-';
+                updateButtons(false);
+            });
+
+            socket.on('connect_error', (error) => {
+                log(`❌ Connection failed: ${error.message}`, 'error');
+                updateStatus('Connection Failed', 'error');
+                updateButtons(false);
+            });
+
+            socket.on('authenticated', (data) => {
+                log(`🔐 Authentication successful: ${data.message}`, 'success');
+            });
+
+            socket.on('authentication_error', (error) => {
+                log(`🔐 Authentication failed: ${error.message}`, 'warning');
+            });
+
+            socket.on('notification:new', (notification) => {
+                log(`📢 New notification received: ${JSON.stringify(notification)}`, 'info');
+            });
+
+            socket.on('error', (error) => {
+                log(`⚠️ Socket error: ${error}`, 'error');
+            });
+
+            // Custom event listeners
+            socket.on('visitor:ban-status', (data) => {
+                log(`🚫 Visitor ban status: ${JSON.stringify(data)}`, 'info');
+            });
+        }
+
+        function disconnectSocket() {
+            if (socket) {
+                log('🔌 Disconnecting from server...', 'info');
+                socket.disconnect();
+                socket = null;
+            }
+        }
+
+        function testAuthentication() {
+            if (!socket || !socket.connected) {
+                log('❌ Not connected to server', 'error');
+                return;
+            }
+
+            log('🔐 Testing authentication without token...', 'info');
+            
+            // Test without authentication
+            socket.emit('visitor:ban-check', { 
+                phone: '+2348123456789' 
+            }, (response) => {
+                if (response) {
+                    log(`✅ Ban check response: ${JSON.stringify(response)}`, 'success');
+                } else {
+                    log('❌ No response received (might require authentication)', 'warning');
+                }
+            });
+        }
+
+        function testBanCheck() {
+            if (!socket || !socket.connected) {
+                log('❌ Not connected to server', 'error');
+                return;
+            }
+
+            const testPhone = '+2348123456789';
+            log(`🚫 Testing visitor ban check for: ${testPhone}`, 'info');
+
+            socket.emit('visitor:ban-check', { 
+                phone: testPhone 
+            }, (response) => {
+                if (response) {
+                    log(`✅ Ban check completed: ${JSON.stringify(response)}`, 'success');
+                } else {
+                    log('⚠️ No response received from server', 'warning');
+                }
+            });
+
+            // Test timeout
+            setTimeout(() => {
+                log('⏱️ Ban check timeout - if no response above, check server logs', 'warning');
+            }, 5000);
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            log('📝 Log cleared', 'info');
+        }
+
+        // Auto-connect on page load
+        window.onload = function() {
+            log('🚀 SafeGuard Socket.io Test Suite Ready', 'success');
+            log('📋 Click "Connect to Server" to begin testing', 'info');
+        };
+    </script>
+</body>
+</html>
