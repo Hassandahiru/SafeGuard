@@ -11,14 +11,6 @@ import database from './config/database.js';
 import { logger } from './utils/logger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import requestLogger from './middleware/requestLogger.js';
-import SocketHandler from './sockets/socketHandler.js';
-import NotificationService from './services/notification.service.js';
-
-// Import routes
-import authRoutes from './routes/auth.routes.js';
-import visitorRoutes from './routes/visitor.routes.js';
-import frequentVisitorRoutes from './routes/frequentVisitor.routes.js';
-import visitorBanRoutes from './routes/visitorBan.routes.js';
 
 class SafeGuardApp {
   constructor() {
@@ -28,12 +20,6 @@ class SafeGuardApp {
       cors: config.socketio.cors,
       transports: config.socketio.transports
     });
-    
-    // Initialize socket handler
-    this.socketHandler = new SocketHandler(this.io);
-    
-    // Connect notification service to socket handler
-    NotificationService.setSocketHandler(this.socketHandler);
     
     this.setupMiddleware();
     this.setupRoutes();
@@ -102,29 +88,58 @@ class SafeGuardApp {
           auth: '/api/auth',
           visits: '/api/visits',
           visitors: '/api/visitors',
-          'frequent-visitors': '/api/frequent-visitors',
-          'visitor-bans': '/api/visitor-bans',
           admin: '/api/admin'
         }
       });
     });
 
-    // Register routes
-    this.app.use('/api/auth', authRoutes);
-    this.app.use('/api/visitors', visitorRoutes);
-    this.app.use('/api/frequent-visitors', frequentVisitorRoutes);
-    this.app.use('/api/visitor-bans', visitorBanRoutes);
+    // Routes will be registered here as we implement them
+    // Route imports will be added here using ES6 import syntax
+    // import authRoutes from './routes/auth.routes.js';
+    // import visitRoutes from './routes/visit.routes.js';
+    // import visitorRoutes from './routes/visitor.routes.js';
+    // import frequentVisitorRoutes from './routes/frequentVisitor.routes.js';
+    // import visitorBanRoutes from './routes/visitorBan.routes.js';
+    // import adminRoutes from './routes/admin.routes.js';
+    // import analyticsRoutes from './routes/analytics.routes.js';
     
-    // TODO: Add remaining routes as they are implemented
+    // this.app.use('/api/auth', authRoutes);
+    // this.app.use('/api/visits', visitRoutes);
+    // this.app.use('/api/visitors', visitorRoutes);
+    // this.app.use('/api/frequent-visitors', frequentVisitorRoutes);
+    // this.app.use('/api/visitor-bans', visitorBanRoutes);
     // this.app.use('/api/admin', adminRoutes);
     // this.app.use('/api/analytics', analyticsRoutes);
   }
 
   setupSocketIO() {
-    // Initialize socket handler with authentication and event handling
-    this.socketHandler.initialize();
-    
-    logger.info('Socket.IO setup completed with authentication and event handlers');
+    // Socket.IO middleware for authentication will be added here
+    this.io.use((socket, next) => {
+      // TODO: Add JWT authentication for socket connections
+      next();
+    });
+
+    // Socket.IO event handlers
+    this.io.on('connection', (socket) => {
+      logger.info('New socket connection', {
+        socketId: socket.id,
+        userId: socket.userId,
+        timestamp: new Date().toISOString()
+      });
+
+      // Handle socket disconnection
+      socket.on('disconnect', (reason) => {
+        logger.info('Socket disconnected', {
+          socketId: socket.id,
+          userId: socket.userId,
+          reason,
+          timestamp: new Date().toISOString()
+        });
+      });
+
+      // Socket event handlers will be added here
+      // import('./sockets/socketHandler.js').then(handler => handler.default(socket, this.io));
+    });
   }
 
   setupErrorHandling() {
@@ -190,6 +205,7 @@ class SafeGuardApp {
 const app = new SafeGuardApp();
 
 // Start the server only if this file is run directly
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   app.start();
 }
