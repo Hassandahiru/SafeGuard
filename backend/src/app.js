@@ -12,6 +12,12 @@ import { logger } from './utils/logger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import requestLogger from './middleware/requestLogger.js';
 
+// Import routes
+import authRoutes from './routes/auth.routes.js';
+import visitorRoutes from './routes/visitor.routes.js';
+import frequentVisitorRoutes from './routes/frequentVisitor.routes.js';
+import visitorBanRoutes from './routes/visitorBan.routes.js';
+
 class SafeGuardApp {
   constructor() {
     this.app = express();
@@ -93,23 +99,11 @@ class SafeGuardApp {
       });
     });
 
-    // Routes will be registered here as we implement them
-    // Route imports will be added here using ES6 import syntax
-    // import authRoutes from './routes/auth.routes.js';
-    // import visitRoutes from './routes/visit.routes.js';
-    // import visitorRoutes from './routes/visitor.routes.js';
-    // import frequentVisitorRoutes from './routes/frequentVisitor.routes.js';
-    // import visitorBanRoutes from './routes/visitorBan.routes.js';
-    // import adminRoutes from './routes/admin.routes.js';
-    // import analyticsRoutes from './routes/analytics.routes.js';
-    
-    // this.app.use('/api/auth', authRoutes);
-    // this.app.use('/api/visits', visitRoutes);
-    // this.app.use('/api/visitors', visitorRoutes);
-    // this.app.use('/api/frequent-visitors', frequentVisitorRoutes);
-    // this.app.use('/api/visitor-bans', visitorBanRoutes);
-    // this.app.use('/api/admin', adminRoutes);
-    // this.app.use('/api/analytics', analyticsRoutes);
+    // Register API routes
+    this.app.use('/api/auth', authRoutes);
+    this.app.use('/api/visitors', visitorRoutes);
+    this.app.use('/api/frequent-visitors', frequentVisitorRoutes);
+    this.app.use('/api/visitor-bans', visitorBanRoutes);
   }
 
   setupSocketIO() {
