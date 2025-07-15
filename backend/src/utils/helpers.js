@@ -1,5 +1,7 @@
 import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 import { VALIDATION_PATTERNS } from './constants.js';
 
 /**
@@ -26,7 +28,6 @@ const generateToken = (length = 32) => {
  * @returns {Promise<string>} Hashed password
  */
 const hashPassword = async (password) => {
-  const bcrypt = await import('bcrypt');
   const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS) || 12;
   return await bcrypt.hash(password, saltRounds);
 };
@@ -38,7 +39,6 @@ const hashPassword = async (password) => {
  * @returns {Promise<boolean>} Match result
  */
 const comparePassword = async (password, hash) => {
-  const bcrypt = await import('bcrypt');
   return await bcrypt.compare(password, hash);
 };
 
@@ -49,7 +49,6 @@ const comparePassword = async (password, hash) => {
  * @returns {string} JWT token
  */
 const generateJWT = async (payload, expiresIn = '24h') => {
-  const jwt = await import('jsonwebtoken');
   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn });
 };
 
@@ -59,7 +58,6 @@ const generateJWT = async (payload, expiresIn = '24h') => {
  * @returns {object} Decoded token payload
  */
 const verifyJWT = async (token) => {
-  const jwt = await import('jsonwebtoken');
   return jwt.verify(token, process.env.JWT_SECRET);
 };
 
@@ -260,7 +258,7 @@ const cleanObject = (obj) => {
  */
 const toTitleCase = (str) => {
   return str.replace(/\w\S*/g, (txt) => {
-    return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+    return txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase();
   });
 };
 
