@@ -17,6 +17,7 @@ import authRoutes from './routes/auth.routes.js';
 import visitorRoutes from './routes/visitor.routes.js';
 import frequentVisitorRoutes from './routes/frequentVisitor.routes.js';
 import visitorBanRoutes from './routes/visitorBan.routes.js';
+import adminRoutes from './routes/admin.routes.js';
 
 class SafeGuardApp {
   constructor() {
@@ -104,6 +105,7 @@ class SafeGuardApp {
     this.app.use('/api/visitors', visitorRoutes);
     this.app.use('/api/frequent-visitors', frequentVisitorRoutes);
     this.app.use('/api/visitor-bans', visitorBanRoutes);
+    this.app.use('/api/admin', adminRoutes);
   }
 
   setupSocketIO() {

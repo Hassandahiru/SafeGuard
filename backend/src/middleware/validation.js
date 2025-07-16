@@ -652,9 +652,155 @@ const searchValidations = {
   ]
 };
 
+/**
+ * Simple validation middleware for admin routes
+ * @param {Object} schema - Validation schema
+ * @returns {Function} Express middleware
+ */
+const validateRequest = (schema) => {
+  return (req, res, next) => {
+    const errors = [];
+
+    // Validate body
+    if (schema.body) {
+      for (const [field, rules] of Object.entries(schema.body)) {
+        const value = req.body[field];
+        
+        // Check if field is required
+        if (rules.required && (value === undefined || value === null || value === '')) {
+          errors.push({ field, message: `${field} is required` });
+          continue;
+        }
+
+        // Skip validation if field is optional and empty
+        if (rules.optional && (value === undefined || value === null || value === '')) {
+          continue;
+        }
+
+        // Type validation
+        if (rules.type && value !== undefined) {
+          if (rules.type === 'string' && typeof value !== 'string') {
+            errors.push({ field, message: `${field} must be a string` });
+          } else if (rules.type === 'number' && typeof value !== 'number') {
+            errors.push({ field, message: `${field} must be a number` });
+          } else if (rules.type === 'boolean' && typeof value !== 'boolean') {
+            errors.push({ field, message: `${field} must be a boolean` });
+          } else if (rules.type === 'object' && typeof value !== 'object') {
+            errors.push({ field, message: `${field} must be an object` });
+          }
+        }
+
+        // String length validation
+        if (rules.minLength && typeof value === 'string' && value.length < rules.minLength) {
+          errors.push({ field, message: `${field} must be at least ${rules.minLength} characters` });
+        }
+        if (rules.maxLength && typeof value === 'string' && value.length > rules.maxLength) {
+          errors.push({ field, message: `${field} must be at most ${rules.maxLength} characters` });
+        }
+
+        // Number range validation
+        if (rules.min && typeof value === 'number' && value < rules.min) {
+          errors.push({ field, message: `${field} must be at least ${rules.min}` });
+        }
+        if (rules.max && typeof value === 'number' && value > rules.max) {
+          errors.push({ field, message: `${field} must be at most ${rules.max}` });
+        }
+
+        // Email validation
+        if (rules.format === 'email' && typeof value === 'string' && !isValidEmail(value)) {
+          errors.push({ field, message: `${field} must be a valid email` });
+        }
+
+        // UUID validation
+        if (rules.format === 'uuid' && typeof value === 'string' && !isValidUUID(value)) {
+          errors.push({ field, message: `${field} must be a valid UUID` });
+        }
+
+        // Enum validation
+        if (rules.enum && !rules.enum.includes(value)) {
+          errors.push({ field, message: `${field} must be one of: ${rules.enum.join(', ')}` });
+        }
+      }
+    }
+
+    // Validate params
+    if (schema.params) {
+      for (const [field, rules] of Object.entries(schema.params)) {
+        const value = req.params[field];
+        
+        if (rules.required && !value) {
+          errors.push({ field, message: `${field} parameter is required` });
+          continue;
+        }
+
+        // UUID validation for params
+        if (rules.format === 'uuid' && value && !isValidUUID(value)) {
+          errors.push({ field, message: `${field} must be a valid UUID` });
+        }
+      }
+    }
+
+    // Validate query
+    if (schema.query) {
+      for (const [field, rules] of Object.entries(schema.query)) {
+        const value = req.query[field];
+        
+        if (rules.required && !value) {
+          errors.push({ field, message: `${field} query parameter is required` });
+          continue;
+        }
+
+        // Skip validation if field is optional and empty
+        if (rules.optional && !value) {
+          continue;
+        }
+
+        // Type validation for query params
+        if (rules.type === 'number' && value) {
+          const numValue = Number(value);
+          if (isNaN(numValue)) {
+            errors.push({ field, message: `${field} must be a number` });
+          } else {
+            req.query[field] = numValue;
+          }
+        }
+
+        if (rules.type === 'boolean' && value) {
+          if (value !== 'true' && value !== 'false') {
+            errors.push({ field, message: `${field} must be true or false` });
+          } else {
+            req.query[field] = value === 'true';
+          }
+        }
+
+        // Number range validation for query
+        if (rules.min && typeof req.query[field] === 'number' && req.query[field] < rules.min) {
+          errors.push({ field, message: `${field} must be at least ${rules.min}` });
+        }
+        if (rules.max && typeof req.query[field] === 'number' && req.query[field] > rules.max) {
+          errors.push({ field, message: `${field} must be at most ${rules.max}` });
+        }
+
+        // Enum validation for query
+        if (rules.enum && value && !rules.enum.includes(value)) {
+          errors.push({ field, message: `${field} must be one of: ${rules.enum.join(', ')}` });
+        }
+      }
+    }
+
+    if (errors.length > 0) {
+      const validationError = new ValidationError('Validation failed', errors);
+      return next(validationError);
+    }
+
+    next();
+  };
+};
+
 export {
   sanitizeInputs,
   handleValidationErrors,
+  validateRequest,
   userValidations,
   buildingValidations,
   visitValidations,
