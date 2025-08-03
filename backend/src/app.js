@@ -159,14 +159,11 @@ class SafeGuardApp {
       logger.info('Database connected successfully');
 
       // Start server
-      const PORT = config.PORT;
-      this.server.listen(PORT, () => {
-        logger.info(`SafeGuard API Server started`, {
-          port: PORT,
-          environment: config.NODE_ENV,
-          version: process.env.npm_package_version || '1.0.0',
-          timestamp: new Date().toISOString()
-        });
+      const PORT = config.PORT || 3000;
+      const HOST = process.env.HOST || 'localhost';
+      
+      this.server.listen(PORT, HOST, () => {
+        this.logServerStartup(PORT, HOST);
       });
 
       // Graceful shutdown
@@ -177,6 +174,138 @@ class SafeGuardApp {
       logger.error('Failed to start server:', error);
       process.exit(1);
     }
+  }
+
+  logServerStartup(PORT, HOST) {
+    const startupTime = new Date().toISOString();
+    const version = process.env.npm_package_version || '1.0.0';
+    const nodeVersion = process.version;
+    const platform = process.platform;
+    const arch = process.arch;
+    const uptime = process.uptime();
+    const memory = process.memoryUsage();
+    
+    // Console logging with enhanced server information
+    console.log('\n' + '🚀'.repeat(40));
+    console.log('🚀 SAFEGUARD API SERVER STARTED SUCCESSFULLY! 🚀');
+    console.log('🚀'.repeat(40));
+    
+    console.log('\n📊 SERVER INFORMATION:');
+    console.log('━'.repeat(50));
+    console.log(`🌐 Server URL:      http://${HOST}:${PORT}`);
+    console.log(`🏠 Host:            ${HOST}`);
+    console.log(`🔌 Port:            ${PORT}`);
+    console.log(`🏷️  Version:         v${version}`);
+    console.log(`⚙️  Environment:     ${config.NODE_ENV}`);
+    console.log(`📅 Started:         ${startupTime}`);
+    console.log(`⏱️  Startup Time:    ${uptime.toFixed(2)} seconds`);
+    
+    console.log('\n🖥️  SYSTEM INFORMATION:');
+    console.log('━'.repeat(50));
+    console.log(`🟢 Node.js:         ${nodeVersion}`);
+    console.log(`💻 Platform:        ${platform} (${arch})`);
+    console.log(`🧠 Memory Usage:    ${(memory.rss / 1024 / 1024).toFixed(2)} MB RSS`);
+    console.log(`📦 Heap Used:       ${(memory.heapUsed / 1024 / 1024).toFixed(2)} MB`);
+    console.log(`📈 Heap Total:      ${(memory.heapTotal / 1024 / 1024).toFixed(2)} MB`);
+    
+    console.log('\n🔗 API ENDPOINTS:');
+    console.log('━'.repeat(50));
+    console.log(`🏥 Health Check:    http://${HOST}:${PORT}/health`);
+    console.log(`📋 API Info:        http://${HOST}:${PORT}/api`);
+    console.log(`🔐 Authentication:  http://${HOST}:${PORT}/api/auth`);
+    console.log(`🆕 Enhanced Auth:   http://${HOST}:${PORT}/api/auth/enhanced`);
+    console.log(`👥 Registration:    http://${HOST}:${PORT}/api/registration`);
+    console.log(`👤 Visitors:        http://${HOST}:${PORT}/api/visitors`);
+    console.log(`⭐ Frequent:        http://${HOST}:${PORT}/api/frequent-visitors`);
+    console.log(`🚫 Bans:            http://${HOST}:${PORT}/api/visitor-bans`);
+    console.log(`👑 Admin:           http://${HOST}:${PORT}/api/admin`);
+    
+    console.log('\n🔌 SOCKET.IO:');
+    console.log('━'.repeat(50));
+    console.log(`📡 Socket Server:   ws://${HOST}:${PORT}`);
+    console.log(`🔄 Transports:      ${config.socketio.transports.join(', ')}`);
+    console.log(`🌐 CORS Origins:    ${config.socketio.cors.origin}`);
+    
+    console.log('\n🗄️  DATABASE:');
+    console.log('━'.repeat(50));
+    console.log(`✅ Status:          Connected`);
+    console.log(`🏠 Host:            ${config.database.host}:${config.database.port}`);
+    console.log(`📊 Database:        ${config.database.name}`);
+    console.log(`👤 User:            ${config.database.user}`);
+    console.log(`🏊 Pool Max:        ${config.database.pool.max} connections`);
+    
+    console.log('\n🛡️  SECURITY:');
+    console.log('━'.repeat(50));
+    console.log(`🔒 JWT Enabled:     ✅ Yes`);
+    console.log(`⏰ Token Expiry:    ${config.jwt.expiresIn}`);
+    console.log(`🔄 Refresh Expiry:  ${config.jwt.refreshExpiresIn}`);
+    console.log(`🧂 Salt Rounds:     ${config.security.saltRounds}`);
+    console.log(`🚦 Rate Limiting:   ${config.security.rateLimitMax} req/${config.security.rateLimitWindow/60000}min`);
+    
+    console.log('\n🏢 FEATURES:');
+    console.log('━'.repeat(50));
+    console.log(`📊 Analytics:       ${config.features.enableAnalytics ? '✅ Enabled' : '❌ Disabled'}`);
+    console.log(`🔔 Notifications:   ${config.features.enableNotifications ? '✅ Enabled' : '❌ Disabled'}`);
+    console.log(`💳 Payments:        ${config.features.enablePayments ? '✅ Enabled' : '❌ Disabled'}`);
+    console.log(`🚨 Emergency:       ${config.features.enableEmergencyAlerts ? '✅ Enabled' : '❌ Disabled'}`);
+    
+    console.log('\n🔧 MIDDLEWARE:');
+    console.log('━'.repeat(50));
+    console.log(`🛡️  Helmet:          ✅ Security headers`);
+    console.log(`🌐 CORS:            ✅ Cross-origin requests`);
+    console.log(`🗜️  Compression:     ✅ Response compression`);
+    console.log(`📝 Request Logger:  ✅ Request/response logging`);
+    console.log(`🚦 Rate Limiter:    ✅ API rate limiting`);
+    
+    if (config.NODE_ENV === 'development') {
+      console.log('\n🔧 DEVELOPMENT TOOLS:');
+      console.log('━'.repeat(50));
+      console.log(`📋 Postman Guide:   POSTMAN_TESTING_GUIDE.md`);
+      console.log(`📁 Collection:      SafeGuard_Enhanced_Auth.postman_collection.json`);
+      console.log(`🌍 Environment:     SafeGuard_Environment.postman_environment.json`);
+      console.log(`📊 Test Script:     test_enhanced_auth.js`);
+    }
+    
+    console.log('\n' + '✨'.repeat(40));
+    console.log('✨ READY TO HANDLE REQUESTS! ✨');
+    console.log('✨'.repeat(40) + '\n');
+    
+    // Log to structured logger as well
+    logger.info('SafeGuard API Server started successfully', {
+      server: {
+        url: `http://${HOST}:${PORT}`,
+        host: HOST,
+        port: PORT,
+        environment: config.NODE_ENV,
+        version: version,
+        startTime: startupTime
+      },
+      system: {
+        nodeVersion: nodeVersion,
+        platform: platform,
+        architecture: arch,
+        memory: {
+          rss: `${(memory.rss / 1024 / 1024).toFixed(2)} MB`,
+          heapUsed: `${(memory.heapUsed / 1024 / 1024).toFixed(2)} MB`,
+          heapTotal: `${(memory.heapTotal / 1024 / 1024).toFixed(2)} MB`
+        }
+      },
+      database: {
+        status: 'connected',
+        host: config.database.host,
+        port: config.database.port,
+        name: config.database.name,
+        user: config.database.user
+      },
+      features: config.features,
+      endpoints: {
+        health: `http://${HOST}:${PORT}/health`,
+        api: `http://${HOST}:${PORT}/api`,
+        auth: `http://${HOST}:${PORT}/api/auth`,
+        enhancedAuth: `http://${HOST}:${PORT}/api/auth/enhanced`,
+        registration: `http://${HOST}:${PORT}/api/registration`
+      }
+    });
   }
 
   async gracefulShutdown() {
