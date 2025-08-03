@@ -36,11 +36,23 @@ The SafeGuard database implements a **visit-centric visitor management system** 
 3. **License Management**: Only registered users count against building licenses
 4. **Security-First**: Comprehensive audit trails and multi-level access control
 5. **Performance-Optimized**: Strategic indexing and materialized views
+6. **Schema Separation**: Logical organization with dedicated schemas for different domains
+7. **Profile Management**: Extended user profiles with approval workflows
 
 ### Technology Stack
 - **Database**: PostgreSQL 12+
 - **Extensions**: uuid-ossp, postgis (optional for location features)
 - **Features**: Row Level Security, Triggers, Materialized Views, Custom Types
+- **Schema Organization**: Multi-schema architecture for better maintainability
+
+### Schema Organization (Planned v2.0)
+```
+safeguard_db
+├── public                    # Core system tables
+├── profile_management        # User profiles and registration workflows
+├── building_management       # Buildings, licenses, and admin operations
+└── visitor_management        # Visitor and visit management
+```
 
 ---
 
@@ -229,7 +241,56 @@ Key Fields:
 - priority (INT): 1-5 priority level
 ```
 
-### 10. Supporting Tables
+### 10. Profile Management System (Planned v2.0)
+
+#### Extended User Profiles (`profile_management.user_profiles`)
+**Purpose**: Enhanced user profile data beyond basic account information
+
+```sql
+Key Fields:
+- user_id (UUID, FK): Reference to core user account
+- avatar_url (TEXT): Profile picture URL
+- bio (TEXT): User biography (max 500 chars)
+- date_of_birth (DATE): For age verification
+- emergency_contact (JSONB): Emergency contact information
+- notification_preferences (JSONB): Email, push, alert preferences
+- privacy_settings (JSONB): Visibility and sharing controls
+- theme_preferences (JSONB): UI theme and language settings
+```
+
+#### Pending Registrations (`profile_management.pending_registrations`)
+**Purpose**: Registration approval workflow system
+
+```sql
+Key Fields:
+- email, password_hash, personal_info: Registration data
+- building_email (VARCHAR): Building admin contact email
+- status (ENUM): 'pending', 'approved', 'rejected', 'expired'
+- verification_token (VARCHAR): Email verification token
+- expires_at (TIMESTAMPTZ): Auto-expiry after 7 days
+- approved_by (UUID, FK): Which admin processed the request
+- rejection_reason (TEXT): Admin feedback for rejections
+```
+
+**Business Rules**:
+- Users submit registration with building email
+- Building admins receive notification to approve/reject
+- Auto-expires after 7 days if no action taken
+- Complete audit trail of approval process
+
+#### License Allocations (`building_management.license_allocations`)
+**Purpose**: Track license assignments by building admins
+
+```sql
+Key Fields:
+- building_id, user_id: License assignment
+- allocated_by (UUID, FK): Admin who assigned license
+- allocation_method (ENUM): 'admin', 'auto', 'system'
+- expires_at (TIMESTAMPTZ): License expiry date
+- is_active (BOOLEAN): Current license status
+```
+
+### 11. Supporting Tables
 - **`licenses`**: Building subscription management
 - **`payments`**: Payment processing tracking
 - **`emergency_alerts`**: Security incident management

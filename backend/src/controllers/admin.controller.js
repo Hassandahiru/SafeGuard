@@ -113,6 +113,7 @@ class AdminController {
         postalCode,
         phone,
         email,
+        website,
         totalLicenses = 250,
         securityLevel = 1,
         adminEmail,
@@ -144,6 +145,7 @@ class AdminController {
         postal_code: postalCode,
         phone,
         email,
+        website,
         total_licenses: totalLicenses,
         used_licenses: 1, // Admin will use 1 license
         security_level: securityLevel,
@@ -649,6 +651,131 @@ class AdminController {
       });
     } catch (error) {
       logger.error('Error activating license:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Initial system setup - creates first super admin and building
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async initialSetup(req, res) {
+    try {
+      const {
+        // Building details
+        name,
+        address,
+        city,
+        state,
+        country = 'Nigeria',
+        postalCode,
+        buildingPhone,
+        buildingEmail,
+        website,
+        totalLicenses = 250,
+        securityLevel = 1,
+        // Super admin details
+        adminEmail,
+        adminPassword,
+        adminFirstName,
+        adminLastName,
+        adminPhone,
+        adminApartment,
+        // License details
+        licenseData
+      } = req.body;
+
+      // Validate required fields
+      if (!name || !address || !city || !state || !adminEmail || !adminPassword || !adminFirstName || !adminLastName || !adminPhone) {
+        throw new ValidationError('All required fields must be provided');
+      }
+
+      // Check if any super admin already exists (security check)
+      const existingSuperAdmin = await User.findByRole(USER_ROLES.SUPER_ADMIN);
+      if (existingSuperAdmin && existingSuperAdmin.length > 0) {
+        throw new ConflictError('System already initialized. Super admin exists.');
+      }
+
+      // Create building
+      const buildingData = {
+        name,
+        address,
+        city,
+        state,
+        country,
+        postal_code: postalCode,
+        phone: buildingPhone,
+        email: buildingEmail,
+        website,
+        total_licenses: totalLicenses,
+        used_licenses: 1, // Super admin will use 1 license
+        security_level: securityLevel,
+        is_active: true,
+        settings: {}
+      };
+
+      const building = await Building.create(buildingData);
+
+      // Create license for the building
+      const licenseInfo = {
+        building_id: building.id,
+        plan_type: licenseData?.planType || 'enterprise',
+        total_licenses: totalLicenses,
+        starts_at: new Date(),
+        expires_at: new Date(Date.now() + (licenseData?.durationMonths || 12) * 30 * 24 * 60 * 60 * 1000),
+        amount: licenseData?.amount || 0,
+        currency: licenseData?.currency || 'NGN',
+        payment_reference: licenseData?.paymentReference || 'SETUP',
+        features: licenseData?.features || {
+          qr_codes: true,
+          analytics: true,
+          emergency_alerts: true,
+          visitor_management: true,
+          admin_dashboard: true
+        }
+      };
+
+      const license = await License.create(licenseInfo);
+
+      // Create super admin
+      const superAdminData = {
+        email: adminEmail,
+        password: adminPassword,
+        first_name: adminFirstName,
+        last_name: adminLastName,
+        phone: adminPhone,
+        apartment_number: adminApartment,
+        building_id: building.id,
+        role: USER_ROLES.SUPER_ADMIN,
+        is_active: true,
+        is_verified: true,
+        uses_license: true
+      };
+
+      const superAdmin = await User.create(superAdminData);
+
+      // Remove password from response
+      const { password_hash, ...adminResponse } = superAdmin;
+
+      logger.info('Initial system setup completed', {
+        buildingId: building.id,
+        licenseId: license.id,
+        superAdminId: superAdmin.id,
+        setupBy: 'system_initialization'
+      });
+
+      res.status(HTTP_STATUS.CREATED).json({
+        success: true,
+        message: 'System initialized successfully',
+        data: {
+          building,
+          license,
+          superAdmin: adminResponse
+        }
+      });
+    } catch (error) {
+      logger.error('Error during initial setup:', error);
       throw error;
     }
   }

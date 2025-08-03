@@ -163,6 +163,10 @@ const buildingValidations = {
       .withMessage('Postal code must be between 3 and 20 characters'),
     commonValidations.phone().optional(),
     commonValidations.email().optional(),
+    body('website')
+      .optional()
+      .isURL({ protocols: ['http', 'https'], require_protocol: true })
+      .withMessage('Website must be a valid URL starting with http:// or https://'),
     body('total_licenses')
       .optional()
       .isInt({ min: 1, max: 10000 })
@@ -186,6 +190,10 @@ const buildingValidations = {
       .withMessage('Postal code must be between 3 and 20 characters'),
     commonValidations.phone().optional(),
     commonValidations.email().optional(),
+    body('website')
+      .optional()
+      .isURL({ protocols: ['http', 'https'], require_protocol: true })
+      .withMessage('Website must be a valid URL starting with http:// or https://'),
     body('total_licenses')
       .optional()
       .isInt({ min: 1, max: 10000 })
@@ -653,6 +661,285 @@ const searchValidations = {
 };
 
 /**
+ * Admin validation rules
+ */
+const adminValidations = {
+  initialSetup: [
+    // Building details validation
+    commonValidations.requiredString('name', 2, 255),
+    commonValidations.requiredString('address', 10, 500),
+    commonValidations.requiredString('city', 2, 100),
+    commonValidations.requiredString('state', 2, 100),
+    body('country')
+      .optional()
+      .isLength({ min: 2, max: 100 })
+      .withMessage('Country must be between 2 and 100 characters'),
+    body('postalCode')
+      .optional()
+      .isLength({ min: 3, max: 20 })
+      .withMessage('Postal code must be between 3 and 20 characters'),
+    body('buildingPhone')
+      .optional()
+      .isMobilePhone()
+      .withMessage('Building phone must be a valid phone number'),
+    body('buildingEmail')
+      .optional()
+      .isEmail()
+      .normalizeEmail()
+      .withMessage('Building email must be valid'),
+    body('website')
+      .optional()
+      .isURL({ protocols: ['http', 'https'], require_protocol: true })
+      .withMessage('Website must be a valid URL starting with http:// or https://'),
+    body('totalLicenses')
+      .optional()
+      .isInt({ min: 50, max: 1000 })
+      .withMessage('Total licenses must be between 50 and 1000'),
+    body('securityLevel')
+      .optional()
+      .isInt({ min: 1, max: 5 })
+      .withMessage('Security level must be between 1 and 5'),
+    
+    // Super admin details validation
+    body('adminEmail')
+      .isEmail()
+      .normalizeEmail()
+      .withMessage('Admin email must be valid'),
+    commonValidations.password('adminPassword'),
+    commonValidations.name('adminFirstName'),
+    commonValidations.name('adminLastName'),
+    body('adminPhone')
+      .isMobilePhone()
+      .withMessage('Admin phone must be a valid phone number'),
+    body('adminApartment')
+      .optional()
+      .isLength({ min: 1, max: 20 })
+      .withMessage('Admin apartment must be between 1 and 20 characters'),
+    
+    // License data validation
+    body('licenseData')
+      .optional()
+      .isObject()
+      .withMessage('License data must be an object'),
+    body('licenseData.planType')
+      .optional()
+      .isIn(['standard', 'premium', 'enterprise'])
+      .withMessage('Plan type must be one of: standard, premium, enterprise'),
+    body('licenseData.durationMonths')
+      .optional()
+      .isInt({ min: 1, max: 60 })
+      .withMessage('Duration must be between 1 and 60 months'),
+    body('licenseData.amount')
+      .optional()
+      .isNumeric()
+      .withMessage('Amount must be a valid number'),
+    body('licenseData.currency')
+      .optional()
+      .isIn(['NGN', 'USD', 'EUR'])
+      .withMessage('Currency must be one of: NGN, USD, EUR'),
+    body('licenseData.paymentReference')
+      .optional()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Payment reference must be between 1 and 100 characters'),
+    
+    handleValidationErrors
+  ],
+
+  registerBuilding: [
+    // Building details
+    commonValidations.requiredString('name', 2, 255),
+    commonValidations.requiredString('address', 10, 500),
+    commonValidations.requiredString('city', 2, 100),
+    commonValidations.requiredString('state', 2, 100),
+    body('country')
+      .optional()
+      .isLength({ min: 2, max: 100 })
+      .withMessage('Country must be between 2 and 100 characters'),
+    body('postalCode')
+      .optional()
+      .isLength({ min: 3, max: 20 })
+      .withMessage('Postal code must be between 3 and 20 characters'),
+    commonValidations.phone().optional(),
+    commonValidations.email().optional(),
+    body('website')
+      .optional()
+      .isURL({ protocols: ['http', 'https'], require_protocol: true })
+      .withMessage('Website must be a valid URL starting with http:// or https://'),
+    body('totalLicenses')
+      .optional()
+      .isInt({ min: 50, max: 1000 })
+      .withMessage('Total licenses must be between 50 and 1000'),
+    body('securityLevel')
+      .optional()
+      .isInt({ min: 1, max: 5 })
+      .withMessage('Security level must be between 1 and 5'),
+    
+    // Building admin details
+    body('adminEmail')
+      .isEmail()
+      .normalizeEmail()
+      .withMessage('Admin email must be valid'),
+    commonValidations.password('adminPassword'),
+    commonValidations.name('adminFirstName'),
+    commonValidations.name('adminLastName'),
+    body('adminPhone')
+      .isMobilePhone()
+      .withMessage('Admin phone must be a valid phone number'),
+    body('adminApartment')
+      .optional()
+      .isLength({ min: 1, max: 20 })
+      .withMessage('Admin apartment must be between 1 and 20 characters'),
+    
+    // License data
+    body('licenseData')
+      .optional()
+      .isObject()
+      .withMessage('License data must be an object'),
+    body('licenseData.planType')
+      .optional()
+      .isIn(['standard', 'premium', 'enterprise'])
+      .withMessage('Plan type must be one of: standard, premium, enterprise'),
+    body('licenseData.durationMonths')
+      .optional()
+      .isInt({ min: 1, max: 60 })
+      .withMessage('Duration must be between 1 and 60 months'),
+    body('licenseData.amount')
+      .optional()
+      .isNumeric()
+      .withMessage('Amount must be a valid number'),
+    body('licenseData.currency')
+      .optional()
+      .isIn(['NGN', 'USD', 'EUR'])
+      .withMessage('Currency must be one of: NGN, USD, EUR'),
+    
+    handleValidationErrors
+  ],
+
+  createBuildingAdmin: [
+    commonValidations.email(),
+    commonValidations.password(),
+    commonValidations.name('firstName'),
+    commonValidations.name('lastName'),
+    commonValidations.phone(),
+    commonValidations.uuid('buildingId'),
+    body('apartmentNumber')
+      .optional()
+      .isLength({ min: 1, max: 20 })
+      .withMessage('Apartment number must be between 1 and 20 characters'),
+    handleValidationErrors
+  ],
+
+  allocateLicense: [
+    commonValidations.uuid('buildingId'),
+    body('planType')
+      .optional()
+      .isIn(['standard', 'premium', 'enterprise'])
+      .withMessage('Plan type must be one of: standard, premium, enterprise'),
+    body('totalLicenses')
+      .optional()
+      .isInt({ min: 50, max: 1000 })
+      .withMessage('Total licenses must be between 50 and 1000'),
+    body('durationMonths')
+      .optional()
+      .isInt({ min: 1, max: 60 })
+      .withMessage('Duration must be between 1 and 60 months'),
+    body('amount')
+      .optional()
+      .isNumeric()
+      .withMessage('Amount must be a valid number'),
+    body('currency')
+      .optional()
+      .isIn(['NGN', 'USD', 'EUR'])
+      .withMessage('Currency must be one of: NGN, USD, EUR'),
+    body('paymentReference')
+      .optional()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Payment reference must be between 1 and 100 characters'),
+    body('features')
+      .optional()
+      .isObject()
+      .withMessage('Features must be an object'),
+    handleValidationErrors
+  ],
+
+  extendLicense: [
+    commonValidations.uuid('licenseId'),
+    body('months')
+      .isInt({ min: 1, max: 60 })
+      .withMessage('Months must be between 1 and 60'),
+    handleValidationErrors
+  ],
+
+  suspendLicense: [
+    commonValidations.uuid('licenseId'),
+    commonValidations.requiredString('reason', 10, 500),
+    handleValidationErrors
+  ],
+
+  getBuildingDetails: [
+    commonValidations.uuid('buildingId'),
+    handleValidationErrors
+  ],
+
+  getLicenseStats: [
+    commonValidations.uuid('licenseId'),
+    handleValidationErrors
+  ],
+
+  getAllBuildings: [
+    query('page')
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage('Page must be a positive integer'),
+    query('limit')
+      .optional()
+      .isInt({ min: 1, max: 100 })
+      .withMessage('Limit must be between 1 and 100'),
+    query('search')
+      .optional()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Search query must be between 1 and 100 characters'),
+    query('city')
+      .optional()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('City must be between 1 and 100 characters'),
+    query('state')
+      .optional()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('State must be between 1 and 100 characters'),
+    query('status')
+      .optional()
+      .isIn(['active', 'inactive', 'all'])
+      .withMessage('Status must be one of: active, inactive, all'),
+    handleValidationErrors
+  ],
+
+  getAllLicenses: [
+    query('page')
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage('Page must be a positive integer'),
+    query('limit')
+      .optional()
+      .isInt({ min: 1, max: 100 })
+      .withMessage('Limit must be between 1 and 100'),
+    query('status')
+      .optional()
+      .isIn(['active', 'inactive', 'suspended', 'expired'])
+      .withMessage('Status must be one of: active, inactive, suspended, expired'),
+    query('buildingId')
+      .optional()
+      .isUUID()
+      .withMessage('Building ID must be a valid UUID'),
+    query('expiringOnly')
+      .optional()
+      .isBoolean()
+      .withMessage('Expiring only must be true or false'),
+    handleValidationErrors
+  ]
+};
+
+/**
  * Simple validation middleware for admin routes
  * @param {Object} schema - Validation schema
  * @returns {Function} Express middleware
@@ -809,5 +1096,6 @@ export {
   visitorBanValidations,
   paginationValidations,
   searchValidations,
+  adminValidations,
   commonValidations
 };

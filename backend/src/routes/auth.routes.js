@@ -26,11 +26,11 @@ router.post('/register', userValidations.register, authController.register);
 router.post('/login', userValidations.login, authController.login);
 
 /**
- * @route   POST /api/auth/refresh
+ * @route   POST /api/auth/refresh-token
  * @desc    Refresh access token
  * @access  Public
  */
-router.post('/refresh', authController.refreshToken);
+router.post('/refresh-token', authController.refreshToken);
 
 /**
  * @route   POST /api/auth/logout

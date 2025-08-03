@@ -1,13 +1,27 @@
 import express from 'express';
 import AdminController from '../controllers/admin.controller.js';
 import { authenticate, authorize } from '../middleware/auth.js';
-import { validateRequest } from '../middleware/validation.js';
+import { validateRequest, adminValidations } from '../middleware/validation.js';
 import { USER_ROLES } from '../utils/constants.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 
 const router = express.Router();
 
-// All admin routes require authentication
+// =============================================
+// INITIAL SETUP ROUTE (NO AUTHENTICATION REQUIRED)
+// =============================================
+
+/**
+ * @route   POST /api/admin/initial-setup
+ * @desc    Initial system setup - creates first super admin and building
+ * @access  Public (one-time setup only)
+ */
+router.post('/initial-setup',
+  adminValidations.initialSetup,
+  asyncHandler(AdminController.initialSetup)
+);
+
+// All other admin routes require authentication
 router.use(authenticate);
 
 // =============================================
@@ -21,38 +35,7 @@ router.use(authenticate);
  */
 router.post('/buildings', 
   authorize([USER_ROLES.SUPER_ADMIN]),
-  validateRequest({
-    body: {
-      name: { type: 'string', required: true, minLength: 2, maxLength: 255 },
-      address: { type: 'string', required: true, minLength: 10, maxLength: 500 },
-      city: { type: 'string', required: true, minLength: 2, maxLength: 100 },
-      state: { type: 'string', required: true, minLength: 2, maxLength: 100 },
-      country: { type: 'string', optional: true, maxLength: 100 },
-      postalCode: { type: 'string', optional: true, maxLength: 20 },
-      phone: { type: 'string', optional: true, maxLength: 20 },
-      email: { type: 'string', optional: true, format: 'email' },
-      totalLicenses: { type: 'number', optional: true, min: 50, max: 1000 },
-      securityLevel: { type: 'number', optional: true, min: 1, max: 5 },
-      adminEmail: { type: 'string', required: true, format: 'email' },
-      adminPassword: { type: 'string', required: true, minLength: 8 },
-      adminFirstName: { type: 'string', required: true, minLength: 2, maxLength: 100 },
-      adminLastName: { type: 'string', required: true, minLength: 2, maxLength: 100 },
-      adminPhone: { type: 'string', required: true, maxLength: 20 },
-      adminApartment: { type: 'string', optional: true, maxLength: 20 },
-      licenseData: {
-        type: 'object',
-        optional: true,
-        properties: {
-          planType: { type: 'string', enum: ['standard', 'premium', 'enterprise'] },
-          durationMonths: { type: 'number', min: 1, max: 60 },
-          amount: { type: 'number', min: 0 },
-          currency: { type: 'string', enum: ['NGN', 'USD', 'EUR'] },
-          paymentReference: { type: 'string' },
-          features: { type: 'object' }
-        }
-      }
-    }
-  }),
+  adminValidations.registerBuilding,
   asyncHandler(AdminController.registerBuilding)
 );
 
@@ -63,16 +46,7 @@ router.post('/buildings',
  */
 router.get('/buildings',
   authorize([USER_ROLES.SUPER_ADMIN]),
-  validateRequest({
-    query: {
-      page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 100 },
-      search: { type: 'string', optional: true },
-      city: { type: 'string', optional: true },
-      state: { type: 'string', optional: true },
-      status: { type: 'string', optional: true, enum: ['active', 'inactive', 'all'] }
-    }
-  }),
+  adminValidations.getAllBuildings,
   asyncHandler(AdminController.getAllBuildings)
 );
 
@@ -83,11 +57,7 @@ router.get('/buildings',
  */
 router.get('/buildings/:buildingId',
   authorize([USER_ROLES.SUPER_ADMIN, USER_ROLES.BUILDING_ADMIN]),
-  validateRequest({
-    params: {
-      buildingId: { type: 'string', required: true, format: 'uuid' }
-    }
-  }),
+  adminValidations.getBuildingDetails,
   asyncHandler(AdminController.getBuildingDetails)
 );
 
@@ -102,17 +72,7 @@ router.get('/buildings/:buildingId',
  */
 router.post('/building-admins',
   authorize([USER_ROLES.SUPER_ADMIN, USER_ROLES.BUILDING_ADMIN]),
-  validateRequest({
-    body: {
-      email: { type: 'string', required: true, format: 'email' },
-      password: { type: 'string', required: true, minLength: 8 },
-      firstName: { type: 'string', required: true, minLength: 2, maxLength: 100 },
-      lastName: { type: 'string', required: true, minLength: 2, maxLength: 100 },
-      phone: { type: 'string', required: true, maxLength: 20 },
-      buildingId: { type: 'string', required: true, format: 'uuid' },
-      apartmentNumber: { type: 'string', optional: true, maxLength: 20 }
-    }
-  }),
+  adminValidations.createBuildingAdmin,
   asyncHandler(AdminController.createBuildingAdmin)
 );
 
@@ -127,20 +87,7 @@ router.post('/building-admins',
  */
 router.post('/buildings/:buildingId/licenses',
   authorize([USER_ROLES.SUPER_ADMIN]),
-  validateRequest({
-    params: {
-      buildingId: { type: 'string', required: true, format: 'uuid' }
-    },
-    body: {
-      planType: { type: 'string', optional: true, enum: ['standard', 'premium', 'enterprise'] },
-      totalLicenses: { type: 'number', optional: true, min: 50, max: 1000 },
-      durationMonths: { type: 'number', optional: true, min: 1, max: 60 },
-      amount: { type: 'number', optional: true, min: 0 },
-      currency: { type: 'string', optional: true, enum: ['NGN', 'USD', 'EUR'] },
-      paymentReference: { type: 'string', optional: true },
-      features: { type: 'object', optional: true }
-    }
-  }),
+  adminValidations.allocateLicense,
   asyncHandler(AdminController.allocateLicense)
 );
 
@@ -151,15 +98,7 @@ router.post('/buildings/:buildingId/licenses',
  */
 router.get('/licenses',
   authorize([USER_ROLES.SUPER_ADMIN]),
-  validateRequest({
-    query: {
-      page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 100 },
-      status: { type: 'string', optional: true, enum: ['active', 'inactive', 'suspended', 'expired'] },
-      buildingId: { type: 'string', optional: true, format: 'uuid' },
-      expiringOnly: { type: 'boolean', optional: true }
-    }
-  }),
+  adminValidations.getAllLicenses,
   asyncHandler(AdminController.getAllLicenses)
 );
 
@@ -170,11 +109,7 @@ router.get('/licenses',
  */
 router.get('/licenses/:licenseId/stats',
   authorize([USER_ROLES.SUPER_ADMIN]),
-  validateRequest({
-    params: {
-      licenseId: { type: 'string', required: true, format: 'uuid' }
-    }
-  }),
+  adminValidations.getLicenseStats,
   asyncHandler(AdminController.getLicenseStats)
 );
 
@@ -185,14 +120,7 @@ router.get('/licenses/:licenseId/stats',
  */
 router.put('/licenses/:licenseId/extend',
   authorize([USER_ROLES.SUPER_ADMIN]),
-  validateRequest({
-    params: {
-      licenseId: { type: 'string', required: true, format: 'uuid' }
-    },
-    body: {
-      months: { type: 'number', required: true, min: 1, max: 60 }
-    }
-  }),
+  adminValidations.extendLicense,
   asyncHandler(AdminController.extendLicense)
 );
 
@@ -203,14 +131,7 @@ router.put('/licenses/:licenseId/extend',
  */
 router.put('/licenses/:licenseId/suspend',
   authorize([USER_ROLES.SUPER_ADMIN]),
-  validateRequest({
-    params: {
-      licenseId: { type: 'string', required: true, format: 'uuid' }
-    },
-    body: {
-      reason: { type: 'string', required: true, minLength: 10, maxLength: 500 }
-    }
-  }),
+  adminValidations.suspendLicense,
   asyncHandler(AdminController.suspendLicense)
 );
 
