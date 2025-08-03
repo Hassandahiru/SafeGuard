@@ -370,6 +370,205 @@
       ]
     },
     {
+      "name": "Building & Admin Management",
+      "item": [
+        {
+          "name": "1. Initial System Setup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"superAdmin\": {\n    \"email\": \"superadmin@safeguard.com\",\n    \"password\": \"SuperSecure123!\",\n    \"first_name\": \"Super\",\n    \"last_name\": \"Admin\",\n    \"phone\": \"+2348012345600\"\n  },\n  \"building\": {\n    \"name\": \"Test Building Complex\",\n    \"address\": \"123 Main Street, Lagos\",\n    \"building_code\": \"TB001\",\n    \"total_licenses\": 250\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/initial-setup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "initial-setup"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Initial setup successful\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('superAdmin');",
+                  "    pm.expect(jsonData.data).to.have.property('building');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Register New Building",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New Building Complex\",\n  \"address\": \"456 Business District, Lagos\",\n  \"building_code\": \"NB002\",\n  \"total_licenses\": 150,\n  \"buildingAdmin\": {\n    \"email\": \"admin@newbuilding.com\",\n    \"password\": \"BuildingAdmin123!\",\n    \"first_name\": \"Building\",\n    \"last_name\": \"Administrator\",\n    \"phone\": \"+2348012345601\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/buildings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "buildings"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Building registration successful\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('building');",
+                  "    pm.expect(jsonData.data).to.have.property('admin');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Get All Buildings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/buildings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "buildings"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Buildings retrieved successfully\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('buildings');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Register Building Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newadmin@safeguard.com\",\n  \"password\": \"NewAdmin123!\",\n  \"first_name\": \"New\",\n  \"last_name\": \"Admin\",\n  \"phone\": \"+2348012345602\",\n  \"building_id\": \"{{buildingId}}\",\n  \"apartment_number\": \"ADMIN-01\",\n  \"admin_permissions\": [\"manage_users\", \"view_analytics\"],\n  \"send_welcome_email\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/registration/building-admin",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registration", "building-admin"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Building admin registration successful\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('admin');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. Register Security Personnel",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"security@safeguard.com\",\n  \"password\": \"SecurityGuard123!\",\n  \"first_name\": \"Security\",\n  \"last_name\": \"Officer\",\n  \"phone\": \"+2348012345603\",\n  \"building_id\": \"{{buildingId}}\",\n  \"security_level\": 2,\n  \"shift_schedule\": [\"morning\", \"evening\"],\n  \"security_clearance\": \"intermediate\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/registration/security",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registration", "security"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Security registration successful\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('security');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Registration Management",
       "item": [
         {
@@ -451,7 +650,48 @@
           ]
         },
         {
-          "name": "3. Get Registration Statistics",
+          "name": "3. Bulk User Registration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"building_id\": \"{{buildingId}}\",\n  \"users\": [\n    {\n      \"email\": \"resident1@building.com\",\n      \"first_name\": \"Resident\",\n      \"last_name\": \"One\",\n      \"phone\": \"+2348012345610\",\n      \"apartment_number\": \"101\",\n      \"role\": \"resident\"\n    },\n    {\n      \"email\": \"resident2@building.com\",\n      \"first_name\": \"Resident\",\n      \"last_name\": \"Two\",\n      \"phone\": \"+2348012345611\",\n      \"apartment_number\": \"102\",\n      \"role\": \"resident\"\n    }\n  ],\n  \"default_password\": \"TempPassword123!\",\n  \"send_welcome_emails\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/registration/bulk",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registration", "bulk"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Bulk registration successful\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('successful');",
+                  "    pm.expect(jsonData.data).to.have.property('failed');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Get Registration Statistics",
           "request": {
             "method": "GET",
             "header": [
