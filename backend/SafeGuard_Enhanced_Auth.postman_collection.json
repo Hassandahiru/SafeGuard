@@ -1,0 +1,640 @@
+{
+  "info": {
+    "name": "SafeGuard Enhanced Authentication",
+    "description": "Complete test collection for SafeGuard's enhanced authentication and user registration system",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "User Registration",
+      "item": [
+        {
+          "name": "1. Validate Registration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"building_id\": \"{{buildingId}}\",\n  \"email\": \"test.admin@safeguard.com\",\n  \"phone\": \"+2348012345678\",\n  \"role\": \"building_admin\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/registration/validate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registration", "validate"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Registration validation successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('canRegister');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Complete Registration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test.admin@safeguard.com\",\n  \"password\": \"SecureAdmin123!\",\n  \"first_name\": \"Test\",\n  \"last_name\": \"Admin\",\n  \"phone\": \"+2348012345678\",\n  \"building_id\": \"{{buildingId}}\",\n  \"role\": \"building_admin\",\n  \"apartment_number\": \"A101\",\n  \"emergency_contact\": {\n    \"name\": \"Emergency Contact\",\n    \"phone\": \"+2348012345680\",\n    \"relationship\": \"spouse\"\n  },\n  \"agreed_to_terms\": true,\n  \"email_notifications\": true,\n  \"sms_notifications\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/registration/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registration", "complete"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"User registration successful\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('user');",
+                  "    pm.expect(jsonData.data).to.have.property('token');",
+                  "    ",
+                  "    // Save user ID for future tests",
+                  "    if (jsonData.data.user.id) {",
+                  "        pm.environment.set('userId', jsonData.data.user.id);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Resident Self Registration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"resident@safeguard.com\",\n  \"password\": \"SecureResident123!\",\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"phone\": \"+2348012345679\",\n  \"building_code\": \"TB001\",\n  \"apartment_number\": \"B205\",\n  \"emergency_contact_name\": \"Jane Doe\",\n  \"emergency_contact_phone\": \"+2348012345681\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/registration/self-register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registration", "self-register"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Self registration submitted\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.status).to.equal('pending_approval');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Enhanced Authentication",
+      "item": [
+        {
+          "name": "1. Enhanced Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test.admin@safeguard.com\",\n  \"password\": \"SecureAdmin123!\",\n  \"remember_me\": false,\n  \"device_name\": \"Postman Test Client\",\n  \"location\": \"Lagos, Nigeria\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/enhanced/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "enhanced", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Login successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('accessToken');",
+                  "    pm.expect(jsonData.data).to.have.property('refreshToken');",
+                  "    ",
+                  "    // Save tokens for authenticated requests",
+                  "    pm.environment.set('accessToken', jsonData.data.accessToken);",
+                  "    pm.environment.set('refreshToken', jsonData.data.refreshToken);",
+                  "    if (jsonData.data.sessionId) {",
+                  "        pm.environment.set('sessionId', jsonData.data.sessionId);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Get Security Settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/enhanced/security-settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "enhanced", "security-settings"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Security settings retrieved\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('security_score');",
+                  "    pm.expect(jsonData.data).to.have.property('recommendations');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Get Active Sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/enhanced/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "enhanced", "sessions"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Active sessions retrieved\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('sessions');",
+                  "    pm.expect(jsonData.data).to.have.property('totalSessions');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"SecureAdmin123!\",\n  \"new_password\": \"NewSecureAdmin456!\",\n  \"logout_other_sessions\": true,\n  \"require_reauth_for_sensitive_actions\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/enhanced/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "enhanced", "change-password"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Password changed successfully\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('passwordStrength');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refreshToken}}\",\n  \"device_fingerprint\": \"postman-test-fingerprint\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/enhanced/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "enhanced", "refresh"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Token refreshed successfully\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('accessToken');",
+                  "    ",
+                  "    // Update access token",
+                  "    pm.environment.set('accessToken', jsonData.data.accessToken);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6. Enhanced Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"logout_all_devices\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/enhanced/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "enhanced", "logout"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Logout successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    ",
+                  "    // Clear tokens",
+                  "    pm.environment.unset('accessToken');",
+                  "    pm.environment.unset('refreshToken');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Registration Management",
+      "item": [
+        {
+          "name": "1. Get Registration Templates",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/registration/templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registration", "templates"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Templates retrieved successfully\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('csv_headers');",
+                  "    pm.expect(jsonData.data).to.have.property('validation_rules');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Validate Bulk Registration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"building_id\": \"{{buildingId}}\",\n  \"users\": [\n    {\n      \"email\": \"bulk1@test.com\",\n      \"first_name\": \"Bulk\",\n      \"last_name\": \"User1\",\n      \"phone\": \"+2348012345690\",\n      \"role\": \"resident\"\n    },\n    {\n      \"email\": \"bulk2@test.com\",\n      \"first_name\": \"Bulk\",\n      \"last_name\": \"User2\",\n      \"phone\": \"+2348012345691\",\n      \"role\": \"resident\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/registration/validate-bulk",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registration", "validate-bulk"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Bulk validation successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('valid_users');",
+                  "    pm.expect(jsonData.data).to.have.property('license_requirements');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Get Registration Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/registration/stats/{{buildingId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registration", "stats", "{{buildingId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Statistics retrieved successfully\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('userCounts');",
+                  "    pm.expect(jsonData.data).to.have.property('licenseUtilization');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Error Scenarios",
+      "item": [
+        {
+          "name": "1. Invalid Login Credentials",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test.admin@safeguard.com\",\n  \"password\": \"WrongPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/enhanced/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "enhanced", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Invalid credentials rejected\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "    pm.expect(jsonData.error.code).to.equal('AUTHENTICATION_ERROR');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Weak Password Registration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"weak@test.com\",\n  \"password\": \"123\",\n  \"first_name\": \"Test\",\n  \"last_name\": \"User\",\n  \"phone\": \"+2348012345699\",\n  \"building_id\": \"{{buildingId}}\",\n  \"agreed_to_terms\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/registration/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registration", "complete"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Weak password rejected\", function () {",
+                  "    pm.response.to.have.status(422);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "    pm.expect(jsonData.error.code).to.equal('VALIDATION_ERROR');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Unauthorized Access",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/enhanced/security-settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "enhanced", "security-settings"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Unauthorized access rejected\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Global pre-request script",
+          "console.log('Running test against:', pm.environment.get('baseUrl'));"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "exec": [
+          "// Global test script",
+          "pm.test('Response time is acceptable', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+          "});",
+          "",
+          "pm.test('Response has timestamp', function () {",
+          "    const jsonData = pm.response.json();",
+          "    pm.expect(jsonData).to.have.property('timestamp');",
+          "});"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "buildingId",
+      "value": "550e8400-e29b-41d4-a716-446655440000",
+      "type": "string"
+    }
+  ]
+}

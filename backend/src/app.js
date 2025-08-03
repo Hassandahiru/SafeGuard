@@ -14,6 +14,8 @@ import requestLogger from './middleware/requestLogger.js';
 
 // Import routes
 import authRoutes from './routes/auth.routes.js';
+import enhancedAuthRoutes from './routes/enhancedAuth.routes.js';
+import userRegistrationRoutes from './routes/userRegistration.routes.js';
 import visitorRoutes from './routes/visitor.routes.js';
 import frequentVisitorRoutes from './routes/frequentVisitor.routes.js';
 import visitorBanRoutes from './routes/visitorBan.routes.js';
@@ -93,6 +95,8 @@ class SafeGuardApp {
         endpoints: {
           health: '/health',
           auth: '/api/auth',
+          enhancedAuth: '/api/auth/enhanced',
+          registration: '/api/registration',
           visits: '/api/visits',
           visitors: '/api/visitors',
           admin: '/api/admin'
@@ -102,6 +106,8 @@ class SafeGuardApp {
 
     // Register API routes
     this.app.use('/api/auth', authRoutes);
+    this.app.use('/api/auth/enhanced', enhancedAuthRoutes);
+    this.app.use('/api/registration', userRegistrationRoutes);
     this.app.use('/api/visitors', visitorRoutes);
     this.app.use('/api/frequent-visitors', frequentVisitorRoutes);
     this.app.use('/api/visitor-bans', visitorBanRoutes);
