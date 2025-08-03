@@ -212,13 +212,30 @@ class SafeGuardApp {
     console.log('━'.repeat(50));
     console.log(`🏥 Health Check:    http://${HOST}:${PORT}/health`);
     console.log(`📋 API Info:        http://${HOST}:${PORT}/api`);
-    console.log(`🔐 Authentication:  http://${HOST}:${PORT}/api/auth`);
-    console.log(`🆕 Enhanced Auth:   http://${HOST}:${PORT}/api/auth/enhanced`);
-    console.log(`👥 Registration:    http://${HOST}:${PORT}/api/registration`);
-    console.log(`👤 Visitors:        http://${HOST}:${PORT}/api/visitors`);
-    console.log(`⭐ Frequent:        http://${HOST}:${PORT}/api/frequent-visitors`);
-    console.log(`🚫 Bans:            http://${HOST}:${PORT}/api/visitor-bans`);
-    console.log(`👑 Admin:           http://${HOST}:${PORT}/api/admin`);
+    
+    console.log('\n🔐 AUTHENTICATION ENDPOINTS:');
+    console.log(`   🔑 Basic Auth:      http://${HOST}:${PORT}/api/auth`);
+    console.log(`   🛡️  Enhanced Auth:   http://${HOST}:${PORT}/api/auth/enhanced`);
+    
+    console.log('\n👥 USER REGISTRATION (SIGNUP) ENDPOINTS:');
+    console.log(`   📝 User Signup:     http://${HOST}:${PORT}/api/registration`);
+    console.log(`   ✅ Validate:        http://${HOST}:${PORT}/api/registration/validate`);
+    console.log(`   ✍️  Complete:        http://${HOST}:${PORT}/api/registration/complete`);
+    console.log(`   🏠 Self Register:   http://${HOST}:${PORT}/api/registration/self-register`);
+    console.log(`   📊 Bulk Import:     http://${HOST}:${PORT}/api/registration/bulk`);
+    console.log(`   📈 Statistics:      http://${HOST}:${PORT}/api/registration/stats/:building_id`);
+    
+    console.log('\n🏢 BUILDING & ADMIN MANAGEMENT:');
+    console.log(`   🏗️  Buildings:       http://${HOST}:${PORT}/api/admin/buildings`);
+    console.log(`   🚀 Initial Setup:   http://${HOST}:${PORT}/api/admin/initial-setup`);
+    console.log(`   👑 Admin Panel:     http://${HOST}:${PORT}/api/admin`);
+    console.log(`   📋 Building Admin:  http://${HOST}:${PORT}/api/registration/building-admin`);
+    console.log(`   🛡️  Security Staff:  http://${HOST}:${PORT}/api/registration/security`);
+    
+    console.log('\n👤 VISITOR MANAGEMENT:');
+    console.log(`   🎫 Visitors:        http://${HOST}:${PORT}/api/visitors`);
+    console.log(`   ⭐ Frequent:        http://${HOST}:${PORT}/api/frequent-visitors`);
+    console.log(`   🚫 Bans:            http://${HOST}:${PORT}/api/visitor-bans`);
     
     console.log('\n🔌 SOCKET.IO:');
     console.log('━'.repeat(50));
@@ -301,9 +318,29 @@ class SafeGuardApp {
       endpoints: {
         health: `http://${HOST}:${PORT}/health`,
         api: `http://${HOST}:${PORT}/api`,
-        auth: `http://${HOST}:${PORT}/api/auth`,
-        enhancedAuth: `http://${HOST}:${PORT}/api/auth/enhanced`,
-        registration: `http://${HOST}:${PORT}/api/registration`
+        auth: {
+          basic: `http://${HOST}:${PORT}/api/auth`,
+          enhanced: `http://${HOST}:${PORT}/api/auth/enhanced`
+        },
+        userSignup: {
+          base: `http://${HOST}:${PORT}/api/registration`,
+          validate: `http://${HOST}:${PORT}/api/registration/validate`,
+          complete: `http://${HOST}:${PORT}/api/registration/complete`,
+          selfRegister: `http://${HOST}:${PORT}/api/registration/self-register`,
+          bulk: `http://${HOST}:${PORT}/api/registration/bulk`,
+          buildingAdmin: `http://${HOST}:${PORT}/api/registration/building-admin`,
+          security: `http://${HOST}:${PORT}/api/registration/security`
+        },
+        admin: {
+          panel: `http://${HOST}:${PORT}/api/admin`,
+          buildings: `http://${HOST}:${PORT}/api/admin/buildings`,
+          initialSetup: `http://${HOST}:${PORT}/api/admin/initial-setup`
+        },
+        visitors: {
+          base: `http://${HOST}:${PORT}/api/visitors`,
+          frequent: `http://${HOST}:${PORT}/api/frequent-visitors`,
+          bans: `http://${HOST}:${PORT}/api/visitor-bans`
+        }
       }
     });
   }
