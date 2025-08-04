@@ -20,7 +20,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"building_id\": \"{{buildingId}}\",\n  \"email\": \"test.admin@safeguard.com\",\n  \"phone\": \"+2348012345678\",\n  \"role\": \"building_admin\"\n}"
+              "raw": "{\n  \"building_id\": \"{{buildingId}}\",\n  \"email\": \"newuser@safeguard.com\",\n  \"phone\": \"+2348012345678\",\n  \"role\": \"building_admin\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/registration/validate",
@@ -56,7 +56,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"test.admin@safeguard.com\",\n  \"password\": \"SecureAdmin123!\",\n  \"first_name\": \"Test\",\n  \"last_name\": \"Admin\",\n  \"phone\": \"+2348012345678\",\n  \"building_id\": \"{{buildingId}}\",\n  \"role\": \"building_admin\",\n  \"apartment_number\": \"A101\",\n  \"emergency_contact\": {\n    \"name\": \"Emergency Contact\",\n    \"phone\": \"+2348012345680\",\n    \"relationship\": \"spouse\"\n  },\n  \"agreed_to_terms\": true,\n  \"email_notifications\": true,\n  \"sms_notifications\": false\n}"
+              "raw": "{\n  \"email\": \"newuser@safeguard.com\",\n  \"password\": \"NewUserPass123!\",\n  \"first_name\": \"New\",\n  \"last_name\": \"User\",\n  \"phone\": \"+2348012345678\",\n  \"building_id\": \"{{buildingId}}\",\n  \"role\": \"building_admin\",\n  \"apartment_number\": \"A101\",\n  \"emergency_contact\": {\n    \"name\": \"Emergency Contact\",\n    \"phone\": \"+2348012345680\",\n    \"relationship\": \"spouse\"\n  },\n  \"agreed_to_terms\": true,\n  \"email_notifications\": true,\n  \"sms_notifications\": false\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/registration/complete",
@@ -139,7 +139,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"test.admin@safeguard.com\",\n  \"password\": \"SecureAdmin123!\",\n  \"remember_me\": false,\n  \"device_name\": \"Postman Test Client\",\n  \"location\": \"Lagos, Nigeria\"\n}"
+              "raw": "{\n  \"email\": \"testuser@safeguard.com\",\n  \"password\": \"TestPassword123!\",\n  \"remember_me\": false,\n  \"device_name\": \"Postman Test Client\",\n  \"location\": \"Lagos, Nigeria\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/enhanced/login",
@@ -261,7 +261,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"current_password\": \"SecureAdmin123!\",\n  \"new_password\": \"NewSecureAdmin456!\",\n  \"logout_other_sessions\": true,\n  \"require_reauth_for_sensitive_actions\": true\n}"
+              "raw": "{\n  \"current_password\": \"TestPassword123!\",\n  \"new_password\": \"NewTestPassword456!\",\n  \"logout_other_sessions\": true,\n  \"require_reauth_for_sensitive_actions\": true\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/enhanced/change-password",
@@ -384,7 +384,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"superAdmin\": {\n    \"email\": \"superadmin@safeguard.com\",\n    \"password\": \"SuperSecure123!\",\n    \"first_name\": \"Super\",\n    \"last_name\": \"Admin\",\n    \"phone\": \"+2348012345600\"\n  },\n  \"building\": {\n    \"name\": \"Test Building Complex\",\n    \"address\": \"123 Main Street, Lagos\",\n    \"building_code\": \"TB001\",\n    \"total_licenses\": 250\n  }\n}"
+              "raw": "{\n  \"name\": \"Test Building Complex\",\n  \"address\": \"123 Main Street, Victoria Island\",\n  \"city\": \"Lagos\",\n  \"state\": \"Lagos State\",\n  \"building_code\": \"TB001\",\n  \"total_licenses\": 250,\n  \"adminEmail\": \"superadmin@safeguard.com\",\n  \"adminPassword\": \"SuperSecure123!\",\n  \"adminFirstName\": \"Super\",\n  \"adminLastName\": \"Admin\",\n  \"adminPhone\": \"+2348012345600\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/admin/initial-setup",
@@ -425,7 +425,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"New Building Complex\",\n  \"address\": \"456 Business District, Lagos\",\n  \"building_code\": \"NB002\",\n  \"total_licenses\": 150,\n  \"buildingAdmin\": {\n    \"email\": \"admin@newbuilding.com\",\n    \"password\": \"BuildingAdmin123!\",\n    \"first_name\": \"Building\",\n    \"last_name\": \"Administrator\",\n    \"phone\": \"+2348012345601\"\n  }\n}"
+              "raw": "{\n  \"name\": \"New Building Complex\",\n  \"address\": \"456 Business District, Victoria Island\",\n  \"city\": \"Lagos\",\n  \"state\": \"Lagos State\",\n  \"country\": \"Nigeria\",\n  \"totalLicenses\": 150,\n  \"adminEmail\": \"admin@newbuilding.com\",\n  \"adminPassword\": \"BuildingAdmin123!\",\n  \"adminFirstName\": \"Building\",\n  \"adminLastName\": \"Administrator\",\n  \"adminPhone\": \"+2348012345601\",\n  \"adminApartment\": \"ADMIN-01\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/admin/buildings",
@@ -744,7 +744,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"test.admin@safeguard.com\",\n  \"password\": \"WrongPassword123!\"\n}"
+              "raw": "{\n  \"email\": \"testuser@safeguard.com\",\n  \"password\": \"WrongPassword123!\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/enhanced/login",
@@ -868,7 +868,7 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:3000",
+      "value": "http://localhost:4500",
       "type": "string"
     },
     {

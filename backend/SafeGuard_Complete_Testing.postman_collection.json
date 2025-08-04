@@ -1,0 +1,960 @@
+{
+  "info": {
+    "name": "SafeGuard Complete Testing Collection",
+    "description": "Comprehensive test collection for SafeGuard authentication system covering all user roles: Super Admin, Building Admin, Security, and Residents",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": {
+      "major": 2,
+      "minor": 1,
+      "patch": 0
+    }
+  },
+  "item": [
+    {
+      "name": "1. System Setup & Super Admin",
+      "description": "System initialization and super admin operations",
+      "item": [
+        {
+          "name": "1.1 Initial System Setup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Building Complex\",\n  \"address\": \"123 Main Street, Victoria Island, Lagos\",\n  \"city\": \"Lagos\",\n  \"state\": \"Lagos State\",\n  \"country\": \"Nigeria\",\n  \"phone\": \"+2348012345600\",\n  \"email\": \"building@testcomplex.com\",\n  \"total_licenses\": 250,\n  \"adminEmail\": \"superadmin@safeguard.com\",\n  \"adminPassword\": \"SuperSecure123!\",\n  \"adminFirstName\": \"Super\",\n  \"adminLastName\": \"Admin\",\n  \"adminPhone\": \"+2348012345601\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/initial-setup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "initial-setup"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Initial setup successful\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    ",
+                  "    // Save building ID for other tests",
+                  "    if (jsonData.data && jsonData.data.building && jsonData.data.building.id) {",
+                  "        pm.environment.set('buildingId', jsonData.data.building.id);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.2 Super Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"superadmin@safeguard.com\",\n  \"password\": \"SuperSecure123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Super Admin login successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('token');",
+                  "    ",
+                  "    // Save super admin token",
+                  "    pm.environment.set('superAdminToken', jsonData.data.token);",
+                  "    pm.environment.set('accessToken', jsonData.data.token);",
+                  "    if (jsonData.data.refreshToken) {",
+                  "        pm.environment.set('refreshToken', jsonData.data.refreshToken);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Building Admin Registration & Login",
+      "description": "Building administrator management and authentication",
+      "item": [
+        {
+          "name": "2.1 Register Building Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"buildingadmin@safeguard.com\",\n  \"password\": \"BuildingAdmin123!\",\n  \"confirmPassword\": \"BuildingAdmin123!\",\n  \"first_name\": \"Building\",\n  \"last_name\": \"Administrator\",\n  \"phone\": \"+2348012345602\",\n  \"building_id\": \"{{buildingId}}\",\n  \"apartment_number\": \"ADMIN-01\",\n  \"role\": \"building_admin\",\n  \"admin_permissions\": [\"manage_users\", \"view_analytics\", \"manage_security\"],\n  \"agreed_to_terms\": true,\n  \"agreed_to_privacy\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/registration/building-admin",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registration", "building-admin"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Building admin registration successful\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('user');",
+                  "    pm.expect(jsonData.data.user.role).to.equal('building_admin');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.2 Building Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"buildingadmin@safeguard.com\",\n  \"password\": \"BuildingAdmin123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Building admin login successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('token');",
+                  "    ",
+                  "    // Save building admin token",
+                  "    pm.environment.set('buildingAdminToken', jsonData.data.token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Security Personnel Registration & Login",
+      "description": "Security personnel management and authentication",
+      "item": [
+        {
+          "name": "3.1 Register Security Personnel",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{buildingAdminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"security@safeguard.com\",\n  \"password\": \"SecurityGuard123!\",\n  \"confirmPassword\": \"SecurityGuard123!\",\n  \"first_name\": \"Security\",\n  \"last_name\": \"Officer\",\n  \"phone\": \"+2348012345603\",\n  \"building_id\": \"{{buildingId}}\",\n  \"apartment_number\": \"GATE-01\",\n  \"role\": \"security\",\n  \"security_level\": 2,\n  \"shift_schedule\": [\"morning\", \"evening\"],\n  \"security_clearance\": \"intermediate\",\n  \"agreed_to_terms\": true,\n  \"agreed_to_privacy\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/registration/security",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registration", "security"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Security registration successful\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('user');",
+                  "    pm.expect(jsonData.data.user.role).to.equal('security');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.2 Security Personnel Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"security@safeguard.com\",\n  \"password\": \"SecurityGuard123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Security login successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('token');",
+                  "    ",
+                  "    // Save security token",
+                  "    pm.environment.set('securityToken', jsonData.data.token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Resident Registration & Login",
+      "description": "Resident user management and authentication",
+      "item": [
+        {
+          "name": "4.1 Register Resident (Complete Registration)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"resident@safeguard.com\",\n  \"password\": \"ResidentPass123!\",\n  \"confirmPassword\": \"ResidentPass123!\",\n  \"first_name\": \"John\",\n  \"last_name\": \"Resident\",\n  \"phone\": \"+2348012345604\",\n  \"building_id\": \"{{buildingId}}\",\n  \"apartment_number\": \"A101\",\n  \"role\": \"resident\",\n  \"emergency_contact\": {\n    \"name\": \"Jane Resident\",\n    \"phone\": \"+2348012345605\",\n    \"relationship\": \"spouse\"\n  },\n  \"agreed_to_terms\": true,\n  \"agreed_to_privacy\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/registration/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registration", "complete"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Resident registration successful\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('user');",
+                  "    pm.expect(jsonData.data.user.role).to.equal('resident');",
+                  "    ",
+                  "    // Save resident user ID",
+                  "    if (jsonData.data.user.id) {",
+                  "        pm.environment.set('residentUserId', jsonData.data.user.id);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.2 Resident Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"resident@safeguard.com\",\n  \"password\": \"ResidentPass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Resident login successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('token');",
+                  "    ",
+                  "    // Save resident token",
+                  "    pm.environment.set('residentToken', jsonData.data.token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.3 Resident Self Registration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"selfregister@safeguard.com\",\n  \"password\": \"SelfRegister123!\",\n  \"confirmPassword\": \"SelfRegister123!\",\n  \"first_name\": \"Self\",\n  \"last_name\": \"Register\",\n  \"phone\": \"+2348012345606\",\n  \"apartment_number\": \"B205\",\n  \"emergency_contact_name\": \"Emergency Contact\",\n  \"emergency_contact_phone\": \"+2348012345607\",\n  \"agreed_to_terms\": true,\n  \"agreed_to_privacy\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/registration/self-register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registration", "self-register"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Self registration submitted successfully\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('status');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Bulk Operations",
+      "description": "Bulk user registration and management",
+      "item": [
+        {
+          "name": "5.1 Validate Bulk Registration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{buildingAdminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"building_id\": \"{{buildingId}}\",\n  \"users\": [\n    {\n      \"email\": \"bulkresident1@safeguard.com\",\n      \"first_name\": \"Bulk\",\n      \"last_name\": \"Resident1\",\n      \"phone\": \"+2348012345610\",\n      \"apartment_number\": \"C101\",\n      \"role\": \"resident\"\n    },\n    {\n      \"email\": \"bulkresident2@safeguard.com\",\n      \"first_name\": \"Bulk\",\n      \"last_name\": \"Resident2\",\n      \"phone\": \"+2348012345611\",\n      \"apartment_number\": \"C102\",\n      \"role\": \"resident\"\n    },\n    {\n      \"email\": \"bulkresident3@safeguard.com\",\n      \"first_name\": \"Bulk\",\n      \"last_name\": \"Resident3\",\n      \"phone\": \"+2348012345612\",\n      \"apartment_number\": \"C103\",\n      \"role\": \"resident\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/registration/validate-bulk",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registration", "validate-bulk"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Bulk validation successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('valid_users');",
+                  "    pm.expect(jsonData.data).to.have.property('license_requirements');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.2 Bulk User Registration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{buildingAdminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"building_id\": \"{{buildingId}}\",\n  \"users\": [\n    {\n      \"email\": \"bulkresident1@safeguard.com\",\n      \"first_name\": \"Bulk\",\n      \"last_name\": \"Resident1\",\n      \"phone\": \"+2348012345610\",\n      \"apartment_number\": \"C101\",\n      \"role\": \"resident\"\n    },\n    {\n      \"email\": \"bulkresident2@safeguard.com\",\n      \"first_name\": \"Bulk\",\n      \"last_name\": \"Resident2\",\n      \"phone\": \"+2348012345611\",\n      \"apartment_number\": \"C102\",\n      \"role\": \"resident\"\n    }\n  ],\n  \"default_password\": \"TempPassword123!\",\n  \"send_welcome_emails\": true,\n  \"require_password_change\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/registration/bulk",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registration", "bulk"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Bulk registration successful\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('successful');",
+                  "    pm.expect(jsonData.data).to.have.property('failed');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Authentication Management",
+      "description": "Token refresh, logout, and session management",
+      "item": [
+        {
+          "name": "6.1 Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Token refresh successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('token');",
+                  "    ",
+                  "    // Update access token",
+                  "    pm.environment.set('accessToken', jsonData.data.token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.2 Get Profile (Authenticated)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "profile"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Profile retrieved successfully\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('user');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.3 Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"logout_all_devices\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Logout successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    ",
+                  "    // Clear tokens",
+                  "    pm.environment.unset('accessToken');",
+                  "    pm.environment.unset('refreshToken');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Admin Operations",
+      "description": "Building management and administrative functions",
+      "item": [
+        {
+          "name": "7.1 Get Building Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/buildings/{{buildingId}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "buildings", "{{buildingId}}", "users"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Building users retrieved successfully\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('users');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.2 Get Registration Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{buildingAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/registration/stats/{{buildingId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registration", "stats", "{{buildingId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Registration statistics retrieved\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('userCounts');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.3 Get All Buildings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/buildings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "buildings"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Buildings retrieved successfully\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('buildings');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "8. Error Testing & Edge Cases",
+      "description": "Testing error scenarios and validation",
+      "item": [
+        {
+          "name": "8.1 Invalid Login Credentials",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nonexistent@safeguard.com\",\n  \"password\": \"WrongPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Invalid credentials rejected\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "    pm.expect(jsonData.error).to.have.property('code');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8.2 Weak Password Registration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"weakpassword@safeguard.com\",\n  \"password\": \"123\",\n  \"confirmPassword\": \"123\",\n  \"first_name\": \"Weak\",\n  \"last_name\": \"Password\",\n  \"phone\": \"+2348012345699\",\n  \"building_id\": \"{{buildingId}}\",\n  \"agreed_to_terms\": true,\n  \"agreed_to_privacy\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/registration/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registration", "complete"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Weak password rejected\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "    pm.expect(jsonData.error).to.have.property('code');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8.3 Duplicate Email Registration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"resident@safeguard.com\",\n  \"password\": \"DuplicateUser123!\",\n  \"confirmPassword\": \"DuplicateUser123!\",\n  \"first_name\": \"Duplicate\",\n  \"last_name\": \"User\",\n  \"phone\": \"+2348012345698\",\n  \"building_id\": \"{{buildingId}}\",\n  \"agreed_to_terms\": true,\n  \"agreed_to_privacy\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/registration/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registration", "complete"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Duplicate email rejected\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "    pm.expect(jsonData.error).to.have.property('code');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8.4 Unauthorized Access",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/buildings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "buildings"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Unauthorized access rejected\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "9. System Health & Validation",
+      "description": "Health checks and system validation endpoints",
+      "item": [
+        {
+          "name": "9.1 Registration Validation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"building_id\": \"{{buildingId}}\",\n  \"email\": \"validation@test.com\",\n  \"phone\": \"+2348012345650\",\n  \"role\": \"resident\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/registration/validate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registration", "validate"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Registration validation works\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('canRegister');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Global pre-request script for all tests",
+          "console.log('🧪 Running test against:', pm.environment.get('baseUrl'));",
+          "console.log('📋 Test:', pm.info.requestName);",
+          "",
+          "// Add request timestamp",
+          "pm.globals.set('requestTimestamp', new Date().toISOString());"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "exec": [
+          "// Global test script for all requests",
+          "pm.test('Response time is acceptable (< 5s)', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+          "});",
+          "",
+          "pm.test('Response has correct content type', function () {",
+          "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+          "});",
+          "",
+          "pm.test('Response has timestamp', function () {",
+          "    const jsonData = pm.response.json();",
+          "    pm.expect(jsonData).to.have.property('timestamp');",
+          "});",
+          "",
+          "// Log response for debugging",
+          "if (pm.response.code >= 400) {",
+          "    console.log('❌ Error Response:', pm.response.json());",
+          "} else {",
+          "    console.log('✅ Success Response Status:', pm.response.code);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4500",
+      "type": "string"
+    }
+  ]
+}

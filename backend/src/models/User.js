@@ -56,6 +56,48 @@ class User extends BaseModel {
   }
 
   /**
+   * Find user by email with security information
+   * @param {string} email - User email
+   * @returns {Promise<Object|null>} Found user with security fields or null
+   */
+  async findByEmailWithSecurity(email) {
+    const query = `
+      SELECT 
+        id, building_id, email, password_hash, first_name, last_name, 
+        phone, apartment_number, role, avatar_url, is_active, is_verified,
+        uses_license, last_login, login_attempts, locked_until, 
+        emergency_contact, preferences, created_at, updated_at,
+        registration_ip, registration_user_agent, status
+      FROM ${this.tableName}
+      WHERE email = $1 AND is_active = true
+    `;
+    
+    const result = await this.query(query, [email]);
+    return result.rows[0] || null;
+  }
+
+  /**
+   * Find user by ID with security information
+   * @param {string} userId - User ID
+   * @returns {Promise<Object|null>} Found user with security fields or null
+   */
+  async findByIdWithSecurity(userId) {
+    const query = `
+      SELECT 
+        id, building_id, email, password_hash, first_name, last_name, 
+        phone, apartment_number, role, avatar_url, is_active, is_verified,
+        uses_license, last_login, login_attempts, locked_until, 
+        emergency_contact, preferences, created_at, updated_at,
+        registration_ip, registration_user_agent, status
+      FROM ${this.tableName}
+      WHERE id = $1 AND is_active = true
+    `;
+    
+    const result = await this.query(query, [userId]);
+    return result.rows[0] || null;
+  }
+
+  /**
    * Authenticate user with email and password
    * @param {string} email - User email
    * @param {string} password - User password

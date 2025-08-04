@@ -5,21 +5,137 @@ This guide provides step-by-step instructions for manually testing the entire en
 ## 🚀 Setup
 
 ### Base Configuration
-- **Base URL**: `http://localhost:3000`
+- **Base URL**: `http://localhost:4500`
 - **Content-Type**: `application/json` (for all requests)
 - **Environment Variables** (recommended):
-  - `{{baseUrl}}` = `http://localhost:3000`
+  - `{{baseUrl}}` = `http://localhost:4500`
   - `{{accessToken}}` = (will be set after login)
   - `{{refreshToken}}` = (will be set after login)
 
 ### Prerequisites
-1. Ensure the SafeGuard backend server is running
+1. Ensure the SafeGuard backend server is running on port 4500
 2. Database is connected and migrated
-3. At least one building exists in the database
+3. Test user exists in database (created by test scripts or initial setup)
+
+### Test User Credentials
+For testing purposes, use these verified working credentials:
+- **Email**: `testuser@safeguard.com`
+- **Password**: `TestPassword123!`
+- **Role**: `super_admin`
+- **Status**: Active and verified
+
+*Note: This test user is created by the JWT testing script if it doesn't exist.*
 
 ---
 
 ## 📋 Testing Sequence
+
+### Phase 0: Initial System Setup (Required First)
+
+#### 0.1 Initial System Setup
+**Endpoint**: `POST {{baseUrl}}/api/admin/initial-setup`
+
+**Headers**:
+```
+Content-Type: application/json
+```
+
+**Body**:
+```json
+{
+  "name": "Test Building Complex",
+  "address": "123 Main Street, Victoria Island",
+  "city": "Lagos",
+  "state": "Lagos State",
+  "building_code": "TB001",
+  "total_licenses": 250,
+  "adminEmail": "superadmin@safeguard.com",
+  "adminPassword": "SuperSecure123!",
+  "adminFirstName": "Super",
+  "adminLastName": "Admin",
+  "adminPhone": "+2348012345600"
+}
+```
+
+**Expected Response (201)**:
+```json
+{
+  "success": true,
+  "data": {
+    "superAdmin": {
+      "id": "admin-uuid-here",
+      "email": "superadmin@safeguard.com",
+      "first_name": "Super",
+      "last_name": "Admin",
+      "role": "super_admin"
+    },
+    "building": {
+      "id": "building-uuid-here",
+      "name": "Test Building Complex",
+      "address": "123 Main Street, Victoria Island",
+      "building_code": "TB001",
+      "total_licenses": 250
+    }
+  },
+  "message": "Initial system setup completed successfully",
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+**⚠️ Important**: Save the `building.id` from this response as `{{buildingId}}` in your Postman environment.
+
+### Phase 0.2: Register Additional Buildings (Optional)
+**Endpoint**: `POST {{baseUrl}}/api/admin/buildings`
+
+**Headers**:
+```
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+```
+
+**Body**:
+```json
+{
+  "name": "New Building Complex",
+  "address": "456 Business District, Victoria Island",  
+  "city": "Lagos",
+  "state": "Lagos State",
+  "country": "Nigeria",
+  "totalLicenses": 150,
+  "adminEmail": "admin@newbuilding.com",
+  "adminPassword": "BuildingAdmin123!",
+  "adminFirstName": "Building",
+  "adminLastName": "Administrator", 
+  "adminPhone": "+2348012345601",
+  "adminApartment": "ADMIN-01"
+}
+```
+
+**Expected Response (201)**:
+```json
+{
+  "success": true,
+  "data": {
+    "building": {
+      "id": "new-building-uuid-here",
+      "name": "New Building Complex",
+      "address": "456 Business District, Victoria Island",
+      "total_licenses": 150
+    },
+    "admin": {
+      "id": "new-admin-uuid-here", 
+      "email": "admin@newbuilding.com",
+      "first_name": "Building",
+      "last_name": "Administrator",
+      "role": "building_admin"
+    }
+  },
+  "message": "Building and admin created successfully",
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+---
 
 ### Phase 1: User Registration Testing
 
@@ -178,8 +294,8 @@ Content-Type: application/json
 **Body**:
 ```json
 {
-  "email": "test.admin@safeguard.com",
-  "password": "SecureAdmin123!",
+  "email": "testuser@safeguard.com",
+  "password": "TestPassword123!",
   "remember_me": false,
   "device_name": "Postman Test Client",
   "location": "Lagos, Nigeria"
@@ -193,11 +309,11 @@ Content-Type: application/json
   "data": {
     "user": {
       "id": "user-uuid-here",
-      "email": "test.admin@safeguard.com",
+      "email": "testuser@safeguard.com",
       "first_name": "Test",
-      "last_name": "Admin",
-      "role": "building_admin",
-      "building_id": "550e8400-e29b-41d4-a716-446655440000"
+      "last_name": "User",
+      "role": "super_admin",
+      "building_id": "building-uuid-here"
     },
     "accessToken": "eyJhbGciOiJIUzI1NiIs...",
     "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
@@ -522,7 +638,30 @@ Authorization: Bearer {{accessToken}}
 }
 ```
 
-### Phase 4: Error Scenarios Testing
+### Phase 4: JWT Authentication Troubleshooting
+
+#### 4.0 Create Test User (If Needed)
+**Purpose**: Create a test user with known password if authentication fails
+
+**Script**: Run the JWT testing script to create a test user:
+```bash
+node test_login.js
+```
+
+**This will create**:
+- **Email**: `testuser@safeguard.com`
+- **Password**: `TestPassword123!`
+- **Role**: `super_admin`
+- **Status**: Active and verified
+
+**Verify Test User Creation**:
+```bash
+node test_database.js
+```
+
+---
+
+### Phase 5: Error Scenarios Testing
 
 #### 4.1 Invalid Login Credentials
 **Endpoint**: `POST {{baseUrl}}/api/auth/enhanced/login`
@@ -530,7 +669,7 @@ Authorization: Bearer {{accessToken}}
 **Body**:
 ```json
 {
-  "email": "test.admin@safeguard.com",
+  "email": "testuser@safeguard.com",
   "password": "WrongPassword123!"
 }
 ```
@@ -647,7 +786,7 @@ Create a Postman environment with these variables:
 
 ```json
 {
-  "baseUrl": "http://localhost:3000",
+  "baseUrl": "http://localhost:4500",
   "accessToken": "",
   "refreshToken": "",
   "userId": "",
@@ -706,6 +845,12 @@ pm.test("Response time is acceptable", function () {
 
 ## 📝 Testing Checklist
 
+### ✅ Initial Setup
+- [ ] Initial system setup with super admin and building
+- [ ] Verify building creation
+- [ ] Verify super admin creation
+- [ ] Save building ID for subsequent tests
+
 ### ✅ User Registration
 - [ ] Validate registration eligibility
 - [ ] Complete user registration with all fields
@@ -751,16 +896,43 @@ pm.test("Response time is acceptable", function () {
 
 ---
 
+## 🧪 Quick Authentication Test
+
+**Before starting the full test suite**, verify authentication is working:
+
+1. **Test JWT System**:
+   ```bash
+   node test_jwt.js
+   ```
+
+2. **Test Database & User Model**:
+   ```bash
+   node test_database.js
+   ```
+
+3. **Test Login Process**:
+   ```bash
+   node test_login.js
+   ```
+
+4. **Use Test Credentials**:
+   - Email: `testuser@safeguard.com`
+   - Password: `TestPassword123!`
+
+---
+
 ## 🎯 Success Criteria
 
 Your testing is successful if:
 
-1. **All registration flows work** without errors
-2. **Authentication provides secure tokens** and proper session management
-3. **Validation catches invalid data** and provides clear error messages
-4. **Security features function correctly** (password changes, session management)
-5. **Error responses are informative** and properly formatted
-6. **Performance is acceptable** (< 5 seconds response time)
+1. **JWT system is working** (test scripts pass)
+2. **Test user credentials work** for login
+3. **Authentication provides secure tokens** and proper session management
+4. **All registration flows work** without errors
+5. **Validation catches invalid data** and provides clear error messages
+6. **Security features function correctly** (password changes, session management)
+7. **Error responses are informative** and properly formatted
+8. **Performance is acceptable** (< 5 seconds response time)
 
 ---
 
@@ -768,16 +940,51 @@ Your testing is successful if:
 
 ### Common Issues:
 
-1. **500 Server Error**: Check server logs and database connection
-2. **401 Unauthorized**: Ensure access token is valid and properly set
-3. **422 Validation Error**: Check request body format and required fields
-4. **404 Not Found**: Verify endpoint URLs and server routing
+1. **401 Authentication Error**: 
+   - Use test user credentials: `testuser@safeguard.com` / `TestPassword123!`
+   - Run `node test_login.js` to create test user
+   - Verify JWT_SECRET is set in .env file
+   - Check Bearer token format: `Bearer <token>`
+
+2. **500 Server Error**: 
+   - Check server logs and database connection
+   - Run `node test_database.js` to verify database
+   - Ensure PostgreSQL is running
+
+3. **422 Validation Error**: 
+   - Check request body format and required fields
+   - Use flat structure (not nested) for initial setup
+   - Verify all required fields are present
+
+4. **404 Not Found**: 
+   - Verify endpoint URLs and server routing
+   - Check server is running on port 4500
+   - Run `node test_endpoints.js` to verify all endpoints
 
 ### Debug Tips:
 
-1. Check server console for error logs
-2. Verify database connections and migrations
-3. Ensure environment variables are properly set
-4. Use Postman Console to debug request/response data
+1. **Run Test Scripts First**:
+   ```bash
+   node test_jwt.js        # Test JWT functionality
+   node test_database.js   # Test database connection
+   node test_login.js      # Test complete login process
+   node test_endpoints.js  # Test all endpoints
+   ```
+
+2. **Check Environment**:
+   - Verify .env file is loaded (check server startup logs)
+   - Ensure JWT_SECRET is set and not default value
+   - Confirm database credentials are correct
+
+3. **Use Test User**:
+   - Always start with `testuser@safeguard.com` / `TestPassword123!`
+   - This user is created by test scripts with known working credentials
+   - Don't try to guess passwords for existing users
+
+4. **Debug Authentication**:
+   - Check Bearer token format in Authorization header
+   - Verify token is not expired (24h default)
+   - Use Postman Console to debug request/response data
+   - Check server logs for authentication errors
 
 This comprehensive testing guide should help you thoroughly validate the enhanced authentication system functionality!
