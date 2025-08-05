@@ -1,18 +1,24 @@
 {
   "info": {
     "name": "SafeGuard Visitor Ban API",
-    "description": "Complete API testing collection for SafeGuard visitor ban system",
-    "version": "1.0.0"
+    "description": "Complete API testing collection for SafeGuard visitor ban system - Updated with new test objects and latest implementation",
+    "version": "2.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:3000",
+      "value": "{{baseUrl}}",
       "type": "string"
     },
     {
-      "key": "jwt_token",
-      "value": "{{your_jwt_token_here}}",
+      "key": "accessToken",
+      "value": "{{accessToken}}",
+      "type": "string"
+    },
+    {
+      "key": "visitorBanId", 
+      "value": "{{visitorBanId}}",
       "type": "string"
     }
   ],
@@ -39,13 +45,13 @@
             "value": "application/json"
           },
           {
-            "key": "Authorization",
-            "value": "Bearer {{jwt_token}}"
+            "key": "Authorization",  
+            "value": "Bearer {{accessToken}}"
           }
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"name\": \"John Doe\",\n  \"phone\": \"+2348123456789\",\n  \"reason\": \"Inappropriate behavior during last visit\",\n  \"severity\": \"medium\",\n  \"notes\": \"Resident requested permanent ban due to security concerns\"\n}"
+          "raw": "{\n  \"name\": \"Marcus Troublemaker\",\n  \"phone\": \"{{bannedPhoneNumber}}\",\n  \"reason\": \"Inappropriate behavior during last visit and disrespectful to security staff\",\n  \"severity\": \"high\",\n  \"notes\": \"Resident requested permanent ban due to security concerns. Multiple incident reports filed.\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/visitor-bans",
@@ -60,8 +66,8 @@
         "method": "GET",
         "header": [
           {
-            "key": "Authorization",
-            "value": "Bearer {{jwt_token}}"
+            "key": "Authorization",  
+            "value": "Bearer {{accessToken}}"
           }
         ],
         "url": {
@@ -87,8 +93,8 @@
         "method": "GET",
         "header": [
           {
-            "key": "Authorization",
-            "value": "Bearer {{jwt_token}}"
+            "key": "Authorization",  
+            "value": "Bearer {{accessToken}}"
           }
         ],
         "url": {
@@ -114,14 +120,14 @@
         "method": "GET",
         "header": [
           {
-            "key": "Authorization",
-            "value": "Bearer {{jwt_token}}"
+            "key": "Authorization",  
+            "value": "Bearer {{accessToken}}"
           }
         ],
         "url": {
-          "raw": "{{baseUrl}}/api/visitor-bans/check/+2348123456789",
+          "raw": "{{baseUrl}}/api/visitor-bans/check/{{bannedPhoneNumber}}",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "visitor-bans", "check", "+2348123456789"]
+          "path": ["api", "visitor-bans", "check", "{{bannedPhoneNumber}}"]
         }
       }
     },
@@ -131,14 +137,14 @@
         "method": "GET",
         "header": [
           {
-            "key": "Authorization",
-            "value": "Bearer {{jwt_token}}"
+            "key": "Authorization",  
+            "value": "Bearer {{accessToken}}"
           }
         ],
         "url": {
-          "raw": "{{baseUrl}}/api/visitor-bans/building-check/+2348123456789",
+          "raw": "{{baseUrl}}/api/visitor-bans/building-check/{{bannedPhoneNumber}}",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "visitor-bans", "building-check", "+2348123456789"]
+          "path": ["api", "visitor-bans", "building-check", "{{bannedPhoneNumber}}"]
         }
       }
     },
@@ -148,8 +154,8 @@
         "method": "GET",
         "header": [
           {
-            "key": "Authorization",
-            "value": "Bearer {{jwt_token}}"
+            "key": "Authorization",  
+            "value": "Bearer {{accessToken}}"
           }
         ],
         "url": {
@@ -165,8 +171,8 @@
         "method": "GET",
         "header": [
           {
-            "key": "Authorization",
-            "value": "Bearer {{jwt_token}}"
+            "key": "Authorization",  
+            "value": "Bearer {{accessToken}}"
           }
         ],
         "url": {
@@ -188,8 +194,8 @@
         "method": "GET",
         "header": [
           {
-            "key": "Authorization",
-            "value": "Bearer {{jwt_token}}"
+            "key": "Authorization",  
+            "value": "Bearer {{accessToken}}"
           }
         ],
         "url": {
@@ -205,8 +211,8 @@
         "method": "GET",
         "header": [
           {
-            "key": "Authorization",
-            "value": "Bearer {{jwt_token}}"
+            "key": "Authorization",  
+            "value": "Bearer {{accessToken}}"
           }
         ],
         "url": {
@@ -232,8 +238,8 @@
             "value": "application/json"
           },
           {
-            "key": "Authorization",
-            "value": "Bearer {{jwt_token}}"
+            "key": "Authorization",  
+            "value": "Bearer {{accessToken}}"
           }
         ],
         "body": {
@@ -241,9 +247,9 @@
           "raw": "{\n  \"reason\": \"Updated ban reason - escalated due to repeated incidents\",\n  \"severity\": \"high\",\n  \"notes\": \"Updated notes with additional context\"\n}"
         },
         "url": {
-          "raw": "{{baseUrl}}/api/visitor-bans/{{ban_id}}",
+          "raw": "{{baseUrl}}/api/visitor-bans/{{visitorBanId}}",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "visitor-bans", "{{ban_id}}"]
+          "path": ["api", "visitor-bans", "{{visitorBanId}}"]
         }
       }
     },
@@ -257,8 +263,8 @@
             "value": "application/json"
           },
           {
-            "key": "Authorization",
-            "value": "Bearer {{jwt_token}}"
+            "key": "Authorization",  
+            "value": "Bearer {{accessToken}}"
           }
         ],
         "body": {
@@ -266,9 +272,9 @@
           "raw": "{\n  \"reason\": \"Resident requested to lift the ban after apology\"\n}"
         },
         "url": {
-          "raw": "{{baseUrl}}/api/visitor-bans/{{ban_id}}/unban",
+          "raw": "{{baseUrl}}/api/visitor-bans/{{visitorBanId}}/unban",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "visitor-bans", "{{ban_id}}", "unban"]
+          "path": ["api", "visitor-bans", "{{visitorBanId}}", "unban"]
         }
       }
     },
@@ -282,13 +288,13 @@
             "value": "application/json"
           },
           {
-            "key": "Authorization",
-            "value": "Bearer {{jwt_token}}"
+            "key": "Authorization",  
+            "value": "Bearer {{accessToken}}"
           }
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"phone\": \"+2348987654321\",\n  \"reason\": \"Temporary ban period has ended\"\n}"
+          "raw": "{\n  \"phone\": \"{{testPhoneNumber}}\",\n  \"reason\": \"Temporary ban period has ended\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/visitor-bans/unban-by-phone",
@@ -303,14 +309,14 @@
         "method": "GET",
         "header": [
           {
-            "key": "Authorization",
-            "value": "Bearer {{jwt_token}}"
+            "key": "Authorization",  
+            "value": "Bearer {{accessToken}}"
           }
         ],
         "url": {
-          "raw": "{{baseUrl}}/api/visitor-bans/history/+2348123456789",
+          "raw": "{{baseUrl}}/api/visitor-bans/history/{{bannedPhoneNumber}}",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "visitor-bans", "history", "+2348123456789"]
+          "path": ["api", "visitor-bans", "history", "{{bannedPhoneNumber}}"]
         }
       }
     },
@@ -320,8 +326,8 @@
         "method": "GET",
         "header": [
           {
-            "key": "Authorization",
-            "value": "Bearer {{jwt_token}}"
+            "key": "Authorization",  
+            "value": "Bearer {{accessToken}}"
           }
         ],
         "url": {
@@ -341,13 +347,13 @@
             "value": "application/json"
           },
           {
-            "key": "Authorization",
-            "value": "Bearer {{jwt_token}}"
+            "key": "Authorization",  
+            "value": "Bearer {{accessToken}}"
           }
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"user_id\": \"target-user-id\",\n  \"name\": \"System Ban\",\n  \"phone\": \"+2348123456789\",\n  \"trigger\": \"Suspicious activity detected\",\n  \"severity\": \"high\"\n}"
+          "raw": "{\n  \"user_id\": \"{{residentId}}\",\n  \"name\": \"System Ban\",\n  \"phone\": \"{{bannedPhoneNumber}}\",\n  \"trigger\": \"Suspicious activity detected by security system\",\n  \"severity\": \"high\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/visitor-bans/automatic",

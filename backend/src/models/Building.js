@@ -348,6 +348,115 @@ class Building extends BaseModel {
     const result = await this.query(query, [threshold]);
     return result.rows;
   }
+
+  /**
+   * Find building by email address
+   * @param {string} email - Building email
+   * @returns {Promise<Object|null>} Found building or null
+   */
+  async findByEmail(email) {
+    if (!email) return null;
+    return await this.findOne({ 
+      email: email.toLowerCase(), 
+      is_active: true 
+    });
+  }
+
+  /**
+   * Find building with its super admin details
+   * @param {string} buildingEmail - Building email
+   * @returns {Promise<Object|null>} Building with super admin info
+   */
+  async findWithSuperAdmin(buildingEmail) {
+    if (!buildingEmail) return null;
+
+    const query = `
+      SELECT 
+        b.*,
+        u.id as super_admin_id,
+        u.email as super_admin_email,
+        u.first_name as super_admin_first_name,
+        u.last_name as super_admin_last_name,
+        u.verified as super_admin_verified
+      FROM buildings b
+      LEFT JOIN users u ON b.id = u.building_id 
+        AND u.role = 'super_admin' 
+        AND u.is_active = true
+      WHERE LOWER(b.email) = LOWER($1) 
+        AND b.is_active = true
+    `;
+
+    const result = await this.query(query, [buildingEmail.toLowerCase()]);
+    return result.rows[0] || null;
+  }
+
+  /**
+   * Search buildings by email (partial match)
+   * @param {string} emailTerm - Email search term
+   * @returns {Promise<Array>} Matching buildings
+   */
+  async searchByEmail(emailTerm) {
+    if (!emailTerm) return [];
+
+    const query = `
+      SELECT 
+        id,
+        name,
+        email,
+        address,
+        city,
+        state,
+        total_licenses,
+        used_licenses
+      FROM ${this.tableName}
+      WHERE is_active = true
+        AND email ILIKE $1
+      ORDER BY name
+    `;
+
+    const result = await this.query(query, [`%${emailTerm}%`]);
+    return result.rows;
+  }
+
+  /**
+   * Get building by email with admin approval context
+   * @param {string} buildingEmail - Building email
+   * @returns {Promise<Object|null>} Building with admin context
+   */
+  async findForAdminApproval(buildingEmail) {
+    if (!buildingEmail) return null;
+
+    const query = `
+      SELECT 
+        b.*,
+        u.id as super_admin_id,
+        u.email as super_admin_email,
+        u.first_name as super_admin_first_name,
+        u.last_name as super_admin_last_name,
+        u.verified as super_admin_verified,
+        COUNT(pending_admins.id) as pending_admin_count,
+        COUNT(active_admins.id) as active_admin_count
+      FROM buildings b
+      LEFT JOIN users u ON b.id = u.building_id 
+        AND u.role = 'super_admin' 
+        AND u.is_active = true
+        AND u.verified = true
+      LEFT JOIN users pending_admins ON b.id = pending_admins.building_id
+        AND pending_admins.role = 'building_admin'
+        AND pending_admins.is_active = true
+        AND pending_admins.verified = false
+      LEFT JOIN users active_admins ON b.id = active_admins.building_id
+        AND active_admins.role = 'building_admin'
+        AND active_admins.is_active = true
+        AND active_admins.verified = true
+      WHERE LOWER(b.email) = LOWER($1) 
+        AND b.is_active = true
+      GROUP BY b.id, u.id, u.email, u.first_name, u.last_name, u.verified
+    `;
+
+    const result = await this.query(query, [buildingEmail.toLowerCase()]);
+    return result.rows[0] || null;
+  }
 }
 
 export default new Building();

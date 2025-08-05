@@ -5,6 +5,8 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import SocketHandler from './sockets/socketHandler.js';
+import NotificationService from './services/notification.service.js';
 
 import config from './config/environment.js';
 import database from './config/database.js';
@@ -20,6 +22,7 @@ import visitorRoutes from './routes/visitor.routes.js';
 import frequentVisitorRoutes from './routes/frequentVisitor.routes.js';
 import visitorBanRoutes from './routes/visitorBan.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import adminApprovalRoutes from './routes/adminApproval.routes.js';
 
 class SafeGuardApp {
   constructor() {
@@ -99,7 +102,8 @@ class SafeGuardApp {
           registration: '/api/registration',
           visits: '/api/visits',
           visitors: '/api/visitors',
-          admin: '/api/admin'
+          admin: '/api/admin',
+          adminApproval: '/api/admin-approval'
         }
       });
     });
@@ -112,36 +116,18 @@ class SafeGuardApp {
     this.app.use('/api/frequent-visitors', frequentVisitorRoutes);
     this.app.use('/api/visitor-bans', visitorBanRoutes);
     this.app.use('/api/admin', adminRoutes);
+    this.app.use('/api/admin-approval', adminApprovalRoutes);
   }
 
   setupSocketIO() {
-    // Socket.IO middleware for authentication will be added here
-    this.io.use((socket, next) => {
-      // TODO: Add JWT authentication for socket connections
-      next();
-    });
+    // Initialize Socket Handler
+    this.socketHandler = new SocketHandler(this.io);
+    this.socketHandler.initialize();
 
-    // Socket.IO event handlers
-    this.io.on('connection', (socket) => {
-      logger.info('New socket connection', {
-        socketId: socket.id,
-        userId: socket.userId,
-        timestamp: new Date().toISOString()
-      });
+    // Connect notification service to socket handler for real-time delivery
+    NotificationService.setSocketHandler(this.socketHandler);
 
-      // Handle socket disconnection
-      socket.on('disconnect', (reason) => {
-        logger.info('Socket disconnected', {
-          socketId: socket.id,
-          userId: socket.userId,
-          reason,
-          timestamp: new Date().toISOString()
-        });
-      });
-
-      // Socket event handlers will be added here
-      // import('./sockets/socketHandler.js').then(handler => handler.default(socket, this.io));
-    });
+    logger.info('Socket.io initialized with real-time notifications');
   }
 
   setupErrorHandling() {

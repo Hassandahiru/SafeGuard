@@ -1,7 +1,8 @@
 {
   "info": {
-    "name": "SafeGuard Enhanced Authentication",
-    "description": "Complete test collection for SafeGuard's enhanced authentication and user registration system",
+    "name": "SafeGuard Enhanced Authentication API",
+    "description": "Enhanced authentication and user registration system for SafeGuard - Updated with new test objects and latest implementation",
+    "version": "2.0.0",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -20,7 +21,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"building_id\": \"{{buildingId}}\",\n  \"email\": \"newuser@safeguard.com\",\n  \"phone\": \"+2348012345678\",\n  \"role\": \"building_admin\"\n}"
+              "raw": "{\n  \"building_id\": \"{{buildingId}}\",\n  \"email\": \"michael.thompson@metroplex.com\",\n  \"phone\": \"+1555-0102\",\n  \"role\": \"building_admin\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/registration/validate",
@@ -56,7 +57,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"newuser@safeguard.com\",\n  \"password\": \"NewUserPass123!\",\n  \"first_name\": \"New\",\n  \"last_name\": \"User\",\n  \"phone\": \"+2348012345678\",\n  \"building_id\": \"{{buildingId}}\",\n  \"role\": \"building_admin\",\n  \"apartment_number\": \"A101\",\n  \"emergency_contact\": {\n    \"name\": \"Emergency Contact\",\n    \"phone\": \"+2348012345680\",\n    \"relationship\": \"spouse\"\n  },\n  \"agreed_to_terms\": true,\n  \"email_notifications\": true,\n  \"sms_notifications\": false\n}"
+              "raw": "{\n  \"email\": \"michael.thompson@metroplex.com\",\n  \"password\": \"SecureAdmin2024!\",\n  \"first_name\": \"Michael\",\n  \"last_name\": \"Thompson\",\n  \"phone\": \"+1555-0102\",\n  \"building_id\": \"{{buildingId}}\",\n  \"role\": \"building_admin\",\n  \"apartment_number\": \"ADMIN-001\",\n  \"emergency_contact\": {\n    \"name\": \"Lisa Thompson\",\n    \"phone\": \"+1555-0202\",\n    \"relationship\": \"spouse\"\n  },\n  \"agreed_to_terms\": true,\n  \"email_notifications\": true,\n  \"sms_notifications\": true\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/registration/complete",
@@ -98,7 +99,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"resident@safeguard.com\",\n  \"password\": \"SecureResident123!\",\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"phone\": \"+2348012345679\",\n  \"building_code\": \"TB001\",\n  \"apartment_number\": \"B205\",\n  \"emergency_contact_name\": \"Jane Doe\",\n  \"emergency_contact_phone\": \"+2348012345681\"\n}"
+              "raw": "{\n  \"email\": \"david.wilson@metroplex.com\",\n  \"password\": \"ResidentSecure2024!\",\n  \"first_name\": \"David\",\n  \"last_name\": \"Wilson\",\n  \"phone\": \"+1555-0103\",\n  \"building_code\": \"METRO001\",\n  \"apartment_number\": \"15B\",\n  \"emergency_contact_name\": \"Sarah Wilson\",\n  \"emergency_contact_phone\": \"+1555-0203\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/registration/self-register",
@@ -139,7 +140,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"testuser@safeguard.com\",\n  \"password\": \"TestPassword123!\",\n  \"remember_me\": false,\n  \"device_name\": \"Postman Test Client\",\n  \"location\": \"Lagos, Nigeria\"\n}"
+              "raw": "{\n  \"email\": \"superadmin@metroplex.com\",\n  \"password\": \"SuperSecure2024!\",\n  \"remember_me\": false,\n  \"device_name\": \"Postman Test Client\",\n  \"location\": \"New York, USA\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/enhanced/login",
@@ -261,7 +262,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"current_password\": \"TestPassword123!\",\n  \"new_password\": \"NewTestPassword456!\",\n  \"logout_other_sessions\": true,\n  \"require_reauth_for_sensitive_actions\": true\n}"
+              "raw": "{\n  \"current_password\": \"SuperSecure2024!\",\n  \"new_password\": \"NewSuperSecure2024!\",\n  \"logout_other_sessions\": true,\n  \"require_reauth_for_sensitive_actions\": true\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/enhanced/change-password",
@@ -384,7 +385,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Test Building Complex\",\n  \"address\": \"123 Main Street, Victoria Island\",\n  \"city\": \"Lagos\",\n  \"state\": \"Lagos State\",\n  \"building_code\": \"TB001\",\n  \"total_licenses\": 250,\n  \"adminEmail\": \"superadmin@safeguard.com\",\n  \"adminPassword\": \"SuperSecure123!\",\n  \"adminFirstName\": \"Super\",\n  \"adminLastName\": \"Admin\",\n  \"adminPhone\": \"+2348012345600\"\n}"
+              "raw": "{\n  \"name\": \"Metroplex Towers\",\n  \"address\": \"1500 Broadway, Manhattan\",\n  \"city\": \"New York\",\n  \"state\": \"New York\",\n  \"building_code\": \"METRO001\",\n  \"total_licenses\": 500,\n  \"adminEmail\": \"superadmin@metroplex.com\",\n  \"adminPassword\": \"SuperSecure2024!\",\n  \"adminFirstName\": \"Sarah\",\n  \"adminLastName\": \"Johnson\",\n  \"adminPhone\": \"+1555-0001\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/admin/initial-setup",
@@ -425,7 +426,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"New Building Complex\",\n  \"address\": \"456 Business District, Victoria Island\",\n  \"city\": \"Lagos\",\n  \"state\": \"Lagos State\",\n  \"country\": \"Nigeria\",\n  \"totalLicenses\": 150,\n  \"adminEmail\": \"admin@newbuilding.com\",\n  \"adminPassword\": \"BuildingAdmin123!\",\n  \"adminFirstName\": \"Building\",\n  \"adminLastName\": \"Administrator\",\n  \"adminPhone\": \"+2348012345601\",\n  \"adminApartment\": \"ADMIN-01\"\n}"
+              "raw": "{\n  \"name\": \"Paradise Gardens Estate\",\n  \"address\": \"7500 Beverly Hills Drive\",\n  \"city\": \"Los Angeles\",\n  \"state\": \"California\",\n  \"country\": \"USA\",\n  \"totalLicenses\": 300,\n  \"adminEmail\": \"admin@paradisegardens.com\",\n  \"adminPassword\": \"GardenAdmin2024!\",\n  \"adminFirstName\": \"Jennifer\",\n  \"adminLastName\": \"Garcia\",\n  \"adminPhone\": \"+1555-0002\",\n  \"adminApartment\": \"ADMIN-PG01\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/admin/buildings",
@@ -744,7 +745,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"testuser@safeguard.com\",\n  \"password\": \"WrongPassword123!\"\n}"
+              "raw": "{\n  \"email\": \"superadmin@metroplex.com\",\n  \"password\": \"WrongPassword123!\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/enhanced/login",

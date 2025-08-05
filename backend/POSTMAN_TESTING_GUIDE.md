@@ -1,6 +1,6 @@
-# SafeGuard Enhanced Authentication - Postman Testing Guide
+# SafeGuard API - Complete Postman Testing Guide
 
-This guide provides step-by-step instructions for manually testing the entire enhanced authentication system using Postman.
+This guide provides comprehensive step-by-step instructions for testing the complete SafeGuard API system using Postman, including the new Admin Approval workflow.
 
 ## 🚀 Setup
 
@@ -987,4 +987,318 @@ Your testing is successful if:
    - Use Postman Console to debug request/response data
    - Check server logs for authentication errors
 
-This comprehensive testing guide should help you thoroughly validate the enhanced authentication system functionality!
+---
+
+## 🔧 Phase 4: Admin Approval Workflow Testing
+
+### 4.1 Register Building Admin (Requires Approval)
+**Endpoint**: `POST {{baseUrl}}/api/admin-approval/register-building-admin`
+
+**Headers**:
+```
+Content-Type: application/json
+```
+
+**Body**:
+```json
+{
+  "building_email": "testbuilding@safeguard.com",
+  "email": "newadmin@example.com",
+  "password": "AdminPassword123!",
+  "confirmPassword": "AdminPassword123!",
+  "first_name": "John",
+  "last_name": "Admin",
+  "phone": "+1234567890",
+  "apartment_number": "ADM-001",
+  "admin_permissions": ["manage_visitors", "view_reports"],
+  "send_welcome_email": true,
+  "notes": "New building administrator registration"
+}
+```
+
+**Expected Response (201)**:
+```json
+{
+  "success": true,
+  "data": {
+    "admin": {
+      "id": "uuid",
+      "email": "newadmin@example.com",
+      "first_name": "John",
+      "last_name": "Admin",
+      "role": "building_admin",
+      "verified": false,
+      "status": "pending_approval",
+      "approval_required": true
+    },
+    "building": {
+      "id": "uuid",
+      "name": "Test Building Complex",
+      "email": "testbuilding@safeguard.com"
+    },
+    "approval_request": {
+      "id": "uuid",
+      "status": "pending"
+    }
+  },
+  "message": "Building administrator registered successfully. Pending super administrator approval."
+}
+```
+
+### 4.2 Get Pending Admin Approvals (Super Admin Only)
+**Endpoint**: `GET {{baseUrl}}/api/admin-approval/pending`
+
+**Headers**:
+```
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+```
+
+**Query Parameters**:
+- `building_id` (optional): Filter by building
+- `limit` (optional): Number of results (default: 20)
+- `offset` (optional): Pagination offset (default: 0)
+
+**Expected Response (200)**:
+```json
+{
+  "success": true,
+  "data": {
+    "pending_approvals": [
+      {
+        "id": "uuid",
+        "admin_first_name": "John",
+        "admin_last_name": "Admin",
+        "admin_email": "newadmin@example.com",
+        "admin_phone": "+1234567890",
+        "building_name": "Test Building Complex",
+        "building_email": "testbuilding@safeguard.com",
+        "request_type": "building_admin",
+        "status": "pending",
+        "created_at": "2024-01-15T10:30:00Z"
+      }
+    ],
+    "pagination": {
+      "total": 1,
+      "limit": 20,
+      "offset": 0,
+      "has_more": false
+    }
+  }
+}
+```
+
+### 4.3 Process Admin Approval (Approve)
+**Endpoint**: `POST {{baseUrl}}/api/admin-approval/{approvalId}/process`
+
+**Headers**:
+```
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+```
+
+**Body**:
+```json
+{
+  "approved": true,
+  "reason": "Application meets all requirements"
+}
+```
+
+**Expected Response (200)**:
+```json
+{
+  "success": true,
+  "data": {
+    "approval_request": {
+      "id": "uuid",
+      "status": "approved",
+      "approved": true,
+      "approved_by": "super_admin_id",
+      "approved_at": "2024-01-15T10:35:00Z",
+      "reason": "Application meets all requirements"
+    },
+    "admin_user": {
+      "id": "uuid",
+      "email": "newadmin@example.com",
+      "name": "John Admin",
+      "verified": true,
+      "is_active": true
+    }
+  },
+  "message": "Building administrator approved successfully..."
+}
+```
+
+### 4.4 Process Admin Approval (Reject)
+**Endpoint**: `POST {{baseUrl}}/api/admin-approval/{approvalId}/process`
+
+**Headers**:
+```
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+```
+
+**Body**:
+```json
+{
+  "approved": false,
+  "reason": "Insufficient qualifications or documentation"
+}
+```
+
+**Expected Response (200)**:
+```json
+{
+  "success": true,
+  "data": {
+    "approval_request": {
+      "id": "uuid",
+      "status": "rejected",
+      "approved": false,
+      "approved_by": "super_admin_id",
+      "approved_at": "2024-01-15T10:35:00Z",
+      "reason": "Insufficient qualifications or documentation"
+    },
+    "admin_user": {
+      "id": "uuid",
+      "email": "newadmin@example.com",
+      "name": "John Admin",
+      "verified": false,
+      "is_active": false
+    }
+  },
+  "message": "Building administrator application rejected..."
+}
+```
+
+### 4.5 Get Approval Details
+**Endpoint**: `GET {{baseUrl}}/api/admin-approval/{approvalId}`
+
+**Headers**:
+```
+Authorization: Bearer {{accessToken}}
+```
+
+**Expected Response (200)**:
+```json
+{
+  "success": true,
+  "data": {
+    "approval_request": {
+      "id": "uuid",
+      "admin_first_name": "John",
+      "admin_last_name": "Admin",
+      "admin_email": "newadmin@example.com",
+      "building_name": "Test Building Complex",
+      "building_email": "testbuilding@safeguard.com",
+      "status": "pending",
+      "request_type": "building_admin",
+      "request_data": {},
+      "created_at": "2024-01-15T10:30:00Z"
+    }
+  }
+}
+```
+
+### 4.6 Get Super Admin Notification Dashboard
+**Endpoint**: `GET {{baseUrl}}/api/admin-approval/dashboard/notifications`
+
+**Headers**:
+```
+Authorization: Bearer {{accessToken}}
+```
+
+**Expected Response (200)**:
+```json
+{
+  "success": true,
+  "data": {
+    "pending_approvals_count": 2,
+    "unread_notifications_count": 5,
+    "recent_notifications": [
+      {
+        "id": "uuid",
+        "type": "admin_approval_request",
+        "title": "New Building Admin Approval Required",
+        "message": "John Admin has registered...",
+        "created_at": "2024-01-15T10:30:00Z",
+        "is_read": false
+      }
+    ],
+    "approval_statistics": {
+      "total_requests": 10,
+      "approved_count": 7,
+      "rejected_count": 1,
+      "pending_count": 2,
+      "requests_this_week": 3,
+      "requests_this_month": 8
+    },
+    "dashboard_summary": {
+      "requires_attention": true,
+      "last_updated": "2024-01-15T10:35:00Z"
+    }
+  }
+}
+```
+
+### 4.7 Search Buildings by Email
+**Endpoint**: `GET {{baseUrl}}/api/admin-approval/buildings/search`
+
+**Headers**:
+```
+Content-Type: application/json
+```
+
+**Query Parameters**:
+- `email_term`: Email search term (min 3 characters)
+- `limit`: Max results (default: 10)
+
+**Example**: `GET {{baseUrl}}/api/admin-approval/buildings/search?email_term=test&limit=5`
+
+**Expected Response (200)**:
+```json
+{
+  "success": true,
+  "data": {
+    "buildings": [
+      {
+        "id": "uuid",
+        "name": "Test Building Complex",
+        "email": "testbuilding@safeguard.com",
+        "address": "123 Main Street",
+        "city": "Lagos",
+        "state": "Lagos State",
+        "total_licenses": 100,
+        "used_licenses": 45
+      }
+    ],
+    "search_term": "test"
+  }
+}
+```
+
+---
+
+## 🔄 Admin Approval Testing Workflow
+
+### Complete Testing Sequence:
+
+1. **Setup**: Ensure super admin is logged in with valid token
+2. **Register Admin**: Create new building admin (unverified)
+3. **Check Pending**: View pending approvals in dashboard
+4. **Get Details**: Review specific approval request details
+5. **Process Approval**: Approve or reject the request
+6. **Verify Result**: Confirm admin status changed appropriately
+7. **Test Notifications**: Check dashboard shows updated counts
+
+### Required Permissions:
+- **Building Registration**: No authentication required (public)
+- **View Pending Approvals**: Super Admin only
+- **Process Approvals**: Super Admin only
+- **View Dashboard**: Super Admin only
+- **Building Search**: Public (for registration form)
+
+---
+
+This comprehensive testing guide covers the complete SafeGuard API including the new Admin Approval workflow system!

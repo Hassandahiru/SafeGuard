@@ -1068,6 +1068,271 @@ WHERE utilization_percentage > 90;
 
 ---
 
+## 🗄️ Database Reset and Constraint Management
+
+### Database Reset Process
+
+When you need to completely reset the SafeGuard database (for development or troubleshooting), follow this comprehensive process that handles foreign key constraints and triggers properly.
+
+#### Understanding the Challenge
+
+The SafeGuard database has complex relationships with:
+- **48 foreign key constraints** maintaining data integrity
+- **Audit triggers** that log all changes to critical tables
+- **Analytical triggers** collecting real-time metrics
+- **Business logic triggers** managing license counts and visit completion
+
+Simply deleting data can cause **foreign key constraint violations** because:
+1. Audit triggers try to log deletions while referencing being-deleted records
+2. CASCADE operations may not reach all dependent records
+3. Trigger execution order can create circular dependencies
+
+#### The Force Reset Solution
+
+The database reset process uses a **multi-step approach** to safely clear all data:
+
+```sql
+-- 1. DROP ALL TRIGGERS
+-- Remove all triggers to prevent constraint violations during deletion
+SELECT trigger_name, event_object_table 
+FROM information_schema.triggers 
+WHERE trigger_schema = 'public';
+
+-- Drop each trigger:
+DROP TRIGGER IF EXISTS trigger_name ON table_name CASCADE;
+
+-- 2. DISABLE FOREIGN KEY CONSTRAINTS
+-- Temporarily disable constraint checking
+SET session_replication_role = replica;
+
+-- 3. TRUNCATE WITH CASCADE
+-- Force clear all data ignoring foreign keys
+TRUNCATE TABLE table_name RESTART IDENTITY CASCADE;
+
+-- 4. RE-ENABLE CONSTRAINTS
+-- Restore normal constraint checking
+SET session_replication_role = DEFAULT;
+
+-- 5. RECREATE ESSENTIAL TRIGGERS
+-- Restore only the critical audit trigger with safety checks
+CREATE OR REPLACE FUNCTION create_audit_log() RETURNS TRIGGER AS $$
+DECLARE
+    user_id UUID;
+    building_id UUID;
+    visit_id UUID;
+    action TEXT;
+BEGIN
+    -- Only create audit log if user exists
+    IF TG_OP = 'DELETE' THEN
+        user_id := OLD.user_id;
+        building_id := OLD.building_id;
+        visit_id := OLD.visit_id;
+        action := 'DELETE';
+        
+        -- Check if user exists before creating audit log
+        IF EXISTS (SELECT 1 FROM users WHERE id = user_id) THEN
+            INSERT INTO audit_logs (user_id, building_id, visit_id, action, resource_type, resource_id, old_values)
+            VALUES (user_id, building_id, visit_id, action, TG_TABLE_NAME, OLD.id, row_to_json(OLD));
+        END IF;
+        
+        RETURN OLD;
+    END IF;
+    
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+#### Current Database State After Reset
+
+After a successful force reset, the database has:
+
+✅ **Foreign Key Constraints**: **48 active constraints** maintaining data integrity
+```sql
+-- Major constraint relationships:
+users.building_id → buildings.id
+visits.host_id → users.id
+visitors.created_by → users.id
+visit_visitors.visit_id → visits.id
+visitor_bans.user_id → users.id
+audit_logs.user_id → users.id
+-- ... and 42 more
+```
+
+✅ **Clean Tables**: All data tables have **0 records**
+- 0 users (including super admins)
+- 0 buildings
+- 0 visitors, visits, licenses
+- 0 audit logs, notifications
+
+❌ **No Active Triggers**: **0 triggers** currently attached (prevents constraint conflicts)
+- Triggers are NOT automatically recreated
+- Only the `create_audit_log()` function exists
+- This is intentional to prevent future constraint issues
+
+✅ **Available Trigger Functions**: **16 trigger functions** ready for use
+- `create_audit_log()` - Safe audit logging
+- License management functions
+- Analytics collection functions
+- Timestamp update functions
+
+### Constraint Management Best Practices
+
+#### 1. **Understanding CASCADE Behavior**
+```sql
+-- CASCADE operations propagate through foreign key relationships
+DELETE FROM buildings CASCADE;
+-- This would delete:
+-- - All users in the building
+-- - All visits hosted by those users  
+-- - All visitors created by those users
+-- - All related audit logs, notifications, etc.
+```
+
+#### 2. **Safe Constraint Disabling**
+```sql
+-- Temporary constraint disabling (use with extreme caution)
+SET session_replication_role = replica;  -- Disables triggers and FKs
+-- Perform bulk operations
+SET session_replication_role = DEFAULT;  -- Re-enables constraints
+```
+
+#### 3. **Checking Constraint Status**
+```sql
+-- List all foreign key constraints
+SELECT 
+    tc.constraint_name,
+    tc.table_name,
+    kcu.column_name,
+    ccu.table_name AS foreign_table_name,
+    ccu.column_name AS foreign_column_name
+FROM information_schema.table_constraints AS tc
+JOIN information_schema.key_column_usage AS kcu
+  ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage AS ccu
+  ON ccu.constraint_name = tc.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY'
+  AND tc.table_schema = 'public'
+ORDER BY tc.table_name;
+```
+
+#### 4. **Monitoring Constraint Violations**
+Look for these common error patterns:
+```sql
+-- Foreign key constraint violation
+ERROR: insert or update on table "table_name" violates foreign key constraint
+Detail: Key (column_name)=(value) is not present in table "referenced_table"
+
+-- Circular dependency in CASCADE
+ERROR: cannot delete from table because other objects depend on it
+Detail: constraint xyz on table abc depends on table def
+```
+
+### Trigger Management
+
+#### Current Trigger State
+After database reset:
+- **All triggers removed** to prevent constraint conflicts
+- **Trigger functions preserved** and ready for reattachment
+- **create_audit_log()** function enhanced with safety checks
+
+#### Trigger Recreation Strategy
+You can selectively recreate triggers based on your needs:
+
+```sql
+-- 1. Critical Audit Triggers (recommended)
+CREATE TRIGGER tr_users_audit
+    BEFORE DELETE ON users
+    FOR EACH ROW EXECUTE FUNCTION create_audit_log();
+
+-- 2. License Management (for production)
+CREATE TRIGGER tr_user_license_count
+    AFTER INSERT OR UPDATE OR DELETE ON users
+    FOR EACH ROW EXECUTE FUNCTION update_building_license_count();
+
+-- 3. Analytics Collection (optional)
+CREATE TRIGGER tr_visits_analytics
+    AFTER INSERT OR UPDATE ON visits
+    FOR EACH ROW EXECUTE FUNCTION create_analytics_event();
+```
+
+#### Trigger Safety Patterns
+All new triggers should follow this safety pattern:
+```sql
+CREATE OR REPLACE FUNCTION safe_trigger_function() RETURNS TRIGGER AS $$
+BEGIN
+    -- Always check if referenced records exist
+    IF TG_OP = 'DELETE' THEN
+        -- Verify parent records exist before logging
+        IF EXISTS (SELECT 1 FROM parent_table WHERE id = OLD.parent_id) THEN
+            -- Safe to proceed with trigger logic
+            INSERT INTO audit_logs (...);
+        END IF;
+        RETURN OLD;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Database Recovery Procedures
+
+#### Full System Recovery
+```sql
+-- 1. Database reset (clears all data)
+-- Run force reset script
+
+-- 2. Initial system setup
+POST /api/admin/initial-setup
+{
+  "email": "superadmin@metroplex.com",
+  "password": "SuperSecure2024!",
+  "firstName": "Sarah",
+  "lastName": "Johnson",
+  "buildingData": {
+    "name": "Metroplex Towers",
+    "address": "123 Business District",
+    "city": "Lagos"
+  }
+}
+
+-- 3. Verify system state
+SELECT COUNT(*) FROM users;      -- Should be 1 (super admin)
+SELECT COUNT(*) FROM buildings;  -- Should be 1 (initial building)
+SELECT COUNT(*) FROM licenses;   -- Should be 1 (building license)
+```
+
+#### Partial Recovery (Development)
+```sql
+-- Clear specific data while preserving structure
+DELETE FROM visit_logs;
+DELETE FROM notifications;
+DELETE FROM visits;
+DELETE FROM visitors;
+-- Keep users and buildings for testing
+```
+
+### Important Notes
+
+⚠️ **Production Warnings**:
+- Never disable constraints in production without proper backup
+- Always test recovery procedures in development first
+- Monitor constraint violations in application logs
+
+✅ **Development Benefits**:
+- Clean slate for testing new features
+- Consistent database state across team members
+- Easy troubleshooting of schema issues
+
+💡 **Next Steps After Reset**:
+1. Use `/api/admin/initial-setup` to create first super admin and building
+2. Test with updated Postman collections using new test data
+3. Recreate any custom triggers needed for development
+4. Verify all foreign key relationships are working correctly
+
+---
+
 ## 🚀 Getting Started
 
 ### For New Developers
