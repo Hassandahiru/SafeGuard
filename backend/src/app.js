@@ -15,8 +15,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import requestLogger from './middleware/requestLogger.js';
 
 // Import routes
-import authRoutes from './routes/auth.routes.js';
-import enhancedAuthRoutes from './routes/enhancedAuth.routes.js';
+import authRoutes from './routes/authRoutes.routes.js';
 import userRegistrationRoutes from './routes/userRegistration.routes.js';
 import visitorRoutes from './routes/visitor.routes.js';
 import frequentVisitorRoutes from './routes/frequentVisitor.routes.js';
@@ -98,7 +97,6 @@ class SafeGuardApp {
         endpoints: {
           health: '/health',
           auth: '/api/auth',
-          enhancedAuth: '/api/auth/enhanced',
           registration: '/api/registration',
           visits: '/api/visits',
           visitors: '/api/visitors',
@@ -110,7 +108,6 @@ class SafeGuardApp {
 
     // Register API routes
     this.app.use('/api/auth', authRoutes);
-    this.app.use('/api/auth/enhanced', enhancedAuthRoutes);
     this.app.use('/api/registration', userRegistrationRoutes);
     this.app.use('/api/visitors', visitorRoutes);
     this.app.use('/api/frequent-visitors', frequentVisitorRoutes);
@@ -200,8 +197,7 @@ class SafeGuardApp {
     console.log(`📋 API Info:        http://${HOST}:${PORT}/api`);
     
     console.log('\n🔐 AUTHENTICATION ENDPOINTS:');
-    console.log(`   🔑 Basic Auth:      http://${HOST}:${PORT}/api/auth`);
-    console.log(`   🛡️  Enhanced Auth:   http://${HOST}:${PORT}/api/auth/enhanced`);
+    console.log(`   🔑 Auth (Basic & Enhanced): http://${HOST}:${PORT}/api/auth`);
     
     console.log('\n👥 USER REGISTRATION (SIGNUP) ENDPOINTS:');
     console.log(`   📝 User Signup:     http://${HOST}:${PORT}/api/registration`);
@@ -304,10 +300,7 @@ class SafeGuardApp {
       endpoints: {
         health: `http://${HOST}:${PORT}/health`,
         api: `http://${HOST}:${PORT}/api`,
-        auth: {
-          basic: `http://${HOST}:${PORT}/api/auth`,
-          enhanced: `http://${HOST}:${PORT}/api/auth/enhanced`
-        },
+        auth: `http://${HOST}:${PORT}/api/auth`,
         userSignup: {
           base: `http://${HOST}:${PORT}/api/registration`,
           validate: `http://${HOST}:${PORT}/api/registration/validate`,

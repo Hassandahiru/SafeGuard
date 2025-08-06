@@ -1,6 +1,7 @@
 import express from 'express';
-import EnhancedAuthController from '../controllers/enhancedAuth.controller.js';
-import { authenticate, optionalAuth } from '../middleware/auth.js';
+import authController from '../controllers/authController.controller.js';
+import { authenticate, optionalAuth, authRateLimit } from '../middleware/auth.js';
+import { userValidations, sanitizeInputs } from '../middleware/validation.js';
 import { 
   enhancedAuthValidations, 
   paramValidations, 
@@ -10,8 +11,109 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 
 const router = express.Router();
 
+// Apply input sanitization to all routes
+router.use(sanitizeInputs);
+
+// Apply rate limiting to auth routes
+router.use(authRateLimit);
+
 // =============================================
-// PUBLIC AUTHENTICATION ROUTES
+// BASIC AUTHENTICATION ROUTES
+// =============================================
+
+/**
+ * @route   POST /api/auth/register
+ * @desc    Register a new user
+ * @access  Public
+ */
+router.post('/register', userValidations.register, authController.register);
+
+/**
+ * @route   POST /api/auth/login
+ * @desc    Basic user login
+ * @access  Public
+ */
+router.post('/login', userValidations.login, authController.login);
+
+/**
+ * @route   POST /api/auth/refresh-token
+ * @desc    Refresh access token (basic)
+ * @access  Public
+ */
+router.post('/refresh-token', authController.refreshToken);
+
+/**
+ * @route   POST /api/auth/logout
+ * @desc    Basic logout
+ * @access  Private
+ */
+router.post('/logout', authenticate, authController.logout);
+
+/**
+ * @route   GET /api/auth/profile
+ * @desc    Get current user profile
+ * @access  Private
+ */
+router.get('/profile', authenticate, authController.getProfile);
+
+/**
+ * @route   PUT /api/auth/profile
+ * @desc    Update user profile
+ * @access  Private
+ */
+router.put('/profile', authenticate, userValidations.updateProfile, authController.updateProfile);
+
+/**
+ * @route   POST /api/auth/change-password
+ * @desc    Change user password (basic)
+ * @access  Private
+ */
+router.post('/change-password', authenticate, userValidations.changePassword, authController.changePassword);
+
+/**
+ * @route   POST /api/auth/request-password-reset
+ * @desc    Request password reset
+ * @access  Public
+ */
+router.post('/request-password-reset', userValidations.resetPassword, authController.requestPasswordReset);
+
+/**
+ * @route   POST /api/auth/reset-password
+ * @desc    Reset password with token
+ * @access  Public
+ */
+router.post('/reset-password', userValidations.confirmResetPassword, authController.resetPassword);
+
+/**
+ * @route   POST /api/auth/verify-email
+ * @desc    Verify email address
+ * @access  Public
+ */
+router.post('/verify-email', authController.verifyEmail);
+
+/**
+ * @route   POST /api/auth/resend-verification
+ * @desc    Resend email verification
+ * @access  Private
+ */
+router.post('/resend-verification', authenticate, authController.resendEmailVerification);
+
+/**
+ * @route   GET /api/auth/check
+ * @desc    Check authentication status
+ * @access  Private
+ */
+router.get('/check', authenticate, authController.checkAuth);
+
+/**
+ * @route   GET /api/auth/permissions
+ * @desc    Get user permissions
+ * @access  Private
+ */
+router.get('/permissions', authenticate, authController.getPermissions);
+
+// =============================================
+// ENHANCED AUTHENTICATION ROUTES
 // =============================================
 
 /**
@@ -19,40 +121,77 @@ const router = express.Router();
  * @desc    Enhanced login with security features and device tracking
  * @access  Public
  */
-router.post('/login',
+router.post('/enhanced/login',
   securityValidations.checkRateLimit,
   securityValidations.validateIPAddress,
   enhancedAuthValidations.enhancedLogin,
-  asyncHandler(EnhancedAuthController.enhancedLogin)
-);
-
-/**
- * @route   POST /api/auth/enhanced/verify-2fa
- * @desc    Verify two-factor authentication code
- * @access  Public (with verification token)
- */
-router.post('/verify-2fa',
-  enhancedAuthValidations.verifyTwoFactor,
-  asyncHandler(EnhancedAuthController.verifyTwoFactor)
+  asyncHandler(authController.enhancedLogin)
 );
 
 /**
  * @route   POST /api/auth/enhanced/refresh
  * @desc    Enhanced token refresh with session validation
- * @access  Public (with refresh token)
+ * @access  Public
  */
-router.post('/refresh',
+router.post('/enhanced/refresh',
   enhancedAuthValidations.refreshToken,
   securityValidations.validateDeviceFingerprint,
-  asyncHandler(EnhancedAuthController.enhancedRefreshToken)
+  asyncHandler(authController.enhancedRefreshToken)
 );
+
+/**
+ * @route   POST /api/auth/enhanced/logout
+ * @desc    Enhanced logout with session cleanup options
+ * @access  Private
+ */
+router.post('/enhanced/logout',
+  authenticate,
+  enhancedAuthValidations.enhancedLogout,
+  asyncHandler(authController.enhancedLogout)
+);
+
+/**
+ * @route   POST /api/auth/enhanced/change-password
+ * @desc    Enhanced password change with security validations
+ * @access  Private
+ */
+router.post('/enhanced/change-password',
+  authenticate,
+  enhancedAuthValidations.changePassword,
+  asyncHandler(authController.enhancedChangePassword)
+);
+
+/**
+ * @route   GET /api/auth/enhanced/sessions
+ * @desc    Get all active sessions for current user
+ * @access  Private
+ */
+router.get('/enhanced/sessions',
+  authenticate,
+  asyncHandler(authController.getActiveSessions)
+);
+
+/**
+ * @route   DELETE /api/auth/enhanced/sessions/:session_id
+ * @desc    Revoke a specific session
+ * @access  Private
+ */
+router.delete('/enhanced/sessions/:session_id',
+  authenticate,
+  paramValidations.sessionId,
+  asyncHandler(authController.revokeSession)
+);
+
+// =============================================
+// PLACEHOLDER ENHANCED ROUTES (TO BE IMPLEMENTED)
+// =============================================
 
 /**
  * @route   POST /api/auth/enhanced/request-reset
  * @desc    Request password reset with enhanced security
  * @access  Public
  */
-router.post('/request-reset',
+router.post('/enhanced/request-reset',
   securityValidations.checkRateLimit,
   enhancedAuthValidations.requestPasswordReset,
   asyncHandler(async (req, res) => {
@@ -67,9 +206,9 @@ router.post('/request-reset',
 /**
  * @route   POST /api/auth/enhanced/reset-password
  * @desc    Reset password with token validation
- * @access  Public (with reset token)
+ * @access  Public
  */
-router.post('/reset-password',
+router.post('/enhanced/reset-password',
   enhancedAuthValidations.resetPassword,
   asyncHandler(async (req, res) => {
     // Implementation for enhanced password reset
@@ -83,9 +222,9 @@ router.post('/reset-password',
 /**
  * @route   POST /api/auth/enhanced/verify-email
  * @desc    Verify email address with enhanced validation
- * @access  Public (with verification token)
+ * @access  Public
  */
-router.post('/verify-email',
+router.post('/enhanced/verify-email',
   enhancedAuthValidations.verifyEmail,
   asyncHandler(async (req, res) => {
     // Implementation for enhanced email verification
@@ -96,58 +235,13 @@ router.post('/verify-email',
   })
 );
 
-// =============================================
-// AUTHENTICATED ROUTES
-// =============================================
-
-// All routes below require authentication
-router.use(authenticate);
-
-/**
- * @route   POST /api/auth/enhanced/logout
- * @desc    Enhanced logout with session cleanup options
- * @access  Private
- */
-router.post('/logout',
-  enhancedAuthValidations.enhancedLogout,
-  asyncHandler(EnhancedAuthController.enhancedLogout)
-);
-
-/**
- * @route   GET /api/auth/enhanced/sessions
- * @desc    Get all active sessions for current user
- * @access  Private
- */
-router.get('/sessions',
-  asyncHandler(EnhancedAuthController.getActiveSessions)
-);
-
-/**
- * @route   DELETE /api/auth/enhanced/sessions/:session_id
- * @desc    Revoke a specific session
- * @access  Private
- */
-router.delete('/sessions/:session_id',
-  paramValidations.sessionId,
-  asyncHandler(EnhancedAuthController.revokeSession)
-);
-
-/**
- * @route   POST /api/auth/enhanced/change-password
- * @desc    Enhanced password change with security validations
- * @access  Private
- */
-router.post('/change-password',
-  enhancedAuthValidations.changePassword,
-  asyncHandler(EnhancedAuthController.enhancedChangePassword)
-);
-
 /**
  * @route   POST /api/auth/enhanced/enable-2fa
  * @desc    Enable two-factor authentication
  * @access  Private
  */
-router.post('/enable-2fa',
+router.post('/enhanced/enable-2fa',
+  authenticate,
   asyncHandler(async (req, res) => {
     // Implementation for enabling 2FA
     const qr_code_url = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=otpauth://totp/SafeGuard:${req.user.email}?secret=BASE32SECRET&issuer=SafeGuard`;
@@ -169,7 +263,8 @@ router.post('/enable-2fa',
  * @desc    Disable two-factor authentication
  * @access  Private
  */
-router.post('/disable-2fa',
+router.post('/enhanced/disable-2fa',
+  authenticate,
   asyncHandler(async (req, res) => {
     // Implementation for disabling 2FA
     res.json({ 
@@ -184,7 +279,8 @@ router.post('/disable-2fa',
  * @desc    Get user security settings and status
  * @access  Private
  */
-router.get('/security-settings',
+router.get('/enhanced/security-settings',
+  authenticate,
   asyncHandler(async (req, res) => {
     const securitySettings = {
       user_id: req.user.id,
@@ -214,7 +310,8 @@ router.get('/security-settings',
  * @desc    Update user security preferences
  * @access  Private
  */
-router.post('/update-security-settings',
+router.post('/enhanced/update-security-settings',
+  authenticate,
   asyncHandler(async (req, res) => {
     const { 
       login_notifications, 
@@ -236,7 +333,8 @@ router.post('/update-security-settings',
  * @desc    Get user login history and security events
  * @access  Private
  */
-router.get('/login-history',
+router.get('/enhanced/login-history',
+  authenticate,
   asyncHandler(async (req, res) => {
     const { page = 1, limit = 20 } = req.query;
 
@@ -280,7 +378,8 @@ router.get('/login-history',
  * @desc    Report suspicious account activity
  * @access  Private
  */
-router.post('/report-suspicious',
+router.post('/enhanced/report-suspicious',
+  authenticate,
   asyncHandler(async (req, res) => {
     const { description, suspected_activity_time, additional_info } = req.body;
 
@@ -304,7 +403,8 @@ router.post('/report-suspicious',
  * @desc    Temporarily lock account for security reasons
  * @access  Private
  */
-router.post('/lock-account',
+router.post('/enhanced/lock-account',
+  authenticate,
   asyncHandler(async (req, res) => {
     const { reason, duration_hours = 24 } = req.body;
 
@@ -327,7 +427,8 @@ router.post('/lock-account',
  * @desc    Check current session validity and refresh if needed
  * @access  Private
  */
-router.get('/check-session',
+router.get('/enhanced/check-session',
+  authenticate,
   asyncHandler(async (req, res) => {
     const sessionInfo = {
       valid: true,

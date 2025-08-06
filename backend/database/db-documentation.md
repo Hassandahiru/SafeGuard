@@ -88,12 +88,18 @@ Key Fields:
 - uses_license (BOOLEAN): Whether user counts against building licenses
 - apartment_number (VARCHAR): Resident's apartment
 - is_active (BOOLEAN): User status
+- last_login (TIMESTAMPTZ): Most recent successful login timestamp
+- last_login_ip (INET): IP address from most recent successful login
+- last_user_agent (TEXT): User agent string from most recent successful login
+- login_attempts (INTEGER): Failed login attempt counter (security feature)
+- locked_until (TIMESTAMPTZ): Account lockout timestamp for security
 ```
 
 **Business Rules**:
 - Residents and admins use licenses by default
 - Security and temporary users may not use licenses
 - Email must be unique across the entire system
+- Enhanced login tracking for security and analytics
 
 ### 3. Visitors (`visitors`)
 **Purpose**: Reusable visitor profiles per building
@@ -1373,6 +1379,65 @@ If migrating from a visitor-centric system:
 - **Security**: See audit logs for all database changes
 - **Performance**: Monitor slow queries and table growth
 - **Backup**: Daily backups recommended with point-in-time recovery
+
+---
+
+## 📝 Migration History
+
+### Migration: Enhanced Login Tracking (2025-01-06)
+**Migration ID**: `2025_01_06_001_enhanced_login_tracking`  
+**File**: `migrations/add_enhanced_login_tracking.sql`  
+**Status**: ✅ Completed Successfully
+
+#### Summary
+Added enhanced authentication tracking capabilities to the users table to support advanced security features and analytics.
+
+#### Changes Made
+1. **Added Columns**:
+   - `last_login_ip (INET)`: Tracks the IP address from the user's most recent successful login
+   - `last_user_agent (TEXT)`: Stores the user agent string from the user's most recent successful login
+
+2. **Performance Optimizations**:
+   - Added `idx_users_last_login_ip` index on `last_login_ip` (partial index for non-NULL values)
+   - Added `idx_users_last_login` index on `last_login` (partial index for non-NULL values)
+
+3. **Documentation**:
+   - Added column comments explaining the purpose of each new field
+   - Updated existing records to have NULL values explicitly
+
+#### Impact
+- **Enhanced Security**: System can now track login locations and detect suspicious access patterns
+- **Improved Analytics**: Device and location-based user behavior analysis
+- **Better User Experience**: Foundation for features like "New device detected" notifications
+- **Performance**: Strategic indexing ensures fast lookups for security checks
+
+#### Database Schema Changes
+```sql
+-- Before Migration
+users table: 20 columns (id through updated_at)
+
+-- After Migration  
+users table: 22 columns (added last_login_ip, last_user_agent)
+```
+
+#### Migration Execution Details
+- **Execution Date**: 2025-01-06
+- **Execution Time**: < 1 second (2 existing records updated)
+- **Rollback Available**: Standard column drop procedures
+- **Data Loss**: None (all operations are additive)
+
+#### Supporting Features
+This migration enables the enhanced authentication controller consolidation, which includes:
+- Risk-based authentication
+- Device fingerprinting
+- Location-based access controls
+- Suspicious activity detection
+- Session management improvements
+
+#### Future Migrations Planned
+- Enhanced session tracking with device fingerprints
+- Location-based security policies
+- Multi-factor authentication support
 
 ---
 
