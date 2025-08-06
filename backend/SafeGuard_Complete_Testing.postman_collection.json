@@ -73,7 +73,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Metroplex Towers\",\n  \"email\": \"metroplex@safeguard.com\",\n  \"address\": \"1001 Victoria Island Boulevard, Lagos\",\n  \"city\": \"Lagos\",\n  \"state\": \"Lagos State\",\n  \"country\": \"Nigeria\",\n  \"postal_code\": \"101241\",\n  \"building_code\": \"MTX001\",\n  \"total_licenses\": 300,\n  \"adminEmail\": \"superadmin@metroplex.com\",\n  \"adminPassword\": \"SuperSecure2024!\",\n  \"adminFirstName\": \"Sarah\",\n  \"adminLastName\": \"Johnson\",\n  \"adminPhone\": \"+2348012345000\"\n}"
+							"raw": "{\n  \"name\": \"Metroplex Towers\",\n  \"email\": \"metroplex@safeguard.com\",\n  \"address\": \"1001 Victoria Island Boulevard, Lagos\",\n  \"city\": \"Lagos\",\n  \"state\": \"Lagos State\",\n  \"country\": \"Nigeria\",\n  \"postal_code\": \"101241\",\n  \"total_licenses\": 300,\n  \"adminEmail\": \"superadmin@metroplex.com\",\n  \"adminPassword\": \"SuperSecure2024!\",\n  \"adminFirstName\": \"Sarah\",\n  \"adminLastName\": \"Johnson\",\n  \"adminPhone\": \"+2348012345000\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/initial-setup",
@@ -117,7 +117,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Paradise Gardens Estate\",\n  \"email\": \"paradise@safeguard.com\",\n  \"address\": \"456 Lekki Phase 1, Lagos\",\n  \"city\": \"Lagos\",\n  \"state\": \"Lagos State\",\n  \"country\": \"Nigeria\",\n  \"postal_code\": \"101245\",\n  \"building_code\": \"PGE002\",\n  \"total_licenses\": 200,\n  \"adminEmail\": \"admin@paradise.com\",\n  \"adminPassword\": \"ParadiseAdmin2024!\",\n  \"adminFirstName\": \"Michael\",\n  \"adminLastName\": \"Thompson\",\n  \"adminPhone\": \"+2348012345001\",\n  \"adminApartment\": \"ADMIN-001\"\n}"
+							"raw": "{\n  \"name\": \"Paradise Gardens Estate\",\n  \"email\": \"paradise@safeguard.com\",\n  \"address\": \"456 Lekki Phase 1, Lagos\",\n  \"city\": \"Lagos\",\n  \"state\": \"Lagos State\",\n  \"country\": \"Nigeria\",\n  \"postal_code\": \"101245\",\n  \"total_licenses\": 200,\n  \"adminEmail\": \"admin@paradise.com\",\n  \"adminPassword\": \"ParadiseAdmin2024!\",\n  \"adminFirstName\": \"Michael\",\n  \"adminLastName\": \"Thompson\",\n  \"adminPhone\": \"+2348012345001\",\n  \"adminApartment\": \"ADMIN-001\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/buildings",
@@ -385,7 +385,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"selfregister@metroplex.com\",\n  \"password\": \"SelfRegister2024!\",\n  \"first_name\": \"Lisa\",\n  \"last_name\": \"Anderson\",\n  \"phone\": \"+2348012345102\",\n  \"building_code\": \"MTX001\",\n  \"apartment_number\": \"B-301\",\n  \"emergency_contact_name\": \"James Anderson\",\n  \"emergency_contact_phone\": \"+2348012345103\"\n}"
+							"raw": "{\n  \"email\": \"selfregister@metroplex.com\",\n  \"password\": \"SelfRegister2024!\",\n  \"first_name\": \"Lisa\",\n  \"last_name\": \"Anderson\",\n  \"phone\": \"+2348012345102\",\n  \"building_email\": \"superadmin@metroplex.com\",\n  \"apartment_number\": \"B-301\",\n  \"emergency_contact_name\": \"James Anderson\",\n  \"emergency_contact_phone\": \"+2348012345103\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/registration/self-register",

@@ -1,11 +1,23 @@
-{
+[{
   "email": "david.wilson@metroplex.com",
   "password": "ResidentSecure2024!",
   "first_name": "David",
   "last_name": "Wilson",
   "phone": "+1555-0103",
-  "building_code": "METRO001",
+  "building_email": "superadmin@metroplex.com",
   "apartment_number": "15B",
   "emergency_contact_name": "Sarah Wilson",
   "emergency_contact_phone": "+1555-0203"
+},
+{
+  "email": "amos.dauda@gmail.com",
+  "password": "Qwerty@123",
+  "first_name": "Dauda",
+  "last_name": "Amos",
+  "phone": "+2348163753687",
+  "building_email": "admin@dantatagroup.com",
+  "apartment_number": "15B",
+  "emergency_contact_name": "Hauwa Dauda",
+  "emergency_contact_phone": "+2348165480756"
 }
+]

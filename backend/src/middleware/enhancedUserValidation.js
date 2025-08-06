@@ -192,13 +192,14 @@ const enhancedUserValidations = {
     commonValidations.name('last_name'),
     commonValidations.requiredPhone(),
     
-    body('building_code')
+    body('building_email')
       .notEmpty()
-      .withMessage('Building code is required')
-      .isLength({ min: 4, max: 20 })
-      .withMessage('Building code must be between 4 and 20 characters')
-      .matches(/^[A-Z0-9-]+$/)
-      .withMessage('Building code can only contain uppercase letters, numbers, and hyphens'),
+      .withMessage('Building email is required')
+      .isEmail()
+      .normalizeEmail()
+      .withMessage('Building email must be a valid email address')
+      .isLength({ max: 255 })
+      .withMessage('Building email must not exceed 255 characters'),
     
     commonValidations.apartmentNumber(),
     

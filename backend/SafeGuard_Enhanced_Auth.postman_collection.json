@@ -99,7 +99,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"david.wilson@metroplex.com\",\n  \"password\": \"ResidentSecure2024!\",\n  \"first_name\": \"David\",\n  \"last_name\": \"Wilson\",\n  \"phone\": \"+1555-0103\",\n  \"building_code\": \"METRO001\",\n  \"apartment_number\": \"15B\",\n  \"emergency_contact_name\": \"Sarah Wilson\",\n  \"emergency_contact_phone\": \"+1555-0203\"\n}"
+              "raw": "{\n  \"email\": \"david.wilson@metroplex.com\",\n  \"password\": \"ResidentSecure2024!\",\n  \"first_name\": \"David\",\n  \"last_name\": \"Wilson\",\n  \"phone\": \"+1555-0103\",\n  \"building_email\": \"superadmin@metroplex.com\",\n  \"apartment_number\": \"15B\",\n  \"emergency_contact_name\": \"Sarah Wilson\",\n  \"emergency_contact_phone\": \"+1555-0203\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/registration/self-register",
@@ -391,7 +391,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Metroplex Towers\",\n  \"address\": \"1500 Broadway, Manhattan\",\n  \"city\": \"New York\",\n  \"state\": \"New York\",\n  \"building_code\": \"METRO001\",\n  \"total_licenses\": 500,\n  \"adminEmail\": \"superadmin@metroplex.com\",\n  \"adminPassword\": \"SuperSecure2024!\",\n  \"adminFirstName\": \"Sarah\",\n  \"adminLastName\": \"Johnson\",\n  \"adminPhone\": \"+1555-0001\"\n}"
+              "raw": "{\n  \"name\": \"Metroplex Towers\",\n  \"address\": \"1500 Broadway, Manhattan\",\n  \"city\": \"New York\",\n  \"state\": \"New York\",\n  \"email\": \"metroplex@towers.com\",\n  \"total_licenses\": 500,\n  \"adminEmail\": \"superadmin@metroplex.com\",\n  \"adminPassword\": \"SuperSecure2024!\",\n  \"adminFirstName\": \"Sarah\",\n  \"adminLastName\": \"Johnson\",\n  \"adminPhone\": \"+1555-0001\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/admin/initial-setup",
