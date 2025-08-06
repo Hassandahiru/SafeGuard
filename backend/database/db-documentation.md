@@ -1434,9 +1434,36 @@ This migration enables the enhanced authentication controller consolidation, whi
 - Suspicious activity detection
 - Session management improvements
 
+### Migration: Fix Login Tracking Columns (2025-01-06) 
+**Migration ID**: `2025_01_06_002_fix_login_tracking_columns`  
+**File**: `migrations/fix_login_tracking_columns.sql`  
+**Status**: ✅ Completed Successfully
+
+#### Summary
+Fixed database connection issue and ensured login tracking columns are properly created.
+
+#### Issue Resolved
+- **Problem**: Application error "column 'last_login_ip' of relation 'users' does not exist"  
+- **Root Cause**: URL encoding issue with `@` character in database password
+- **Solution**: URL-encoded password (`%40`) and re-ran migration
+
+#### Changes Made
+1. **Fixed DATABASE_URL**: Properly encoded password with `%40` instead of `@`
+2. **Verified Columns**: Confirmed both columns exist with proper indexing
+3. **Added Safety Checks**: Migration includes verification that columns were created
+
+#### Database Connection Fix
+```bash
+# Before (broken):
+DATABASE_URL='postgresql://user:pass@word@host:5432/db'
+
+# After (working): 
+DATABASE_URL='postgresql://user:pass%40word@host:5432/db'
+```
+
 #### Future Migrations Planned
 - Enhanced session tracking with device fingerprints
-- Location-based security policies
+- Location-based security policies  
 - Multi-factor authentication support
 
 ---
