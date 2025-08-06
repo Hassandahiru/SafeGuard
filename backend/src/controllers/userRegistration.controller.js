@@ -214,7 +214,7 @@ class UserRegistrationController {
       first_name, 
       last_name, 
       phone, 
-      building_code, // Instead of building_id for security
+      building_email, // Instead of building_id for security
       apartment_number,
       emergency_contact_name,
       emergency_contact_phone
@@ -222,7 +222,7 @@ class UserRegistrationController {
 
     // Find building by building code
     const building = await Building.findOne({ 
-      building_code, 
+      building_email, 
       is_active: true,
       allows_self_registration: true 
     });
