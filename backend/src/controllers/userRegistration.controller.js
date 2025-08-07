@@ -220,15 +220,11 @@ class UserRegistrationController {
       emergency_contact_phone
     } = req.body;
 
-    // Find building by building code
-    const building = await Building.findOne({ 
-      building_email, 
-      is_active: true,
-      allows_self_registration: true 
-    });
+    // Find building by building email
+    const building = await Building.findByEmail(building_email);
     
     if (!building) {
-      throw new NotFoundError('Invalid building code or self-registration not allowed');
+      throw new NotFoundError('Invalid building email or self-registration not allowed');
     }
 
     // Check license availability
@@ -270,10 +266,7 @@ class UserRegistrationController {
       },
       uses_license: true,
       is_active: false, // Requires admin approval for self-registration
-      is_verified: false,
-      registration_method: 'self_registration',
-      registration_ip: req.ip,
-      registration_user_agent: req.get('User-Agent')
+      is_verified: false
     };
 
     const user = await User.create(userData);

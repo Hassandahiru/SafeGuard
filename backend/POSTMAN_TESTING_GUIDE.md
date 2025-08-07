@@ -47,7 +47,7 @@ Content-Type: application/json
   "address": "123 Main Street, Victoria Island",
   "city": "Lagos",
   "state": "Lagos State",
-  "building_code": "TB001",
+  "building_email": "testbuilding@safeguard.com",
   "total_licenses": 250,
   "adminEmail": "superadmin@safeguard.com",
   "adminPassword": "SuperSecure123!",
@@ -73,7 +73,7 @@ Content-Type: application/json
       "id": "building-uuid-here",
       "name": "Test Building Complex",
       "address": "123 Main Street, Victoria Island",
-      "building_code": "TB001",
+      "building_email": "testbuilding@safeguard.com",
       "total_licenses": 250
     }
   },
@@ -252,7 +252,7 @@ Content-Type: application/json
   "first_name": "John",
   "last_name": "Doe",
   "phone": "+2348012345679",
-  "building_code": "TB001",
+  "building_email": "testbuilding@safeguard.com",
   "apartment_number": "B205",
   "emergency_contact_name": "Jane Doe",
   "emergency_contact_phone": "+2348012345681"

@@ -2,6 +2,7 @@ import express from 'express';
 import UserRegistrationController from '../controllers/userRegistration.controller.js';
 import { authenticate, authorize, requireSuperAdmin, requireBuildingAdmin } from '../middleware/auth.js';
 import { enhancedUserValidations, paramValidations } from '../middleware/enhancedUserValidation.js';
+import { validateSelfRegistration } from '../validators/user.validator.js';
 import { USER_ROLES } from '../utils/constants.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 
@@ -33,11 +34,11 @@ router.post('/complete',
 
 /**
  * @route   POST /api/registration/self-register
- * @desc    Resident self-registration (requires building code)
+ * @desc    Resident self-registration (requires building email)
  * @access  Public
  */
 router.post('/self-register',
-  enhancedUserValidations.residentSelfRegister,
+  validateSelfRegistration,
   asyncHandler(UserRegistrationController.residentSelfRegister)
 );
 
