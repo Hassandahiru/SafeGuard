@@ -758,7 +758,7 @@ const adminValidations = {
       .withMessage('Postal code must be between 3 and 20 characters'),
     body('buildingPhone')
       .optional()
-      .isMobilePhone()
+      .matches(/^\+?[1-9]\d{1,14}$/)
       .withMessage('Building phone must be a valid phone number'),
     body('buildingEmail')
       .optional()
@@ -783,7 +783,7 @@ const adminValidations = {
     commonValidations.name('adminFirstName'),
     commonValidations.name('adminLastName'),
     body('adminPhone')
-      .isMobilePhone()
+      .matches(/^\+?[1-9]\d{1,14}$/)
       .withMessage('Admin phone must be a valid phone number'),
     body('adminApartment')
       .optional()
@@ -802,7 +802,7 @@ const adminValidations = {
       .withMessage('Contact email must be valid'),
     body('contactPhone')
       .optional()
-      .isMobilePhone()
+      .matches(/^\+?[1-9]\d{1,14}$/)
       .withMessage('Contact phone must be a valid phone number'),
     
     handleValidationErrors
