@@ -21,6 +21,16 @@ router.post('/initial-setup',
   asyncHandler(AdminController.initialSetup)
 );
 
+/**
+ * @route   POST /api/admin/register-building
+ * @desc    Self-service building registration for new customers
+ * @access  Public (new customer registration)
+ */
+router.post('/register-building',
+  adminValidations.selfServiceBuildingRegistration,
+  asyncHandler(AdminController.selfServiceBuildingRegistration)
+);
+
 // All other admin routes require authentication
 router.use(authenticate);
 

@@ -21,6 +21,27 @@
   "adminApartment": "ADMIN-PG01"
 },
 {
+    "name": "Lake View",
+    "address": "Jabi, by Jabi lake, Abuja",
+    "city": "Abuja",
+    "state": "FCT",
+    "country": "Nigeria",
+    "postalCode": "90211",
+    "buildingPhone": "+2348012320000",
+    "buildingEmail": "lakeview@lakeviewhomes.com",
+    "website": "https://lakeviewhomes.com",
+    "totalLicenses": 200,
+    "adminEmail": "lv@lakeviewhomes.com",
+    "adminPassword": "Qwerty@123",
+    "adminFirstName": "Ahmed",
+    "adminLastName": "Muhammed",
+    "adminPhone": "+2348012345021",
+    "adminApartment": "ADMIN-001",
+    "companyName": "Lake View Homes Ltd",
+    "contactEmail": "contact@lakeviewhomes.com",
+    "contactPhone": "+2348012345022"
+},
+{
   "name": "Dantata Estate Kubwa",
   "email": "dantata@dantatagroup.com",
   "address": "Kubwa by train station, Abuja",

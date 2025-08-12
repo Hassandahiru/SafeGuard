@@ -781,6 +781,164 @@ class AdminController {
   }
 
   /**
+   * Self-service building registration for new customers
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async selfServiceBuildingRegistration(req, res) {
+    try {
+      const {
+        // Building details
+        name,
+        address,
+        city,
+        state,
+        country = 'Nigeria',
+        postalCode,
+        buildingPhone,
+        buildingEmail,
+        website,
+        totalLicenses = 100,
+        // Building admin details
+        adminEmail,
+        adminPassword,
+        adminFirstName,
+        adminLastName,
+        adminPhone,
+        adminApartment,
+        // Optional company details
+        companyName,
+        contactEmail,
+        contactPhone
+      } = req.body;
+
+      // Validate required fields
+      if (!name || !address || !city || !state || !adminEmail || !adminPassword || !adminFirstName || !adminLastName || !adminPhone) {
+        throw new ValidationError('All required fields must be provided');
+      }
+
+      // Check if admin email already exists
+      const existingUser = await User.findByEmail(adminEmail);
+      if (existingUser) {
+        throw new ConflictError('Email already registered. Please use a different email address.');
+      }
+
+      // Check if building email already exists (optional uniqueness check)
+      if (buildingEmail) {
+        const existingBuildingEmail = await Building.findByEmail(buildingEmail);
+        if (existingBuildingEmail) {
+          throw new ConflictError('Building email already registered. Please use a different email address.');
+        }
+      }
+
+      // Create building
+      const buildingData = {
+        name,
+        address,
+        city,
+        state,
+        country,
+        postal_code: postalCode,
+        phone: buildingPhone,
+        email: buildingEmail || adminEmail,
+        website,
+        total_licenses: totalLicenses,
+        used_licenses: 1, // Building admin will use 1 license
+        security_level: 1, // Start with basic security level
+        is_active: true,
+        settings: {
+          company_name: companyName,
+          contact_email: contactEmail,
+          contact_phone: contactPhone,
+          registration_type: 'self_service',
+          registration_date: new Date().toISOString()
+        }
+      };
+
+      const building = await Building.create(buildingData);
+
+      // Create trial license for the building (30-day trial)
+      const licenseInfo = {
+        building_id: building.id,
+        plan_type: 'standard',
+        total_licenses: totalLicenses,
+        starts_at: new Date(),
+        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days trial
+        amount: 0, // Free trial
+        currency: 'NGN',
+        payment_reference: 'TRIAL_REGISTRATION',
+        features: {
+          qr_codes: true,
+          visitor_management: true,
+          basic_analytics: true,
+          email_notifications: true,
+          mobile_app: true,
+          // Limit trial features
+          emergency_alerts: false,
+          advanced_analytics: false,
+          api_access: false,
+          custom_branding: false
+        }
+      };
+
+      const license = await License.create(licenseInfo);
+
+      // Create building admin
+      const buildingAdminData = {
+        email: adminEmail,
+        password: adminPassword,
+        first_name: adminFirstName,
+        last_name: adminLastName,
+        phone: adminPhone,
+        apartment_number: adminApartment || 'ADMIN-001',
+        building_id: building.id,
+        role: USER_ROLES.BUILDING_ADMIN,
+        is_active: true,
+        is_verified: true, // Auto-verify for self-service registration
+        uses_license: true,
+        registration_source: 'self_service'
+      };
+
+      const buildingAdmin = await User.create(buildingAdminData);
+
+      // Remove password from response
+      const { password_hash, ...adminResponse } = buildingAdmin;
+
+      logger.info('Self-service building registration completed', {
+        buildingId: building.id,
+        licenseId: license.id,
+        buildingAdminId: buildingAdmin.id,
+        registrationType: 'self_service',
+        companyName: companyName
+      });
+
+      res.status(HTTP_STATUS.CREATED).json({
+        success: true,
+        message: 'Building registered successfully! Welcome to SafeGuard.',
+        data: {
+          building,
+          license,
+          admin: adminResponse,
+          trial_info: {
+            trial_period_days: 30,
+            expires_at: license.expires_at,
+            features_included: Object.keys(licenseInfo.features).filter(key => licenseInfo.features[key]),
+            next_steps: [
+              'Complete your building profile',
+              'Add residents and security staff',
+              'Configure visitor management settings',
+              'Explore premium features before trial expires'
+            ]
+          }
+        }
+      });
+    } catch (error) {
+      logger.error('Error during self-service building registration:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get system dashboard statistics
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object

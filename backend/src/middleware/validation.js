@@ -742,6 +742,71 @@ const adminValidations = {
     
     handleValidationErrors
   ],
+  selfServiceBuildingRegistration: [
+    // Building details validation
+    commonValidations.requiredString('name', 2, 255),
+    commonValidations.requiredString('address', 10, 500),
+    commonValidations.requiredString('city', 2, 100),
+    commonValidations.requiredString('state', 2, 100),
+    body('country')
+      .optional()
+      .isLength({ min: 2, max: 100 })
+      .withMessage('Country must be between 2 and 100 characters'),
+    body('postalCode')
+      .optional()
+      .isLength({ min: 3, max: 20 })
+      .withMessage('Postal code must be between 3 and 20 characters'),
+    body('buildingPhone')
+      .optional()
+      .isMobilePhone()
+      .withMessage('Building phone must be a valid phone number'),
+    body('buildingEmail')
+      .optional()
+      .isEmail()
+      .normalizeEmail()
+      .withMessage('Building email must be valid'),
+    body('website')
+      .optional()
+      .isURL({ protocols: ['http', 'https'], require_protocol: true })
+      .withMessage('Website must be a valid URL starting with http:// or https://'),
+    body('totalLicenses')
+      .optional()
+      .isInt({ min: 50, max: 1000 })
+      .withMessage('Total licenses must be between 50 and 1000'),
+    
+    // Building admin details validation
+    body('adminEmail')
+      .isEmail()
+      .normalizeEmail()
+      .withMessage('Admin email must be valid'),
+    commonValidations.password('adminPassword'),
+    commonValidations.name('adminFirstName'),
+    commonValidations.name('adminLastName'),
+    body('adminPhone')
+      .isMobilePhone()
+      .withMessage('Admin phone must be a valid phone number'),
+    body('adminApartment')
+      .optional()
+      .isLength({ min: 1, max: 20 })
+      .withMessage('Admin apartment must be between 1 and 20 characters'),
+    
+    // Optional company/organization details
+    body('companyName')
+      .optional()
+      .isLength({ min: 2, max: 255 })
+      .withMessage('Company name must be between 2 and 255 characters'),
+    body('contactEmail')
+      .optional()
+      .isEmail()
+      .normalizeEmail()
+      .withMessage('Contact email must be valid'),
+    body('contactPhone')
+      .optional()
+      .isMobilePhone()
+      .withMessage('Contact phone must be a valid phone number'),
+    
+    handleValidationErrors
+  ],
 
   registerBuilding: [
     // Building details

@@ -7,6 +7,439 @@
   },
   "item": [
     {
+      "name": "🚀 New Customer Registration (Self-Service)",
+      "description": "Public registration flow for new customers - no super admin required",
+      "item": [
+        {
+          "name": "Register Your Building (Free 30-Day Trial)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Your Building Name\",\n  \"address\": \"Your Building Address\",\n  \"city\": \"Your City\",\n  \"state\": \"Your State\",\n  \"country\": \"Nigeria\",\n  \"postalCode\": \"12345\",\n  \"buildingPhone\": \"+234XXXXXXXXXX\",\n  \"buildingEmail\": \"info@yourbuilding.com\",\n  \"website\": \"https://yourbuilding.com\",\n  \"totalLicenses\": 100,\n  \"adminEmail\": \"admin@yourbuilding.com\",\n  \"adminPassword\": \"YourSecurePassword123!\",\n  \"adminFirstName\": \"Your First Name\",\n  \"adminLastName\": \"Your Last Name\",\n  \"adminPhone\": \"+234XXXXXXXXXX\",\n  \"adminApartment\": \"ADMIN-001\",\n  \"companyName\": \"Your Company Ltd\",\n  \"contactEmail\": \"contact@yourbuilding.com\",\n  \"contactPhone\": \"+234XXXXXXXXXX\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/register-building",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "register-building"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.environment.set('newCustomerBuildingId', data.building.id);",
+                  "    pm.environment.set('newCustomerAdminId', data.admin.id);",
+                  "    pm.environment.set('newCustomerAdminEmail', data.admin.email);",
+                  "    ",
+                  "    console.log('🎉 WELCOME TO SAFEGUARD! 🎉');",
+                  "    console.log('✅ Your building has been registered successfully!');",
+                  "    console.log('');",
+                  "    console.log('📋 REGISTRATION DETAILS:');",
+                  "    console.log('🏢 Building:', data.building.name);",
+                  "    console.log('📍 Location:', data.building.city + ', ' + data.building.state);",
+                  "    console.log('👤 Admin:', data.admin.first_name + ' ' + data.admin.last_name);",
+                  "    console.log('📧 Admin Email:', data.admin.email);",
+                  "    console.log('🎯 License Plan:', data.license.plan_type);",
+                  "    console.log('');",
+                  "    console.log('🎁 TRIAL INFORMATION:');",
+                  "    console.log('⏰ Trial Period:', data.trial_info.trial_period_days + ' days');",
+                  "    console.log('📅 Trial Expires:', new Date(data.trial_info.expires_at).toLocaleDateString());",
+                  "    console.log('🎉 Features Included:', data.trial_info.features_included.join(', '));",
+                  "    console.log('');",
+                  "    console.log('📋 YOUR NEXT STEPS:');",
+                  "    data.trial_info.next_steps.forEach((step, index) => {",
+                  "        console.log(`   ${index + 1}. ${step}`);",
+                  "    });",
+                  "    console.log('');",
+                  "    console.log('💡 TIP: Login with your admin credentials to access the dashboard!');",
+                  "    ",
+                  "    pm.test('Building registration successful', function () {",
+                  "        pm.expect(data.admin.role).to.eql('building_admin');",
+                  "        pm.expect(data.license.plan_type).to.eql('standard');",
+                  "        pm.expect(data.license.amount).to.eql('0.00');",
+                  "        pm.expect(data.trial_info.trial_period_days).to.eql(30);",
+                  "    });",
+                  "} else {",
+                  "    console.log('❌ REGISTRATION FAILED');",
+                  "    const response = pm.response.json();",
+                  "    console.log('Error:', response.error?.message || 'Unknown error');",
+                  "    if (response.error?.details) {",
+                  "        console.log('Details:', response.error.details);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Building Management (Admin)",
+      "item": [
+        {
+          "name": "1. Initial System Setup (First Building + Super Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"SafeGuard Headquarters\",\n  \"address\": \"123 Tech Hub Street, Victoria Island\",\n  \"city\": \"Lagos\",\n  \"state\": \"Lagos\",\n  \"country\": \"Nigeria\",\n  \"postalCode\": \"101001\",\n  \"buildingPhone\": \"+2348000000000\",\n  \"buildingEmail\": \"info@safeguard.com\",\n  \"website\": \"https://safeguard.com\",\n  \"totalLicenses\": 500,\n  \"securityLevel\": 5,\n  \"adminEmail\": \"superadmin@safeguard.com\",\n  \"adminPassword\": \"SuperSecure123!\",\n  \"adminFirstName\": \"Super\",\n  \"adminLastName\": \"Admin\",\n  \"adminPhone\": \"+2348000000001\",\n  \"adminApartment\": \"SUPER-ADMIN\",\n  \"licenseData\": {\n    \"planType\": \"enterprise\",\n    \"durationMonths\": 12,\n    \"amount\": 0,\n    \"currency\": \"NGN\",\n    \"paymentReference\": \"INITIAL_SETUP\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/initial-setup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "initial-setup"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.environment.set('superAdminToken', data.accessToken);",
+                  "    pm.environment.set('superAdminId', data.user.id);",
+                  "    pm.environment.set('headquartersBuildingId', data.user.building_id);",
+                  "    ",
+                  "    console.log('✅ INITIAL SYSTEM SETUP SUCCESSFUL');",
+                  "    console.log('🏢 Building:', data.building?.name);",
+                  "    console.log('👤 Super Admin:', data.user.first_name + ' ' + data.user.last_name);",
+                  "    console.log('🔐 Super Admin Token captured');",
+                  "    ",
+                  "    pm.test('Initial setup completed successfully', function () {",
+                  "        pm.expect(data.user.role).to.eql('super_admin');",
+                  "        pm.expect(data.accessToken).to.not.be.empty;",
+                  "        pm.expect(data.building).to.not.be.undefined;",
+                  "    });",
+                  "} else {",
+                  "    console.log('❌ INITIAL SETUP FAILED');",
+                  "    console.log('Response:', pm.response.json());",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Self-Service Building Registration (New Customer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Luxury Gardens Estate\",\n  \"address\": \"Plot 123, Maitama District\",\n  \"city\": \"Abuja\",\n  \"state\": \"FCT\",\n  \"country\": \"Nigeria\",\n  \"postalCode\": \"90001\",\n  \"buildingPhone\": \"+2348054321000\",\n  \"buildingEmail\": \"info@luxurygardens.com\",\n  \"website\": \"https://luxurygardens.com\",\n  \"totalLicenses\": 150,\n  \"adminEmail\": \"admin@luxurygardens.com\",\n  \"adminPassword\": \"LuxuryAdmin2025!\",\n  \"adminFirstName\": \"Sarah\",\n  \"adminLastName\": \"Johnson\",\n  \"adminPhone\": \"+2348054321001\",\n  \"adminApartment\": \"ADMIN-SUITE\",\n  \"companyName\": \"Luxury Gardens Development Ltd\",\n  \"contactEmail\": \"contact@luxurygardens.com\",\n  \"contactPhone\": \"+2348054321002\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/register-building",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "register-building"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.environment.set('selfServiceBuildingId', data.building.id);",
+                  "    pm.environment.set('selfServiceAdminId', data.admin.id);",
+                  "    pm.environment.set('selfServiceAdminEmail', data.admin.email);",
+                  "    ",
+                  "    console.log('✅ SELF-SERVICE BUILDING REGISTRATION SUCCESSFUL');",
+                  "    console.log('🏢 Building:', data.building.name);",
+                  "    console.log('📍 Location:', data.building.city + ', ' + data.building.state);",
+                  "    console.log('👤 Admin:', data.admin.first_name + ' ' + data.admin.last_name);",
+                  "    console.log('📧 Admin Email:', data.admin.email);",
+                  "    console.log('🎯 License Plan:', data.license.plan_type);",
+                  "    console.log('⏰ Trial Period:', data.trial_info.trial_period_days + ' days');",
+                  "    console.log('📅 Trial Expires:', data.trial_info.expires_at);",
+                  "    console.log('🎁 Trial Features:', data.trial_info.features_included.join(', '));",
+                  "    console.log('');",
+                  "    console.log('📋 NEXT STEPS:');",
+                  "    data.trial_info.next_steps.forEach((step, index) => {",
+                  "        console.log(`   ${index + 1}. ${step}`);",
+                  "    });",
+                  "    ",
+                  "    pm.test('Self-service registration completed successfully', function () {",
+                  "        pm.expect(data.admin.role).to.eql('building_admin');",
+                  "        pm.expect(data.license.plan_type).to.eql('standard');",
+                  "        pm.expect(data.license.amount).to.eql('0.00');",
+                  "        pm.expect(data.trial_info.trial_period_days).to.eql(30);",
+                  "        pm.expect(data.building.settings.registration_type).to.eql('self_service');",
+                  "    });",
+                  "} else {",
+                  "    console.log('❌ SELF-SERVICE REGISTRATION FAILED');",
+                  "    console.log('Response:', pm.response.json());",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Register New Building (Super Admin - Dantata Estate)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dantata Estate Kubwa\",\n  \"address\": \"Kubwa by train station, Abuja\",\n  \"city\": \"Abuja\",\n  \"state\": \"FCT\",\n  \"country\": \"Nigeria\",\n  \"postalCode\": \"90211\",\n  \"phone\": \"+2348012300000\",\n  \"email\": \"dantata@dantatagroup.com\",\n  \"website\": \"https://dantatagroup.com\",\n  \"totalLicenses\": 200,\n  \"securityLevel\": 3,\n  \"adminEmail\": \"admin@dantatagroup.com\",\n  \"adminPassword\": \"Qwerty@123\",\n  \"adminFirstName\": \"Moses\",\n  \"adminLastName\": \"Amos\",\n  \"adminPhone\": \"+2348012345001\",\n  \"adminApartment\": \"ADMIN-001\",\n  \"licenseData\": {\n    \"planType\": \"standard\",\n    \"durationMonths\": 12,\n    \"amount\": 50000,\n    \"currency\": \"NGN\",\n    \"paymentReference\": \"DANTATA_2025_001\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/buildings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "buildings"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.environment.set('dantataEstateId', data.building.id);",
+                  "    pm.environment.set('dantataAdminId', data.admin.id);",
+                  "    ",
+                  "    console.log('✅ DANTATA ESTATE REGISTERED SUCCESSFULLY');",
+                  "    console.log('🏢 Building:', data.building.name);",
+                  "    console.log('📍 Location:', data.building.city + ', ' + data.building.state);",
+                  "    console.log('👤 Admin:', data.admin.first_name + ' ' + data.admin.last_name);",
+                  "    console.log('📧 Admin Email:', data.admin.email);",
+                  "    console.log('🆔 Building ID:', data.building.id);",
+                  "    console.log('🎫 License Key:', data.license.license_key);",
+                  "    console.log('📊 Total Licenses:', data.license.total_licenses);",
+                  "    ",
+                  "    pm.test('Dantata Estate registered successfully', function () {",
+                  "        pm.expect(data.building.name).to.include('Dantata');",
+                  "        pm.expect(data.admin.role).to.eql('building_admin');",
+                  "        pm.expect(data.license.status).to.eql('active');",
+                  "    });",
+                  "} else {",
+                  "    console.log('❌ DANTATA ESTATE REGISTRATION FAILED');",
+                  "    console.log('Error:', pm.response.json());",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Register New Building (Southside Beach Estates)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Southside Beach Estates\",\n  \"address\": \"3rd Avenue Gwarinpa\",\n  \"city\": \"Abuja\",\n  \"state\": \"FCT\",\n  \"country\": \"Nigeria\",\n  \"postalCode\": \"90210\",\n  \"phone\": \"+2347078650000\",\n  \"email\": \"info@southside.com\",\n  \"website\": \"https://southsideestates.com\",\n  \"totalLicenses\": 100,\n  \"securityLevel\": 2,\n  \"adminEmail\": \"admin@southside.com\",\n  \"adminPassword\": \"SouthsideAdmin2024!\",\n  \"adminFirstName\": \"Musa\",\n  \"adminLastName\": \"Danjuma\",\n  \"adminPhone\": \"+2347078651490\",\n  \"adminApartment\": \"ADMIN-PG01\",\n  \"licenseData\": {\n    \"planType\": \"standard\",\n    \"durationMonths\": 6,\n    \"amount\": 25000,\n    \"currency\": \"NGN\",\n    \"paymentReference\": \"SOUTHSIDE_2025_001\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/buildings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "buildings"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.environment.set('southsideEstateId', data.building.id);",
+                  "    pm.environment.set('southsideAdminId', data.admin.id);",
+                  "    ",
+                  "    console.log('✅ SOUTHSIDE BEACH ESTATES REGISTERED SUCCESSFULLY');",
+                  "    console.log('🏢 Building:', data.building.name);",
+                  "    console.log('📍 Location:', data.building.city + ', ' + data.building.state);",
+                  "    console.log('👤 Admin:', data.admin.first_name + ' ' + data.admin.last_name);",
+                  "    console.log('📧 Admin Email:', data.admin.email);",
+                  "    console.log('🆔 Building ID:', data.building.id);",
+                  "    console.log('🎫 License Key:', data.license.license_key);",
+                  "    console.log('📊 Total Licenses:', data.license.total_licenses);",
+                  "    ",
+                  "    pm.test('Southside Estate registered successfully', function () {",
+                  "        pm.expect(data.building.name).to.include('Southside');",
+                  "        pm.expect(data.admin.role).to.eql('building_admin');",
+                  "        pm.expect(data.license.status).to.eql('active');",
+                  "    });",
+                  "} else {",
+                  "    console.log('❌ SOUTHSIDE ESTATE REGISTRATION FAILED');",
+                  "    console.log('Error:', pm.response.json());",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. Register New Building (Prince and Princesses)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Prince and Princesses\",\n  \"address\": \"Galadimawa, off main road. new site\",\n  \"city\": \"Abuja\",\n  \"state\": \"FCT\",\n  \"country\": \"Nigeria\",\n  \"postalCode\": \"90211\",\n  \"phone\": \"+2348012340000\",\n  \"email\": \"pp@ppestates.com\",\n  \"website\": \"https://ppestates.com\",\n  \"totalLicenses\": 200,\n  \"securityLevel\": 3,\n  \"adminEmail\": \"admin@ppestates.com\",\n  \"adminPassword\": \"ColdDay@1975\",\n  \"adminFirstName\": \"Bilal\",\n  \"adminLastName\": \"Adamu\",\n  \"adminPhone\": \"+2348012345002\",\n  \"adminApartment\": \"ADMIN-001\",\n  \"licenseData\": {\n    \"planType\": \"premium\",\n    \"durationMonths\": 12,\n    \"amount\": 75000,\n    \"currency\": \"NGN\",\n    \"paymentReference\": \"PP_2025_001\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/buildings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "buildings"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.environment.set('ppEstateId', data.building.id);",
+                  "    pm.environment.set('ppAdminId', data.admin.id);",
+                  "    ",
+                  "    console.log('✅ PRINCE AND PRINCESSES REGISTERED SUCCESSFULLY');",
+                  "    console.log('🏢 Building:', data.building.name);",
+                  "    console.log('📍 Location:', data.building.city + ', ' + data.building.state);",
+                  "    console.log('👤 Admin:', data.admin.first_name + ' ' + data.admin.last_name);",
+                  "    console.log('📧 Admin Email:', data.admin.email);",
+                  "    console.log('🆔 Building ID:', data.building.id);",
+                  "    console.log('🎫 License Key:', data.license.license_key);",
+                  "    console.log('📊 Total Licenses:', data.license.total_licenses);",
+                  "    ",
+                  "    pm.test('Prince and Princesses registered successfully', function () {",
+                  "        pm.expect(data.building.name).to.include('Prince');",
+                  "        pm.expect(data.admin.role).to.eql('building_admin');",
+                  "        pm.expect(data.license.status).to.eql('active');",
+                  "    });",
+                  "} else {",
+                  "    console.log('❌ PRINCE AND PRINCESSES REGISTRATION FAILED');",
+                  "    console.log('Error:', pm.response.json());",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6. Get All Buildings (Super Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/buildings?page=1&limit=10&status=active",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "buildings"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "active"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json().data;",
+                  "    ",
+                  "    console.log('\\n📋 ALL REGISTERED BUILDINGS');",
+                  "    console.log('📊 Total Buildings:', data.pagination.total);",
+                  "    console.log('📄 Page:', data.pagination.page, 'of', data.pagination.totalPages);",
+                  "    ",
+                  "    if (data.buildings && data.buildings.length > 0) {",
+                  "        console.log('\\n🏢 BUILDING LIST:');",
+                  "        data.buildings.forEach((building, index) => {",
+                  "            console.log(`${index + 1}. ${building.name}`);",
+                  "            console.log(`   📍 Location: ${building.city}, ${building.state}`);",
+                  "            console.log(`   📊 Status: ${building.is_active ? 'Active' : 'Inactive'}`);",
+                  "            console.log(`   🎫 Licenses: ${building.used_licenses}/${building.total_licenses}`);",
+                  "            console.log(`   🆔 ID: ${building.id}`);",
+                  "            console.log('');",
+                  "        });",
+                  "    }",
+                  "    ",
+                  "    pm.test('Buildings retrieved successfully', function () {",
+                  "        pm.expect(data.buildings).to.be.an('array');",
+                  "        pm.expect(data.pagination.total).to.be.at.least(1);",
+                  "    });",
+                  "} else {",
+                  "    console.log('❌ FAILED TO GET BUILDINGS');",
+                  "    console.log('Error:', pm.response.json());",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "User Registration",
       "item": [
         {
