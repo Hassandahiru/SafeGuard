@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeGuard Security Scanner</title>
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .scanner-container {
+            position: relative;
+            background: #2c2c2c;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        #video {
+            width: 100%;
+            max-width: 400px;
+            height: 300px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+        .scanner-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            pointer-events: none;
+        }
+        .scanner-overlay::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .controls {
+            background: #2c2c2c;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 15px 0;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .btn.arrival {
+            background: #28a745;
+            color: white;
+        }
+        .btn.entry {
+            background: #007bff;
+            color: white;
+        }
+        .btn.exit {
+            background: #dc3545;
+            color: white;
+        }
+        .btn.active {
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .status {
+            background: #343a40;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: left;
+        }
+        .result {
+            background: #155724;
+            border: 1px solid #28a745;
+            color: #d4edda;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #721c24;
+            border: 1px solid #dc3545;
+            color: #f8d7da;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .login-form {
+            background: #2c2c2c;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .login-form input {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 1px solid #555;
+            border-radius: 6px;
+            background: #404040;
+            color: white;
+            box-sizing: border-box;
+        }
+        .login-form input::placeholder {
+            color: #aaa;
+        }
+        #loginBtn {
+            background: #007bff;
+            color: white;
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ SafeGuard Security Scanner</h1>
+            <p>Building Access Control System</p>
+        </div>
+
+        <!-- Login Form -->
+        <div id="loginForm" class="login-form">
+            <h3>Security Guard Login</h3>
+            <input type="email" id="email" placeholder="Email Address" value="security.guard@safeguard.com">
+            <input type="password" id="password" placeholder="Password" value="SecurityPass123!">
+            <input type="text" id="gateNumber" placeholder="Gate/Location" value="Main Gate">
+            <button id="loginBtn" onclick="login()">Login</button>
+            <div id="loginStatus"></div>
+        </div>
+
+        <!-- Scanner Interface (hidden until logged in) -->
+        <div id="scannerInterface" class="hidden">
+            <div class="controls">
+                <h3>Select Action:</h3>
+                <div class="action-buttons">
+                    <button class="btn arrival active" onclick="setAction('arrival')">🚶 Arrival</button>
+                    <button class="btn entry" onclick="setAction('entry')">🚪 Entry</button>
+                    <button class="btn exit" onclick="setAction('exit')">🚶‍♂️ Exit</button>
+                </div>
+                <p>Selected: <span id="currentAction">arrival</span></p>
+            </div>
+
+            <div class="scanner-container">
+                <video id="video" autoplay muted></video>
+                <div class="scanner-overlay"></div>
+            </div>
+
+            <div class="status">
+                <strong>Status:</strong> <span id="scanStatus">Ready to scan</span><br>
+                <strong>Gate:</strong> <span id="currentGate">Main Gate</span><br>
+                <strong>Guard:</strong> <span id="currentGuard">Not logged in</span>
+            </div>
+
+            <div id="result"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentAction = 'arrival';
+        let securityToken = null;
+        let guardInfo = null;
+        let gateLocation = 'Main Gate';
+        let codeReader = null;
+
+        // Configuration - Use relative URLs since we're served from the same domain
+        const API_BASE = ''; // Empty string for relative URLs
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            gateLocation = document.getElementById('gateNumber').value || 'Main Gate';
+
+            const loginStatus = document.getElementById('loginStatus');
+            loginStatus.innerHTML = 'Logging in...';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/enhanced/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password,
+                        device_name: 'Security Scanner Terminal',
+                        location: gateLocation
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    securityToken = data.data.accessToken;
+                    guardInfo = data.data.user;
+                    
+                    // Hide login form, show scanner
+                    document.getElementById('loginForm').classList.add('hidden');
+                    document.getElementById('scannerInterface').classList.remove('hidden');
+                    
+                    // Update status
+                    document.getElementById('currentGuard').textContent = 
+                        `${guardInfo.first_name} ${guardInfo.last_name}`;
+                    document.getElementById('currentGate').textContent = gateLocation;
+                    
+                    // Start camera
+                    startScanner();
+                } else {
+                    loginStatus.innerHTML = `<div class="error">❌ Login failed: ${data.error?.message || 'Invalid credentials'}</div>`;
+                }
+            } catch (error) {
+                loginStatus.innerHTML = `<div class="error">❌ Connection error: ${error.message}</div>`;
+            }
+        }
+
+        function setAction(action) {
+            currentAction = action;
+            document.getElementById('currentAction').textContent = action;
+            
+            // Update button styles
+            document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.btn.${action}`).classList.add('active');
+        }
+
+        async function startScanner() {
+            try {
+                codeReader = new ZXing.BrowserQRCodeReader();
+                
+                const videoInputDevices = await ZXing.BrowserQRCodeReader.listVideoInputDevices();
+                
+                if (videoInputDevices.length === 0) {
+                    throw new Error('No camera found');
+                }
+
+                // Use the first camera (usually back camera on mobile)
+                const selectedDeviceId = videoInputDevices[0].deviceId;
+                
+                document.getElementById('scanStatus').textContent = 'Camera ready - Point at QR code';
+
+                codeReader.decodeFromVideoDevice(selectedDeviceId, 'video', (result, err) => {
+                    if (result) {
+                        handleQRScan(result.text);
+                    }
+                    if (err && !(err instanceof ZXing.NotFoundException)) {
+                        console.error(err);
+                        document.getElementById('scanStatus').textContent = 'Scanner error: ' + err.message;
+                    }
+                });
+
+            } catch (error) {
+                document.getElementById('scanStatus').textContent = 'Camera error: ' + error.message;
+                console.error('Camera setup error:', error);
+            }
+        }
+
+        async function handleQRScan(qrCode) {
+            document.getElementById('scanStatus').textContent = 'Processing scan...';
+            
+            // Validate QR code format
+            if (!qrCode.startsWith('SG_')) {
+                showResult('error', '❌ Invalid QR code format. Must start with SG_');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/visitors/scan`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${securityToken}`
+                    },
+                    body: JSON.stringify({
+                        qr_code: qrCode,
+                        action: currentAction,
+                        gate_number: gateLocation
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const visitData = data.data.visit;
+                    showResult('success', `
+                        ✅ QR Scan Successful!<br>
+                        <strong>Action:</strong> ${currentAction}<br>
+                        <strong>Visit:</strong> ${visitData?.title || 'Unknown'}<br>
+                        <strong>Visitor:</strong> ${visitData?.visitor_name || 'Unknown'}<br>
+                        <strong>Time:</strong> ${new Date().toLocaleTimeString()}
+                    `);
+                } else {
+                    showResult('error', `❌ Scan failed: ${data.error?.message || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showResult('error', `❌ Network error: ${error.message}`);
+            }
+
+            document.getElementById('scanStatus').textContent = 'Ready to scan next QR code';
+        }
+
+        function showResult(type, message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = type;
+            resultDiv.innerHTML = message;
+            
+            // Auto-clear result after 5 seconds
+            setTimeout(() => {
+                resultDiv.innerHTML = '';
+                resultDiv.className = '';
+            }, 5000);
+        }
+
+        // Auto-focus email field
+        document.getElementById('email').focus();
+
+        // Allow Enter key to login
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !document.getElementById('loginForm').classList.contains('hidden')) {
+                login();
+            }
+        });
+    </script>
+</body>
+</html>

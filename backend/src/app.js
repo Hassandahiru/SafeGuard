@@ -75,6 +75,9 @@ class SafeGuardApp {
     // Request logging
     this.app.use(requestLogger);
 
+    // Serve static files from public directory
+    this.app.use(express.static('public'));
+
     // Health check endpoint
     this.app.get('/health', (req, res) => {
       res.json({

@@ -35,6 +35,22 @@
   "adminLastName": "Amos",
   "adminPhone": "+2348012345001",
   "adminApartment": "ADMIN-001"
+},
+{
+  "name": "Prince and Princesses",
+  "email": "pp@ppestates.com",
+  "address": "Galadimawa, off main road. new site",
+  "city": "Abuja",
+  "state": "FCT",
+  "country": "Nigeria",
+  "postal_code": "90211",
+  "total_licenses": 200,
+  "adminEmail": "admin@ppestates.com",
+  "adminPassword": "ColdDay@1975",
+  "adminFirstName": "Bilal",
+  "adminLastName": "Adamu",
+  "adminPhone": "+2348012345002",
+  "adminApartment": "ADMIN-001"
 }
 ],
 [

@@ -1,0 +1,421 @@
+{
+  "info": {
+    "name": "SafeGuard Security QR Scanning",
+    "description": "Testing QR code scanning functionality for security guards",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Security Guard Authentication",
+      "item": [
+        {
+          "name": "Security Guard Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"security.guard@safeguard.com\",\n  \"password\": \"SecurityPass123!\",\n  \"remember_me\": false,\n  \"device_name\": \"Security Terminal\",\n  \"location\": \"Main Gate\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/enhanced/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "enhanced", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.environment.set('securityToken', data.accessToken);",
+                  "    pm.environment.set('securityId', data.user.id);",
+                  "    pm.environment.set('securityName', data.user.first_name + ' ' + data.user.last_name);",
+                  "    ",
+                  "    console.log('✅ SECURITY GUARD LOGIN SUCCESSFUL');",
+                  "    console.log('👮 Name:', data.user.first_name + ' ' + data.user.last_name);",
+                  "    console.log('🏢 Building ID:', data.user.building_id);",
+                  "    console.log('🔐 Security Token captured for scanning');",
+                  "    ",
+                  "    pm.test('Security guard authenticated successfully', function () {",
+                  "        pm.expect(data.user.role).to.eql('security');",
+                  "        pm.expect(data.user.is_active).to.eql(true);",
+                  "        pm.expect(data.accessToken).to.not.be.empty;",
+                  "    });",
+                  "} else {",
+                  "    console.log('❌ SECURITY GUARD LOGIN FAILED');",
+                  "    console.log('Response:', pm.response.json());",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. QR Code Scanning Tests",
+      "item": [
+        {
+          "name": "Scan QR Code - Visitor Arrival",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{securityToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_code\": \"{{businessQRCode}}\",\n  \"action\": \"arrival\",\n  \"gate_number\": \"Main Gate\",\n  \"notes\": \"Visitor arrived for business meeting\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/visitors/scan",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "visitors", "scan"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json().data;",
+                  "    ",
+                  "    console.log('\\n🎯 QR CODE SCANNED - VISITOR ARRIVAL');",
+                  "    console.log('👤 Visitor:', data.visit ? data.visit.visitor_name : 'Unknown');",
+                  "    console.log('🏢 Visit Title:', data.visit ? data.visit.title : 'Unknown');",
+                  "    console.log('⏰ Scanned At:', data.scanned_at);",
+                  "    console.log('👮 Scanned By:', data.scanner ? data.scanner.name : 'Unknown');",
+                  "    console.log('🚪 Action:', data.action);",
+                  "    ",
+                  "    pm.test('QR code scan successful', function () {",
+                  "        pm.expect(data.action).to.eql('arrival');",
+                  "        pm.expect(data.scanned_at).to.not.be.empty;",
+                  "        pm.expect(data.scanner).to.not.be.undefined;",
+                  "    });",
+                  "} else {",
+                  "    console.log('❌ QR CODE SCAN FAILED');",
+                  "    console.log('Error:', pm.response.json());",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Scan QR Code - Visitor Entry",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{securityToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_code\": \"{{businessQRCode}}\",\n  \"action\": \"entry\",\n  \"gate_number\": \"Main Gate\",\n  \"notes\": \"Visitor entering building\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/visitors/scan",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "visitors", "scan"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json().data;",
+                  "    ",
+                  "    console.log('\\n🚪 QR CODE SCANNED - VISITOR ENTRY');",
+                  "    console.log('👤 Visitor entered building');",
+                  "    console.log('⏰ Entry Time:', data.scanned_at);",
+                  "    console.log('📍 Gate:', 'Main Gate');",
+                  "    ",
+                  "    pm.test('Visitor entry scan successful', function () {",
+                  "        pm.expect(data.action).to.eql('entry');",
+                  "        pm.expect(data.scanned_at).to.not.be.empty;",
+                  "    });",
+                  "} else {",
+                  "    console.log('❌ VISITOR ENTRY SCAN FAILED');",
+                  "    console.log('Error:', pm.response.json());",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Scan QR Code - Visitor Exit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{securityToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_code\": \"{{businessQRCode}}\",\n  \"action\": \"exit\",\n  \"gate_number\": \"Main Gate\",\n  \"notes\": \"Visitor leaving building\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/visitors/scan",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "visitors", "scan"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json().data;",
+                  "    ",
+                  "    console.log('\\n🚪 QR CODE SCANNED - VISITOR EXIT');",
+                  "    console.log('👤 Visitor left building');",
+                  "    console.log('⏰ Exit Time:', data.scanned_at);",
+                  "    console.log('📊 Visit Status: Completed');",
+                  "    ",
+                  "    pm.test('Visitor exit scan successful', function () {",
+                  "        pm.expect(data.action).to.eql('exit');",
+                  "        pm.expect(data.scanned_at).to.not.be.empty;",
+                  "    });",
+                  "} else {",
+                  "    console.log('❌ VISITOR EXIT SCAN FAILED');",
+                  "    console.log('Error:', pm.response.json());",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Test Invalid QR Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{securityToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_code\": \"SG_INVALID_QR_CODE_FOR_TESTING\",\n  \"action\": \"arrival\",\n  \"gate_number\": \"Main Gate\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/visitors/scan",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "visitors", "scan"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 400 || pm.response.code === 404) {",
+                  "    console.log('\\n❌ INVALID QR CODE TEST');",
+                  "    console.log('✅ System correctly rejected invalid QR code');",
+                  "    console.log('Response:', pm.response.json());",
+                  "    ",
+                  "    pm.test('Invalid QR code properly rejected', function () {",
+                  "        pm.expect(pm.response.code).to.be.oneOf([400, 404]);",
+                  "    });",
+                  "} else {",
+                  "    console.log('🔍 UNEXPECTED RESPONSE FOR INVALID QR');",
+                  "    console.log('Response:', pm.response.json());",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Security Operations",
+      "item": [
+        {
+          "name": "Get Active Visits",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{securityToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/visitors/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "visitors", "active"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json().data;",
+                  "    ",
+                  "    console.log('\\n📋 ACTIVE VISITS IN BUILDING');",
+                  "    console.log('🔢 Total Active Visits:', data.count);",
+                  "    console.log('🏢 Building ID:', data.building_id);",
+                  "    ",
+                  "    if (data.active_visits && data.active_visits.length > 0) {",
+                  "        console.log('\\n📝 ACTIVE VISIT DETAILS:');",
+                  "        data.active_visits.forEach((visit, index) => {",
+                  "            console.log(`${index + 1}. ${visit.title || 'Untitled Visit'}`);",
+                  "            console.log(`   📅 Expected: ${visit.expected_start}`);",
+                  "            console.log(`   👤 Host: ${visit.host_name || 'Unknown'}`);",
+                  "            console.log(`   📊 Status: ${visit.status}`);",
+                  "            console.log('');",
+                  "        });",
+                  "    } else {",
+                  "        console.log('ℹ️  No active visits at this time');",
+                  "    }",
+                  "    ",
+                  "    pm.test('Active visits retrieved successfully', function () {",
+                  "        pm.expect(data).to.have.property('active_visits');",
+                  "        pm.expect(data).to.have.property('count');",
+                  "        pm.expect(data.count).to.be.at.least(0);",
+                  "    });",
+                  "} else {",
+                  "    console.log('❌ FAILED TO GET ACTIVE VISITS');",
+                  "    console.log('Error:', pm.response.json());",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Building Visitor Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{securityToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/visitors/stats?period=daily",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "visitors", "stats"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "daily"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json().data;",
+                  "    ",
+                  "    console.log('\\n📊 BUILDING VISITOR STATISTICS');",
+                  "    console.log('📅 Period:', data.period);",
+                  "    console.log('📈 Total Visits:', data.total_visits || 0);",
+                  "    console.log('✅ Completed Visits:', data.completed_visits || 0);",
+                  "    console.log('⏰ Active Visits:', data.active_visits || 0);",
+                  "    console.log('❌ Cancelled Visits:', data.cancelled_visits || 0);",
+                  "    console.log('👥 Unique Visitors:', data.unique_visitors || 0);",
+                  "    ",
+                  "    pm.test('Building stats retrieved successfully', function () {",
+                  "        pm.expect(data.period).to.not.be.empty;",
+                  "        pm.expect(data).to.have.property('total_visits');",
+                  "    });",
+                  "} else {",
+                  "    console.log('❌ FAILED TO GET BUILDING STATS');",
+                  "    console.log('Error:', pm.response.json());",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Set default base URL if not set",
+          "if (!pm.environment.get('baseUrl')) {",
+          "    pm.environment.set('baseUrl', 'http://localhost:4500');",
+          "}",
+          "",
+          "// Use QR code from resident collection if available",
+          "if (!pm.environment.get('businessQRCode')) {",
+          "    pm.environment.set('businessQRCode', 'SG_9A8A78379329DA5216BB492BF584988B');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4500"
+    },
+    {
+      "key": "securityToken",
+      "value": ""
+    },
+    {
+      "key": "securityId",
+      "value": ""
+    },
+    {
+      "key": "securityName",
+      "value": ""
+    },
+    {
+      "key": "businessQRCode",
+      "value": "SG_9A8A78379329DA5216BB492BF584988B"
+    }
+  ]
+}
