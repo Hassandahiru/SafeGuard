@@ -22,6 +22,7 @@ import frequentVisitorRoutes from './routes/frequentVisitor.routes.js';
 import visitorBanRoutes from './routes/visitorBan.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import adminApprovalRoutes from './routes/adminApproval.routes.js';
+import residentApprovalRoutes from './routes/residentApproval.routes.js';
 
 class SafeGuardApp {
   constructor() {
@@ -101,7 +102,8 @@ class SafeGuardApp {
           visits: '/api/visits',
           visitors: '/api/visitors',
           admin: '/api/admin',
-          adminApproval: '/api/admin-approval'
+          adminApproval: '/api/admin-approval',
+          residentApproval: '/api/resident-approval'
         }
       });
     });
@@ -114,6 +116,7 @@ class SafeGuardApp {
     this.app.use('/api/visitor-bans', visitorBanRoutes);
     this.app.use('/api/admin', adminRoutes);
     this.app.use('/api/admin-approval', adminApprovalRoutes);
+    this.app.use('/api/resident-approval', residentApprovalRoutes);
   }
 
   setupSocketIO() {

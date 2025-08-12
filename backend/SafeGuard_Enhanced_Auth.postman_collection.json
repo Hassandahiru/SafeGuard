@@ -1,8 +1,8 @@
 {
   "info": {
     "name": "SafeGuard Enhanced Authentication API",
-    "description": "Enhanced authentication and user registration system for SafeGuard - Updated with new test objects and latest implementation",
-    "version": "2.0.0",
+    "description": "Enhanced authentication and user registration system for SafeGuard with Resident Approval Workflow",
+    "version": "3.0.0",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -28,22 +28,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "registration", "validate"]
             }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Registration validation successful\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.true;",
-                  "    pm.expect(jsonData.data).to.have.property('canRegister');",
-                  "});"
-                ]
-              }
-            }
-          ]
+          }
         },
         {
           "name": "2. Complete Registration",
@@ -57,38 +42,17 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"michael.thompson@metroplex.com\",\n  \"password\": \"SecureAdmin2024!\",\n  \"first_name\": \"Michael\",\n  \"last_name\": \"Thompson\",\n  \"phone\": \"+1555-0102\",\n  \"building_id\": \"{{buildingId}}\",\n  \"role\": \"building_admin\",\n  \"apartment_number\": \"ADMIN-001\",\n  \"emergency_contact\": {\n    \"name\": \"Lisa Thompson\",\n    \"phone\": \"+1555-0202\",\n    \"relationship\": \"spouse\"\n  },\n  \"agreed_to_terms\": true,\n  \"email_notifications\": true,\n  \"sms_notifications\": true\n}"
+              "raw": "{\n  \"email\": \"michael.thompson@metroplex.com\",\n  \"password\": \"StrongPassword123!\",\n  \"first_name\": \"Michael\",\n  \"last_name\": \"Thompson\",\n  \"phone\": \"+1555-0102\",\n  \"building_id\": \"{{buildingId}}\",\n  \"role\": \"building_admin\",\n  \"apartment_number\": \"A-ADMIN\",\n  \"emergency_contact\": {\n    \"name\": \"Sarah Thompson\",\n    \"phone\": \"+1555-0103\",\n    \"relationship\": \"spouse\"\n  },\n  \"agreed_to_terms\": true,\n  \"email_notifications\": true,\n  \"sms_notifications\": false\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/registration/complete",
               "host": ["{{baseUrl}}"],
               "path": ["api", "registration", "complete"]
             }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"User registration successful\", function () {",
-                  "    pm.response.to.have.status(201);",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.true;",
-                  "    pm.expect(jsonData.data).to.have.property('user');",
-                  "    pm.expect(jsonData.data).to.have.property('token');",
-                  "    ",
-                  "    // Save user ID for future tests",
-                  "    if (jsonData.data.user.id) {",
-                  "        pm.environment.set('userId', jsonData.data.user.id);",
-                  "    }",
-                  "});"
-                ]
-              }
-            }
-          ]
+          }
         },
         {
-          "name": "3. Resident Self Registration",
+          "name": "3. Resident Self-Registration",
           "request": {
             "method": "POST",
             "header": [
@@ -99,7 +63,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"david.wilson@metroplex.com\",\n  \"password\": \"ResidentSecure2024!\",\n  \"first_name\": \"David\",\n  \"last_name\": \"Wilson\",\n  \"phone\": \"+1555-0103\",\n  \"building_email\": \"superadmin@metroplex.com\",\n  \"apartment_number\": \"15B\",\n  \"emergency_contact_name\": \"Sarah Wilson\",\n  \"emergency_contact_phone\": \"+1555-0203\"\n}"
+              "raw": "{\n  \"building_email\": \"admin@dantatagroup.com\",\n  \"email\": \"resident.test@example.com\",\n  \"password\": \"ResidentPass123!\",\n  \"first_name\": \"Alex\",\n  \"last_name\": \"Johnson\",\n  \"phone\": \"+2348012345800\",\n  \"apartment_number\": \"B205\",\n  \"emergency_contact_name\": \"Jane Johnson\",\n  \"emergency_contact_phone\": \"+2348012345801\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/registration/self-register",
@@ -112,12 +76,83 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Self registration submitted\", function () {",
-                  "    pm.response.to.have.status(201);",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.true;",
-                  "    pm.expect(jsonData.data.status).to.equal('pending_approval');",
-                  "});"
+                  "if (pm.response.code === 201) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.environment.set('pendingResidentId', data.user.id);",
+                  "    console.log('Resident registered, waiting for approval');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Security Guard Registration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"building_email\": \"admin@dantatagroup.com\",\n  \"email\": \"security.guard@dantatagroup.com\",\n  \"password\": \"SecurityPass123!\",\n  \"first_name\": \"John\",\n  \"last_name\": \"Security\",\n  \"phone\": \"+2348012345900\",\n  \"apartment_number\": \"SECURITY-01\",\n  \"emergency_contact_name\": \"Security Supervisor\",\n  \"emergency_contact_phone\": \"+2348012345901\",\n  \"role\": \"security\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/registration/self-register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registration", "self-register"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.environment.set('pendingSecurityId', data.user.id);",
+                  "    pm.environment.set('securityEmail', data.user.email);",
+                  "    console.log('Security guard registered, waiting for approval');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. Security Guard 2 Registration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"building_email\": \"admin@dantatagroup.com\",\n  \"email\": \"security.night@dantatagroup.com\",\n  \"password\": \"SecurityPass123!\",\n  \"first_name\": \"Sarah\",\n  \"last_name\": \"NightWatch\",\n  \"phone\": \"+2348012345910\",\n  \"apartment_number\": \"SECURITY-02\",\n  \"emergency_contact_name\": \"Security Supervisor\",\n  \"emergency_contact_phone\": \"+2348012345901\",\n  \"role\": \"security\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/registration/self-register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registration", "self-register"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.environment.set('pendingSecurity2Id', data.user.id);",
+                  "    pm.environment.set('security2Email', data.user.email);",
+                  "    console.log('Night security guard registered, waiting for approval');",
+                  "}"
                 ]
               }
             }
@@ -140,7 +175,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"superadmin@metroplex.com\",\n  \"password\": \"SuperSecure2024!\",\n  \"remember_me\": false,\n  \"device_name\": \"Postman Test Client\",\n  \"location\": \"New York, USA\"\n}"
+              "raw": "{\n  \"email\": \"superadmin@safeguard.com\",\n  \"password\": \"SuperSecure123!\",\n  \"remember_me\": false,\n  \"device_name\": \"Postman Test Client\",\n  \"location\": \"Lagos, Nigeria\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/enhanced/login",
@@ -153,24 +188,347 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Login successful\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.true;",
-                  "    pm.expect(jsonData.data).to.have.property('token');",
-                  "    pm.expect(jsonData.data).to.have.property('refreshToken');",
-                  "    ",
-                  "    // Save tokens for authenticated requests",
-                  "    console.log('🔐 Saving tokens to environment...');",
-                  "    console.log('Token received:', jsonData.data.token ? 'YES ✅' : 'NO ❌');",
-                  "    console.log('Refresh token received:', jsonData.data.refreshToken ? 'YES ✅' : 'NO ❌');",
-                  "    ",
-                  "    pm.environment.set('accessToken', jsonData.data.token);",
-                  "    pm.environment.set('refreshToken', jsonData.data.refreshToken);",
-                  "    ",
-                  "    console.log('✅ Tokens saved to environment successfully!');",
-                  "    if (jsonData.data.sessionId) {",
-                  "        pm.environment.set('sessionId', jsonData.data.sessionId);",
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.environment.set('accessToken', data.accessToken);",
+                  "    pm.environment.set('refreshToken', data.refreshToken);",
+                  "    pm.environment.set('userId', data.user.id);",
+                  "    if (data.sessionId) pm.environment.set('sessionId', data.sessionId);",
+                  "    console.log('Login successful, tokens saved');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Building Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@dantatagroup.com\",\n  \"password\": \"AdminPass123!\",\n  \"remember_me\": false,\n  \"device_name\": \"Building Admin Client\",\n  \"location\": \"Lagos, Nigeria\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/enhanced/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "enhanced", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.environment.set('buildingAdminToken', data.accessToken);",
+                  "    pm.environment.set('buildingAdminId', data.user.id);",
+                  "    pm.environment.set('buildingId', data.user.building_id);",
+                  "    console.log('Building admin login successful');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Security Guard Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{securityEmail}}\",\n  \"password\": \"SecurityPass123!\",\n  \"remember_me\": false,\n  \"device_name\": \"Security Terminal\",\n  \"location\": \"Gate A - Dantata Building\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/enhanced/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "enhanced", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.environment.set('securityToken', data.accessToken);",
+                  "    pm.environment.set('securityId', data.user.id);",
+                  "    pm.environment.set('securityBuildingId', data.user.building_id);",
+                  "    console.log('Security guard login successful');",
+                  "} else {",
+                  "    console.log('Security guard login failed - may not be approved yet');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Night Security Guard Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{security2Email}}\",\n  \"password\": \"SecurityPass123!\",\n  \"remember_me\": false,\n  \"device_name\": \"Night Security Terminal\",\n  \"location\": \"Gate B - Dantata Building\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/enhanced/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "enhanced", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.environment.set('security2Token', data.accessToken);",
+                  "    pm.environment.set('security2Id', data.user.id);",
+                  "    console.log('Night security guard login successful');",
+                  "} else {",
+                  "    console.log('Night security guard login failed - may not be approved yet');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Get Security Settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/enhanced/security-settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "enhanced", "security-settings"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Resident Approval Workflow",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{buildingAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/resident-approval/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "resident-approval", "health"]
+            }
+          }
+        },
+        {
+          "name": "1. Get Pending Approvals",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{buildingAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/resident-approval/pending/{{buildingId}}?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "resident-approval", "pending", "{{buildingId}}"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json().data;",
+                  "    if (data.approvals && data.approvals.length > 0) {",
+                  "        pm.environment.set('approvalId', data.approvals[0].id);",
+                  "        console.log('Found approval ID:', data.approvals[0].id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Approve Resident",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{buildingAdminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approved\": true,\n  \"reason\": \"Application meets all requirements\",\n  \"notes\": \"Welcome to the building! Please check your email for next steps.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/resident-approval/{{approvalId}}/process",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "resident-approval", "{{approvalId}}", "process"]
+            }
+          }
+        },
+        {
+          "name": "3. Reject Resident",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{buildingAdminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approved\": false,\n  \"reason\": \"Incomplete documentation provided\",\n  \"notes\": \"Please resubmit with valid ID documents and proof of residence.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/resident-approval/{{approvalId}}/process",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "resident-approval", "{{approvalId}}", "process"]
+            }
+          }
+        },
+        {
+          "name": "4. Get Approval Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{buildingAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/resident-approval/{{approvalId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "resident-approval", "{{approvalId}}"]
+            }
+          }
+        },
+        {
+          "name": "5. Get Approval Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{buildingAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/resident-approval/dashboard/{{buildingId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "resident-approval", "dashboard", "{{buildingId}}"]
+            }
+          }
+        },
+        {
+          "name": "6. Approve Security Guard",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{buildingAdminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approved\": true,\n  \"reason\": \"Security clearance verified\",\n  \"notes\": \"Welcome to the security team! Please report for duty orientation.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/resident-approval/{{approvalId}}/process",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "resident-approval", "{{approvalId}}", "process"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Get pending security approvals first",
+                  "pm.sendRequest({",
+                  "    url: pm.environment.get('baseUrl') + '/api/resident-approval/pending/' + pm.environment.get('buildingId'),",
+                  "    method: 'GET',",
+                  "    header: {",
+                  "        'Authorization': 'Bearer ' + pm.environment.get('buildingAdminToken')",
+                  "    }",
+                  "}, function (err, res) {",
+                  "    if (res && res.json() && res.json().data && res.json().data.approvals) {",
+                  "        const approvals = res.json().data.approvals;",
+                  "        const securityApproval = approvals.find(a => a.resident_email === pm.environment.get('securityEmail'));",
+                  "        if (securityApproval) {",
+                  "            pm.environment.set('approvalId', securityApproval.id);",
+                  "            console.log('Found security approval ID:', securityApproval.id);",
+                  "        }",
                   "    }",
                   "});"
                 ]
@@ -179,60 +537,132 @@
           ]
         },
         {
-          "name": "2. Get Security Settings",
+          "name": "7. Approve Night Security Guard",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{buildingAdminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approved\": true,\n  \"reason\": \"Night shift security clearance verified\",\n  \"notes\": \"Welcome to the night security team! Please coordinate with day shift.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/resident-approval/{{approvalId}}/process",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "resident-approval", "{{approvalId}}", "process"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Get pending security approvals for night guard",
+                  "pm.sendRequest({",
+                  "    url: pm.environment.get('baseUrl') + '/api/resident-approval/pending/' + pm.environment.get('buildingId'),",
+                  "    method: 'GET',",
+                  "    header: {",
+                  "        'Authorization': 'Bearer ' + pm.environment.get('buildingAdminToken')",
+                  "    }",
+                  "}, function (err, res) {",
+                  "    if (res && res.json() && res.json().data && res.json().data.approvals) {",
+                  "        const approvals = res.json().data.approvals;",
+                  "        const securityApproval = approvals.find(a => a.resident_email === pm.environment.get('security2Email'));",
+                  "        if (securityApproval) {",
+                  "            pm.environment.set('approvalId', securityApproval.id);",
+                  "            console.log('Found night security approval ID:', securityApproval.id);",
+                  "        }",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8. Bulk Process Approvals",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{buildingAdminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approval_ids\": [\"{{approvalId}}\"],\n  \"action\": \"approve\",\n  \"reason\": \"Batch approval for verified residents\",\n  \"notes\": \"Welcome to the building!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/resident-approval/bulk-process",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "resident-approval", "bulk-process"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Super Admin Global Access",
+      "item": [
+        {
+          "name": "Get All Pending Approvals",
           "request": {
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
                 "key": "Authorization",
                 "value": "Bearer {{accessToken}}"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/auth/enhanced/security-settings",
+              "raw": "{{baseUrl}}/api/resident-approval/all/pending?limit=50&offset=0",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "enhanced", "security-settings"]
+              "path": ["api", "resident-approval", "all", "pending"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
             }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Security settings retrieved\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.true;",
-                  "    pm.expect(jsonData.data).to.have.property('security_score');",
-                  "    pm.expect(jsonData.data).to.have.property('recommendations');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
+          }
+        }
+      ]
+    },
+    {
+      "name": "Access Control Testing",
+      "item": [
         {
-          "name": "3. Get Active Sessions",
+          "name": "Building Admin - View Other Building (Should Fail)",
           "request": {
             "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
                 "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
+                "value": "Bearer {{buildingAdminToken}}"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/auth/enhanced/sessions",
+              "raw": "{{baseUrl}}/api/resident-approval/pending/00000000-0000-0000-0000-000000000000",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "enhanced", "sessions"]
+              "path": ["api", "resident-approval", "pending", "00000000-0000-0000-0000-000000000000"]
             }
           },
           "event": [
@@ -240,12 +670,13 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Active sessions retrieved\", function () {",
-                  "    pm.response.to.have.status(200);",
+                  "pm.test('Should return 403 Forbidden', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "",
+                  "pm.test('Should have authorization error', function () {",
                   "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.true;",
-                  "    pm.expect(jsonData.data).to.have.property('sessions');",
-                  "    pm.expect(jsonData.data).to.have.property('totalSessions');",
+                  "    pm.expect(jsonData.error.code).to.eql('AUTHORIZATION_ERROR');",
                   "});"
                 ]
               }
@@ -253,27 +684,14 @@
           ]
         },
         {
-          "name": "4. Change Password",
+          "name": "No Token - Should Fail",
           "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"current_password\": \"SuperSecure2024!\",\n  \"new_password\": \"NewSuperSecure2024!\",\n  \"logout_other_sessions\": true,\n  \"require_reauth_for_sensitive_actions\": true\n}"
-            },
+            "method": "GET",
+            "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/auth/enhanced/change-password",
+              "raw": "{{baseUrl}}/api/resident-approval/pending/{{buildingId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "enhanced", "change-password"]
+              "path": ["api", "resident-approval", "pending", "{{buildingId}}"]
             }
           },
           "event": [
@@ -281,93 +699,8 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Password changed successfully\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.true;",
-                  "    pm.expect(jsonData.data).to.have.property('passwordStrength');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "5. Refresh Token",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"refresh_token\": \"{{refreshToken}}\",\n  \"device_fingerprint\": \"postman-test-fingerprint\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/enhanced/refresh",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "enhanced", "refresh"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Token refreshed successfully\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.true;",
-                  "    pm.expect(jsonData.data).to.have.property('token');",
-                  "    ",
-                  "    // Update access token",
-                  "    pm.environment.set('accessToken', jsonData.data.token);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "6. Enhanced Logout",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"logout_all_devices\": false\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/enhanced/logout",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "enhanced", "logout"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Logout successful\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.true;",
-                  "    ",
-                  "    // Clear tokens",
-                  "    pm.environment.unset('accessToken');",
-                  "    pm.environment.unset('refreshToken');",
+                  "pm.test('Should return 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
                   "});"
                 ]
               }
@@ -377,10 +710,10 @@
       ]
     },
     {
-      "name": "Building & Admin Management",
+      "name": "End-to-End Testing",
       "item": [
         {
-          "name": "1. Initial System Setup",
+          "name": "Test Approved Resident Login",
           "request": {
             "method": "POST",
             "header": [
@@ -391,367 +724,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Metroplex Towers\",\n  \"address\": \"1500 Broadway, Manhattan\",\n  \"city\": \"New York\",\n  \"state\": \"New York\",\n  \"email\": \"metroplex@towers.com\",\n  \"total_licenses\": 500,\n  \"adminEmail\": \"superadmin@metroplex.com\",\n  \"adminPassword\": \"SuperSecure2024!\",\n  \"adminFirstName\": \"Sarah\",\n  \"adminLastName\": \"Johnson\",\n  \"adminPhone\": \"+1555-0001\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/initial-setup",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "admin", "initial-setup"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Initial setup successful\", function () {",
-                  "    pm.response.to.have.status(201);",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.true;",
-                  "    pm.expect(jsonData.data).to.have.property('superAdmin');",
-                  "    pm.expect(jsonData.data).to.have.property('building');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "2. Register New Building",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Paradise Gardens Estate\",\n  \"address\": \"7500 Beverly Hills Drive\",\n  \"city\": \"Los Angeles\",\n  \"state\": \"California\",\n  \"country\": \"USA\",\n  \"totalLicenses\": 300,\n  \"adminEmail\": \"admin@paradisegardens.com\",\n  \"adminPassword\": \"GardenAdmin2024!\",\n  \"adminFirstName\": \"Jennifer\",\n  \"adminLastName\": \"Garcia\",\n  \"adminPhone\": \"+1555-0002\",\n  \"adminApartment\": \"ADMIN-PG01\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/buildings",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "admin", "buildings"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Building registration successful\", function () {",
-                  "    pm.response.to.have.status(201);",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.true;",
-                  "    pm.expect(jsonData.data).to.have.property('building');",
-                  "    pm.expect(jsonData.data).to.have.property('admin');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "3. Get All Buildings",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/buildings",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "admin", "buildings"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Buildings retrieved successfully\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.true;",
-                  "    pm.expect(jsonData.data).to.have.property('buildings');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "4. Register Building Admin",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"newadmin@safeguard.com\",\n  \"password\": \"NewAdmin123!\",\n  \"first_name\": \"New\",\n  \"last_name\": \"Admin\",\n  \"phone\": \"+2348012345602\",\n  \"building_id\": \"{{buildingId}}\",\n  \"apartment_number\": \"ADMIN-01\",\n  \"admin_permissions\": [\"manage_users\", \"view_analytics\"],\n  \"send_welcome_email\": true\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/registration/building-admin",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "registration", "building-admin"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Building admin registration successful\", function () {",
-                  "    pm.response.to.have.status(201);",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.true;",
-                  "    pm.expect(jsonData.data).to.have.property('admin');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "5. Register Security Personnel",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"security@safeguard.com\",\n  \"password\": \"SecurityGuard123!\",\n  \"first_name\": \"Security\",\n  \"last_name\": \"Officer\",\n  \"phone\": \"+2348012345603\",\n  \"building_id\": \"{{buildingId}}\",\n  \"security_level\": 2,\n  \"shift_schedule\": [\"morning\", \"evening\"],\n  \"security_clearance\": \"intermediate\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/registration/security",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "registration", "security"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Security registration successful\", function () {",
-                  "    pm.response.to.have.status(201);",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.true;",
-                  "    pm.expect(jsonData.data).to.have.property('security');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Registration Management",
-      "item": [
-        {
-          "name": "1. Get Registration Templates",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/registration/templates",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "registration", "templates"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Templates retrieved successfully\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.true;",
-                  "    pm.expect(jsonData.data).to.have.property('csv_headers');",
-                  "    pm.expect(jsonData.data).to.have.property('validation_rules');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "2. Validate Bulk Registration",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"building_id\": \"{{buildingId}}\",\n  \"users\": [\n    {\n      \"email\": \"bulk1@test.com\",\n      \"first_name\": \"Bulk\",\n      \"last_name\": \"User1\",\n      \"phone\": \"+2348012345690\",\n      \"role\": \"resident\"\n    },\n    {\n      \"email\": \"bulk2@test.com\",\n      \"first_name\": \"Bulk\",\n      \"last_name\": \"User2\",\n      \"phone\": \"+2348012345691\",\n      \"role\": \"resident\"\n    }\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/registration/validate-bulk",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "registration", "validate-bulk"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Bulk validation successful\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.true;",
-                  "    pm.expect(jsonData.data).to.have.property('valid_users');",
-                  "    pm.expect(jsonData.data).to.have.property('license_requirements');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "3. Bulk User Registration",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"building_id\": \"{{buildingId}}\",\n  \"users\": [\n    {\n      \"email\": \"resident1@building.com\",\n      \"first_name\": \"Resident\",\n      \"last_name\": \"One\",\n      \"phone\": \"+2348012345610\",\n      \"apartment_number\": \"101\",\n      \"role\": \"resident\"\n    },\n    {\n      \"email\": \"resident2@building.com\",\n      \"first_name\": \"Resident\",\n      \"last_name\": \"Two\",\n      \"phone\": \"+2348012345611\",\n      \"apartment_number\": \"102\",\n      \"role\": \"resident\"\n    }\n  ],\n  \"default_password\": \"TempPassword123!\",\n  \"send_welcome_emails\": true\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/registration/bulk",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "registration", "bulk"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Bulk registration successful\", function () {",
-                  "    pm.response.to.have.status(201);",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.true;",
-                  "    pm.expect(jsonData.data).to.have.property('successful');",
-                  "    pm.expect(jsonData.data).to.have.property('failed');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "4. Get Registration Statistics",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/registration/stats/{{buildingId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "registration", "stats", "{{buildingId}}"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Statistics retrieved successfully\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.true;",
-                  "    pm.expect(jsonData.data).to.have.property('userCounts');",
-                  "    pm.expect(jsonData.data).to.have.property('licenseUtilization');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Error Scenarios",
-      "item": [
-        {
-          "name": "1. Invalid Login Credentials",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"superadmin@metroplex.com\",\n  \"password\": \"WrongPassword123!\"\n}"
+              "raw": "{\n  \"email\": \"resident.test@example.com\",\n  \"password\": \"ResidentPass123!\",\n  \"device_name\": \"Resident Mobile App\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/enhanced/login",
@@ -764,35 +737,50 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Invalid credentials rejected\", function () {",
-                  "    pm.response.to.have.status(401);",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.false;",
-                  "    pm.expect(jsonData.error.code).to.equal('AUTHENTICATION_ERROR');",
-                  "});"
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.environment.set('residentToken', data.accessToken);",
+                  "    pm.test('Resident login successful', function () {",
+                  "        pm.expect(data.user.role).to.eql('resident');",
+                  "        pm.expect(data.user.is_active).to.eql(true);",
+                  "    });",
+                  "} else {",
+                  "    pm.test('Resident cannot login (not approved yet)', function () {",
+                  "        pm.response.to.have.status(401);",
+                  "    });",
+                  "}"
                 ]
               }
             }
           ]
-        },
+        }
+      ]
+    },
+    {
+      "name": "Security Guard Visitor Management",
+      "item": [
         {
-          "name": "2. Weak Password Registration",
+          "name": "1. Create Visit Entry",
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{securityToken}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"weak@test.com\",\n  \"password\": \"123\",\n  \"first_name\": \"Test\",\n  \"last_name\": \"User\",\n  \"phone\": \"+2348012345699\",\n  \"building_id\": \"{{buildingId}}\",\n  \"agreed_to_terms\": true\n}"
+              "raw": "{\n  \"visitor_name\": \"John Smith\",\n  \"visitor_phone\": \"+2348123456789\",\n  \"resident_name\": \"Alex Johnson\",\n  \"apartment_number\": \"B205\",\n  \"purpose\": \"Business meeting\",\n  \"entry_time\": \"2024-01-15T10:30:00Z\",\n  \"identification_type\": \"National ID\",\n  \"identification_number\": \"12345678901\",\n  \"vehicle_info\": {\n    \"plate_number\": \"ABC-123-XY\",\n    \"make\": \"Toyota\",\n    \"model\": \"Camry\",\n    \"color\": \"Blue\"\n  },\n  \"notes\": \"Visitor approved by resident via phone\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/registration/complete",
+              "raw": "{{baseUrl}}/api/visitors/security/entry",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "registration", "complete"]
+              "path": ["api", "visitors", "security", "entry"]
             }
           },
           "event": [
@@ -800,47 +788,181 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Weak password rejected\", function () {",
-                  "    pm.response.to.have.status(422);",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.false;",
-                  "    pm.expect(jsonData.error.code).to.equal('VALIDATION_ERROR');",
-                  "});"
+                  "if (pm.response.code === 201) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.environment.set('visitId', data.visit.id);",
+                  "    pm.environment.set('visitorId', data.visitor.id);",
+                  "    console.log('Visit created successfully with ID:', data.visit.id);",
+                  "}"
                 ]
               }
             }
           ]
         },
         {
-          "name": "3. Unauthorized Access",
+          "name": "2. Scan QR Code Entry",
           "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{securityToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_code\": \"SAFEGUARD_VISIT_12345678-abcd-4321-9876-123456789abc\",\n  \"entry_gate\": \"Gate A - Main Entrance\",\n  \"visitor_verification\": {\n    \"name_matches\": true,\n    \"id_verified\": true,\n    \"photo_taken\": true\n  },\n  \"notes\": \"QR code verified successfully\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/visitors/security/qr-scan",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "visitors", "security", "qr-scan"]
+            }
+          }
+        },
+        {
+          "name": "3. Record Visit Exit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{securityToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visit_id\": \"{{visitId}}\",\n  \"exit_time\": \"2024-01-15T14:30:00Z\",\n  \"exit_gate\": \"Gate A - Main Entrance\",\n  \"notes\": \"Normal exit, visitor satisfied with visit\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/visitors/security/exit",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "visitors", "security", "exit"]
+            }
+          }
+        },
+        {
+          "name": "4. Get Active Visits",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{securityToken}}"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/auth/enhanced/security-settings",
+              "raw": "{{baseUrl}}/api/visitors/security/active",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "enhanced", "security-settings"]
+              "path": ["api", "visitors", "security", "active"]
             }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Unauthorized access rejected\", function () {",
-                  "    pm.response.to.have.status(401);",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.false;",
-                  "});"
-                ]
+          }
+        },
+        {
+          "name": "5. Get Today's Visit Log",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{securityToken}}"
               }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/visitors/security/logs/today",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "visitors", "security", "logs", "today"]
             }
-          ]
+          }
+        },
+        {
+          "name": "6. Search Visitor History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{securityToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/visitors/security/search?q=John%20Smith&date_from=2024-01-01&date_to=2024-01-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "visitors", "security", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "John Smith"
+                },
+                {
+                  "key": "date_from",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "date_to",
+                  "value": "2024-01-31"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "7. Report Security Incident",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{securityToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"incident_type\": \"unauthorized_access\",\n  \"severity\": \"medium\",\n  \"location\": \"Gate A - Main Entrance\",\n  \"description\": \"Individual attempted to enter without proper visitor pass\",\n  \"visitor_involved\": {\n    \"name\": \"Unknown Person\",\n    \"description\": \"Male, approximately 30 years old, wearing blue jacket\"\n  },\n  \"action_taken\": \"Denied entry, asked to contact resident directly\",\n  \"witnesses\": [],\n  \"follow_up_required\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/visitors/security/incident",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "visitors", "security", "incident"]
+            }
+          }
+        },
+        {
+          "name": "8. Night Guard - Hand Over Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{security2Token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shift_end\": \"2024-01-16T06:00:00Z\",\n  \"visitors_count\": {\n    \"entered\": 0,\n    \"exited\": 3,\n    \"currently_inside\": 5\n  },\n  \"incidents\": [],\n  \"maintenance_issues\": [\n    {\n      \"location\": \"Gate B - Secondary Entrance\",\n      \"issue\": \"Lighting fixture needs replacement\",\n      \"priority\": \"medium\"\n    }\n  ],\n  \"notes\": \"Quiet night shift. All exits properly logged. Building secure.\",\n  \"handover_to\": \"Day Security Team\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/visitors/security/handover",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "visitors", "security", "handover"]
+            }
+          }
         }
       ]
     }
@@ -849,23 +971,28 @@
     {
       "listen": "prerequest",
       "script": {
+        "type": "text/javascript",
         "exec": [
-          "// Global pre-request script",
-          "console.log('Running test against:', pm.environment.get('baseUrl'));"
+          "// Set default base URL if not set",
+          "if (!pm.environment.get('baseUrl')) {",
+          "    pm.environment.set('baseUrl', 'http://localhost:4500');",
+          "}"
         ]
       }
     },
     {
       "listen": "test",
       "script": {
+        "type": "text/javascript",
         "exec": [
-          "// Global test script",
+          "// Global test script for all requests",
           "pm.test('Response time is acceptable', function () {",
           "    pm.expect(pm.response.responseTime).to.be.below(5000);",
           "});",
           "",
-          "pm.test('Response has timestamp', function () {",
+          "pm.test('Response has proper structure', function () {",
           "    const jsonData = pm.response.json();",
+          "    pm.expect(jsonData).to.have.property('success');",
           "    pm.expect(jsonData).to.have.property('timestamp');",
           "});"
         ]
@@ -875,13 +1002,71 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:4500",
-      "type": "string"
+      "value": "http://localhost:4500"
     },
     {
       "key": "buildingId",
-      "value": "550e8400-e29b-41d4-a716-446655440000",
-      "type": "string"
+      "value": ""
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "buildingAdminToken",
+      "value": ""
+    },
+    {
+      "key": "residentToken", 
+      "value": ""
+    },
+    {
+      "key": "approvalId",
+      "value": ""
+    },
+    {
+      "key": "pendingResidentId",
+      "value": ""
+    },
+    {
+      "key": "securityToken",
+      "value": ""
+    },
+    {
+      "key": "security2Token",
+      "value": ""
+    },
+    {
+      "key": "securityEmail",
+      "value": ""
+    },
+    {
+      "key": "security2Email",
+      "value": ""
+    },
+    {
+      "key": "securityId",
+      "value": ""
+    },
+    {
+      "key": "security2Id",
+      "value": ""
+    },
+    {
+      "key": "pendingSecurityId",
+      "value": ""
+    },
+    {
+      "key": "pendingSecurity2Id",
+      "value": ""
+    },
+    {
+      "key": "visitId",
+      "value": ""
+    },
+    {
+      "key": "visitorId",
+      "value": ""
     }
   ]
 }

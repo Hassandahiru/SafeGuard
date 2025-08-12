@@ -54,6 +54,16 @@
             "date": 1754522171904,
             "name": "logs/payment-2025-08-07.log",
             "hash": "f1c7818808473478fa7b6f4967b1a795ffca79d300dc517ade579ed2858ff0f4"
+        },
+        {
+            "date": 1754610168290,
+            "name": "logs/payment-2025-08-08.log",
+            "hash": "7cb336f303b120ed5f57022506324213696846a5c13082bba79baadefa61bacb"
+        },
+        {
+            "date": 1754994111802,
+            "name": "logs/payment-2025-08-12.log",
+            "hash": "da3fb21bed59745b6fccd0e28c0605b3e4907bbf1837eb722df845eaedb87713"
         }
     ],
     "hashType": "sha256"

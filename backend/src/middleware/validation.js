@@ -211,7 +211,6 @@ const buildingValidations = {
  */
 const visitValidations = {
   create: [
-    commonValidations.uuid('building_id'),
     commonValidations.requiredString('title'),
     commonValidations.text('description').optional(),
     commonValidations.text('purpose').optional(),
@@ -328,7 +327,6 @@ const visitValidations = {
  */
 const visitorValidations = {
   create: [
-    commonValidations.uuid('building_id'),
     commonValidations.name('name'),
     commonValidations.phone(),
     commonValidations.email().optional(),

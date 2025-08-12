@@ -275,7 +275,12 @@ class UserRegistrationController {
     await Building.updateLicenseUsage(building.id, 1);
 
     // Create approval request for building admin
-    // TODO: Implement approval request system
+    const ResidentApproval = (await import('../models/ResidentApproval.js')).default;
+    await ResidentApproval.createApprovalRequest(user, {
+      building_email,
+      registration_ip: req.ip,
+      registration_user_agent: req.get('User-Agent')
+    });
 
     // Remove sensitive data
     const { password_hash, ...userResponse } = user;

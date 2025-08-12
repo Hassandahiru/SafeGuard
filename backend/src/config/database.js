@@ -32,6 +32,9 @@ class Database {
   }
 
   async query(text, params) {
+    if (!this.pool) {
+      throw new Error('Database pool not initialized. Call connect() first.');
+    }
     const start = Date.now();
     try {
       const result = await this.pool.query(text, params);
@@ -55,6 +58,9 @@ class Database {
   }
 
   async getClient() {
+    if (!this.pool) {
+      throw new Error('Database pool not initialized. Call connect() first.');
+    }
     return this.pool.connect();
   }
 

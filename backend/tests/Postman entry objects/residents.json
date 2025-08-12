@@ -19,5 +19,27 @@
   "apartment_number": "15B",
   "emergency_contact_name": "Hauwa Dauda",
   "emergency_contact_phone": "+2348165480756"
+},
+{
+  "email": "najib@gmail.com",
+  "password": "ColdDay@1975",
+  "first_name": "Najib",
+  "last_name": "Nipsey",
+  "phone": "+2348163753587",
+  "building_email": "dantata@dantatagroup.com",
+  "apartment_number": "16B",
+  "emergency_contact_name": "Moses Dauda",
+  "emergency_contact_phone": "+2348165490756"
+}, 
+{
+  "building_email": "dantata@dantatagroup.com",
+  "email": "lex@gmail.com",
+  "password": "ColdDay@1975",
+  "first_name": "Alex",
+  "last_name": "Steel",
+  "phone": "+2348012345710",
+  "apartment_number": "B205",
+  "emergency_contact_name": "Bob Smith",
+  "emergency_contact_phone": "+2348012345711"
 }
 ]

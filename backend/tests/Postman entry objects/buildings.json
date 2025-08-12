@@ -1,4 +1,11 @@
 [
+[
+  {
+  "email": "admin@dantatagroup.com",
+  "password": "Qwerty@123",
+  "device_name": "Building Admin Client"
+}
+],
 [{
   "name": "Southside Beach Estates",
   "address": "3rd Avenue Gwarinpa",

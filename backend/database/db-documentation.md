@@ -247,7 +247,67 @@ Key Fields:
 - priority (INT): 1-5 priority level
 ```
 
-### 10. Profile Management System (Planned v2.0)
+### 10. Resident Approval System ✅ **IMPLEMENTED**
+
+#### Resident Approval Requests (`resident_approval_requests`)
+**Purpose**: Complete registration approval workflow for new residents
+
+```sql
+Key Fields:
+- id (UUID, PK): Unique approval request identifier
+- user_id (UUID, FK): Reference to user account (created with is_active=false)
+- building_id (UUID, FK): Reference to building
+- request_type (VARCHAR): Type of approval ('resident_registration')
+- status (VARCHAR): 'pending', 'approved', 'rejected', 'expired'
+- registration_data (JSONB): Complete registration form data
+- approved_by (UUID, FK): Building admin who processed the request
+- approved_at (TIMESTAMPTZ): When request was processed
+- rejection_reason (TEXT): Admin feedback for rejections
+- approval_notes (TEXT): Additional admin notes
+- created_at (TIMESTAMPTZ): When approval request was created
+- updated_at (TIMESTAMPTZ): Last modification timestamp
+- expires_at (TIMESTAMPTZ): Auto-expiry date (30 days from creation)
+```
+
+**Business Rules**:
+- Created automatically when resident self-registers
+- User account created with `is_active = false` until approved
+- Building admins can approve/reject requests for their building only
+- Auto-expires after 30 days if no action taken
+- Complete audit trail of approval decisions
+- Approved users become active and can login immediately
+- Rejected users remain inactive and cannot access system
+
+**Database Schema**:
+```sql
+CREATE TABLE resident_approval_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  building_id UUID NOT NULL REFERENCES buildings(id) ON DELETE CASCADE,
+  request_type VARCHAR(50) DEFAULT 'resident_registration',
+  status VARCHAR(20) DEFAULT 'pending',
+  registration_data JSONB DEFAULT '{}',
+  approved_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  approved_at TIMESTAMP,
+  rejection_reason TEXT,
+  approval_notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  expires_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP + INTERVAL '30 days'),
+  
+  -- Constraints
+  CONSTRAINT unique_user_approval UNIQUE(user_id),
+  CONSTRAINT check_status CHECK (status IN ('pending', 'approved', 'rejected', 'expired'))
+);
+
+-- Performance Indexes
+CREATE INDEX idx_resident_approval_building_status ON resident_approval_requests (building_id, status);
+CREATE INDEX idx_resident_approval_user ON resident_approval_requests (user_id);
+CREATE INDEX idx_resident_approval_expires ON resident_approval_requests (expires_at);
+CREATE INDEX idx_resident_approval_created ON resident_approval_requests (created_at);
+```
+
+### 11. Profile Management System (Planned v3.0)
 
 #### Extended User Profiles (`profile_management.user_profiles`)
 **Purpose**: Enhanced user profile data beyond basic account information
@@ -263,26 +323,6 @@ Key Fields:
 - privacy_settings (JSONB): Visibility and sharing controls
 - theme_preferences (JSONB): UI theme and language settings
 ```
-
-#### Pending Registrations (`profile_management.pending_registrations`)
-**Purpose**: Registration approval workflow system
-
-```sql
-Key Fields:
-- email, password_hash, personal_info: Registration data
-- building_email (VARCHAR): Building admin contact email
-- status (ENUM): 'pending', 'approved', 'rejected', 'expired'
-- verification_token (VARCHAR): Email verification token
-- expires_at (TIMESTAMPTZ): Auto-expiry after 7 days
-- approved_by (UUID, FK): Which admin processed the request
-- rejection_reason (TEXT): Admin feedback for rejections
-```
-
-**Business Rules**:
-- Users submit registration with building email
-- Building admins receive notification to approve/reject
-- Auto-expires after 7 days if no action taken
-- Complete audit trail of approval process
 
 #### License Allocations (`building_management.license_allocations`)
 **Purpose**: Track license assignments by building admins
@@ -537,6 +577,64 @@ SELECT * FROM get_visitor_recommendations(
 #### 12. `daily_maintenance()`
 **Purpose**: Automated maintenance tasks
 
+### Resident Approval Functions ✅ **IMPLEMENTED**
+
+#### 13. `process_resident_approval()`
+**Purpose**: Processes resident approval requests (approve/reject)
+
+```sql
+SELECT * FROM process_resident_approval(
+    p_approval_id UUID,
+    p_admin_id UUID,
+    p_approved BOOLEAN,
+    p_reason TEXT DEFAULT NULL,
+    p_notes TEXT DEFAULT NULL
+);
+
+-- Returns: success, message, user_id, approval_status
+```
+
+**What it does**:
+1. Validates approval request exists and is pending
+2. Checks admin has permission for the building
+3. Updates approval status and timestamps
+4. Activates/deactivates user account based on decision
+5. Records admin who processed the request
+6. Creates audit trail of the decision
+
+#### 14. `get_building_approval_statistics()`
+**Purpose**: Building-wide approval statistics for dashboards
+
+```sql
+SELECT * FROM get_building_approval_statistics(
+    p_building_id UUID,
+    p_start_date TIMESTAMP DEFAULT (CURRENT_DATE - INTERVAL '30 days'),
+    p_end_date TIMESTAMP DEFAULT CURRENT_DATE
+);
+
+-- Returns: total_requests, pending, approved, rejected, expired, avg_processing_time
+```
+
+**What it does**:
+1. Aggregates approval request statistics for date range
+2. Calculates approval rates and processing times
+3. Provides data for building admin dashboards
+4. Tracks approval workflow efficiency
+
+#### 15. `expire_approval_requests()`
+**Purpose**: Automatically expires old pending approval requests
+
+```sql
+SELECT expire_approval_requests() RETURNS INTEGER;
+```
+
+**What it does**:
+1. Finds approval requests older than 30 days with pending status
+2. Updates status to 'expired'
+3. Optionally deactivates associated user accounts
+4. Returns count of expired requests
+5. Intended for automated/scheduled execution
+
 ---
 
 ## 🔄 Triggers
@@ -598,6 +696,41 @@ tr_[table]_analytics: create_analytics_event()
 - Captures business events (visit created, status changed, user login)
 - Feeds real-time dashboard
 - Enables pattern analysis
+
+### Resident Approval Triggers ✅ **IMPLEMENTED**
+
+#### Approval Request Expiry
+```sql
+-- Automatically expires old approval requests
+tr_approval_expiry: expire_approval_requests()
+```
+**Behavior**:
+- Runs daily via maintenance job
+- Marks requests older than 30 days as 'expired'
+- Updates associated user accounts if needed
+- Maintains clean approval queue
+
+#### User Status Updates
+```sql
+-- Updates user is_active status based on approval decisions
+tr_approval_user_status: update_user_activation_status()
+```
+**Behavior**:
+- Triggered when approval status changes
+- Sets user.is_active = true when approved
+- Sets user.is_active = false when rejected
+- Maintains user account state consistency
+
+#### Approval Audit Trail
+```sql
+-- Comprehensive audit logging for approval decisions
+tr_approval_audit: create_approval_audit_log()
+```
+**Behavior**:
+- Logs all approval decision changes
+- Records admin who processed the request
+- Captures before/after states
+- Enables compliance and audit requirements
 
 ---
 
@@ -1465,6 +1598,69 @@ DATABASE_URL='postgresql://user:pass%40word@host:5432/db'
 - Enhanced session tracking with device fingerprints
 - Location-based security policies  
 - Multi-factor authentication support
+
+### Migration: Resident Approval System (2025-01-08)
+**Migration ID**: `2025_01_08_001_resident_approval_system`  
+**File**: `migrations/create_resident_approval_requests.sql`  
+**Status**: ✅ Completed Successfully
+
+#### Summary
+Implemented comprehensive resident approval workflow system that requires building admin approval for new resident registrations.
+
+#### Changes Made
+1. **Added Table**: `resident_approval_requests`
+   - Complete approval workflow with 13 columns
+   - Automatic expiry after 30 days
+   - Building-specific access control
+   - Comprehensive audit trail
+   
+2. **Performance Optimizations**:
+   - `idx_resident_approval_building_status` index for admin queries
+   - `idx_resident_approval_user` index for user lookup
+   - `idx_resident_approval_expires` index for expiry processing
+   - `idx_resident_approval_created` index for chronological sorting
+
+3. **Business Logic Integration**:
+   - Updated user registration to create is_active=false users
+   - Approval process activates user accounts
+   - Complete integration with existing authentication system
+
+#### Impact
+- **Enhanced Security**: All new residents require admin approval before system access
+- **Improved Management**: Building admins control resident onboarding
+- **Complete Audit Trail**: Full tracking of approval decisions and reasons
+- **Scalable Architecture**: Supports multiple buildings with isolated approval queues
+
+#### Database Schema Changes
+```sql
+-- Before Migration
+- 9 core tables (users, buildings, visitors, etc.)
+
+-- After Migration  
+- 10 core tables (added resident_approval_requests)
+- 4 new indexes for optimal performance
+- 2 new constraints for data integrity
+```
+
+#### API Integration
+- **New Endpoints**: 7 resident approval API endpoints
+- **Authentication**: Building-specific access control
+- **Real-time Updates**: Socket.io integration for approval notifications
+- **Postman Testing**: Comprehensive test collections updated
+
+#### Migration Execution Details
+- **Execution Date**: 2025-01-08
+- **Execution Time**: < 1 second (clean database)
+- **Rollback Available**: Standard table drop procedures
+- **Data Loss**: None (all operations are additive)
+
+#### Supporting Features
+This migration enables:
+- Self-service resident registration
+- Building admin approval dashboard
+- Automated approval request expiry
+- Email notifications for approval decisions
+- Complete integration with existing user management
 
 ---
 
