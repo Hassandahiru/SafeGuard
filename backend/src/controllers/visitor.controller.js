@@ -524,6 +524,114 @@ class VisitorController {
 
     res.json(createResponse(true, status, 'Visitor check-in status retrieved successfully'));
   });
+
+  /**
+   * Scan visitor QR code for building entry
+   * Only security users can scan QR codes for entry
+   */
+  scanVisitorEntry = asyncHandler(async (req, res) => {
+    const { qr_code, gate_number, location } = req.body;
+    const securityOfficerId = req.user.id;
+
+    // Verify user is security role
+    if (req.user.role !== 'security') {
+      throw new AuthorizationError('Only security personnel can scan QR codes for entry');
+    }
+
+    // Validate QR code format
+    if (!QRCodeService.validateQRCodeFormat(qr_code)) {
+      throw new ValidationError('Invalid QR code format');
+    }
+
+    // Process QR scan for entry using the model method
+    const scanResult = await Visit.processEntryQRScan(
+      qr_code,
+      securityOfficerId,
+      gate_number,
+      location
+    );
+
+    const visitData = scanResult.visit_data;
+
+    // Send entry notification
+    await NotificationService.sendVisitorEnteredNotification(
+      visitData,
+      { id: securityOfficerId, name: `${req.user.first_name} ${req.user.last_name}` }
+    );
+
+    visitorLogger.info('QR code scanned for entry', {
+      qrCode: qr_code,
+      securityOfficerId,
+      visitId: visitData.visit_id,
+      gateNumber: gate_number
+    });
+
+    res.json(createResponse(true, {
+      visit: visitData,
+      scan_type: 'entry',
+      scanned_at: new Date(),
+      scanner: {
+        id: req.user.id,
+        name: `${req.user.first_name} ${req.user.last_name}`,
+        role: req.user.role
+      },
+      gate_number: gate_number
+    }, scanResult.message));
+  });
+
+  /**
+   * Scan visitor QR code for building exit
+   * Only security users can scan QR codes for exit
+   */
+  scanVisitorExit = asyncHandler(async (req, res) => {
+    const { qr_code, gate_number, location } = req.body;
+    const securityOfficerId = req.user.id;
+
+    // Verify user is security role
+    if (req.user.role !== 'security') {
+      throw new AuthorizationError('Only security personnel can scan QR codes for exit');
+    }
+
+    // Validate QR code format
+    if (!QRCodeService.validateQRCodeFormat(qr_code)) {
+      throw new ValidationError('Invalid QR code format');
+    }
+
+    // Process QR scan for exit using the model method
+    const scanResult = await Visit.processExitQRScan(
+      qr_code,
+      securityOfficerId,
+      gate_number,
+      location
+    );
+
+    const visitData = scanResult.visit_data;
+
+    // Send exit notification
+    await NotificationService.sendVisitorExitedNotification(
+      visitData,
+      { id: securityOfficerId, name: `${req.user.first_name} ${req.user.last_name}` }
+    );
+
+    visitorLogger.info('QR code scanned for exit', {
+      qrCode: qr_code,
+      securityOfficerId,
+      visitId: visitData.visit_id,
+      gateNumber: gate_number
+    });
+
+    res.json(createResponse(true, {
+      visit: visitData,
+      scan_type: 'exit',
+      scanned_at: new Date(),
+      scanner: {
+        id: req.user.id,
+        name: `${req.user.first_name} ${req.user.last_name}`,
+        role: req.user.role
+      },
+      gate_number: gate_number
+    }, scanResult.message));
+  });
 }
 
 export default new VisitorController();

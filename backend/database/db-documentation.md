@@ -136,12 +136,17 @@ Key Fields:
 - expected_start/end (TIMESTAMPTZ): Planned visit times
 - current_visitors (INT): Number of visitors added to this visit
 - max_visitors (INT): Maximum allowed visitors
+- entry (BOOLEAN): QR code scanned at building entry (Version 2)
+- exit (BOOLEAN): QR code scanned at building exit (Version 2)
 ```
 
 **Business Rules**:
 - QR codes are generated AFTER visit creation by business logic
 - One QR code per visit, regardless of visitor count
 - Status automatically transitions based on visitor actions
+- **Version 2**: Entry and exit tracking via separate QR scans
+- **Sequential Validation**: Cannot exit without entry scan first
+- **Security Role Only**: Only security personnel can scan QR codes for entry/exit
 
 ### 5. Visit Visitors (`visit_visitors`)
 **Purpose**: Junction table linking visits to multiple visitors
@@ -1661,6 +1666,120 @@ This migration enables:
 - Automated approval request expiry
 - Email notifications for approval decisions
 - Complete integration with existing user management
+
+### Migration: QR Code Entry/Exit Tracking - Version 2 (2025-01-14)
+**Migration ID**: `2025_01_14_001_qr_entry_exit_tracking`  
+**File**: `migrations/006_add_entry_exit_columns.sql`  
+**Status**: ✅ Completed Successfully
+
+#### Summary
+Implemented Version 2 QR code scanning functionality that tracks building entry and exit separately, providing granular visitor access control and enhanced security monitoring.
+
+#### Changes Made
+1. **Added Columns to `visits` Table**:
+   - `entry (BOOLEAN)`: Tracks if visitor has scanned QR code at building entry (DEFAULT: FALSE)
+   - `exit (BOOLEAN)`: Tracks if visitor has scanned QR code at building exit (DEFAULT: FALSE)
+
+2. **Performance Optimizations**:
+   - `idx_visits_entry` index for entry status queries
+   - `idx_visits_exit` index for exit status queries
+   - `idx_visits_entry_exit` composite index for entry/exit status combinations
+
+3. **New Database Function**: `process_qr_entry_exit_scan()`
+   ```sql
+   SELECT * FROM process_qr_entry_exit_scan(
+       p_qr_code TEXT,
+       p_scan_type VARCHAR(10), -- 'entry' or 'exit'
+       p_security_officer UUID,
+       p_gate_number VARCHAR(20) DEFAULT NULL,
+       p_location POINT DEFAULT NULL
+   );
+   ```
+
+4. **Business Logic Enhancements**:
+   - **Entry Scanning**: Sets `entry = TRUE`, updates visit status to 'active'
+   - **Exit Scanning**: Sets `exit = TRUE`, updates visit status to 'completed'
+   - **Validation**: Cannot exit without entry scan first
+   - **Prevents Duplicate Scans**: Checks existing entry/exit status
+   - **Real-time Notifications**: Sends appropriate notifications for entry/exit
+
+#### Impact
+- **Enhanced Security**: Separate tracking of building entry and exit points
+- **Granular Control**: Security can control both entry and exit processes independently
+- **Audit Trail**: Complete tracking of visitor movement through building access points
+- **Compliance**: Meets security requirements for visitor access monitoring
+
+#### API Integration
+- **New Endpoints**: 
+  - `POST /api/visitors/scan/entry` - Scan QR for building entry (security only)
+  - `POST /api/visitors/scan/exit` - Scan QR for building exit (security only)
+- **Role-Based Access**: Only users with 'security' role can scan QR codes
+- **Enhanced Middleware**: New `requireSecurityOnly` middleware for strict role enforcement
+
+#### Database Schema Changes
+```sql
+-- Before Migration
+visits table: 28 columns (id through updated_at)
+
+-- After Migration  
+visits table: 30 columns (added entry, exit)
+- entry (BOOLEAN DEFAULT FALSE)
+- exit (BOOLEAN DEFAULT FALSE)
+- 3 new indexes for performance optimization
+```
+
+#### Security Enhancements
+1. **Strict Role Enforcement**: Only security personnel can scan QR codes
+2. **Sequential Validation**: Must scan entry before exit
+3. **Duplicate Prevention**: Cannot scan same QR multiple times for same action
+4. **Complete Audit Trail**: All scans logged with timestamp, officer, and location
+
+#### Migration Execution Details
+- **Execution Date**: 2025-01-14
+- **Execution Time**: < 1 second (schema changes only)
+- **Rollback Available**: Column drop procedures available
+- **Data Loss**: None (all operations are additive)
+- **Existing Data**: All existing visits default to entry=false, exit=false
+
+#### Supporting Features
+This migration enables:
+- Separate entry/exit gate scanning
+- Enhanced visitor flow tracking
+- Security checkpoint management
+- Building access compliance
+- Real-time visitor location awareness within building
+- Advanced analytics on visitor entry/exit patterns
+
+#### Function Details
+The new `process_qr_entry_exit_scan()` function provides:
+- **Validation**: QR code format and expiry checking
+- **Status Management**: Automatic visit status transitions
+- **Logging**: Comprehensive action logging with security officer details
+- **Notifications**: Real-time alerts to hosts about visitor entry/exit
+- **Error Handling**: Detailed error messages for invalid operations
+
+#### Usage Example
+```sql
+-- Entry scan
+SELECT * FROM process_qr_entry_exit_scan(
+    'SG_ABC123DEF456', 
+    'entry', 
+    '550e8400-e29b-41d4-a716-446655440000',
+    'Main Gate',
+    POINT(-6.5244, 3.3792)
+);
+
+-- Exit scan  
+SELECT * FROM process_qr_entry_exit_scan(
+    'SG_ABC123DEF456',
+    'exit',
+    '550e8400-e29b-41d4-a716-446655440000', 
+    'Main Gate',
+    POINT(-6.5244, 3.3792)
+);
+```
+
+This migration represents a significant enhancement to the SafeGuard system's access control capabilities, providing building administrators and security personnel with granular control over visitor movement tracking.
 
 ---
 

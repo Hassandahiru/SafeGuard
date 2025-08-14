@@ -1,0 +1,1855 @@
+{
+	"info": {
+		"_postman_id": "b4d2e8f3-9a12-4c6b-8f7d-1e2a3b4c5d6e",
+		"name": "SafeGuard Complete API",
+		"description": "Comprehensive SafeGuard Backend API Collection - From Authentication to QR Code Generation and Scanning",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "12345678"
+	},
+	"item": [
+		{
+			"name": "System Setup & Building Registration",
+			"description": "Initial system setup and building registration endpoints",
+			"item": [
+				{
+					"name": "Initial System Setup",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.success && responseJson.data.super_admin) {",
+									"        pm.environment.set('super_admin_token', responseJson.data.super_admin.token);",
+									"        pm.environment.set('super_admin_id', responseJson.data.super_admin.id);",
+									"        pm.environment.set('initial_building_id', responseJson.data.building.id);",
+									"    }",
+									"}",
+									"pm.test('Initial setup completed successfully', function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"super_admin\": {\n    \"email\": \"{{super_admin_email}}\",\n    \"password\": \"{{super_admin_password}}\",\n    \"first_name\": \"System\",\n    \"last_name\": \"Administrator\",\n    \"phone\": \"+1234567890\"\n  },\n  \"building\": {\n    \"name\": \"SafeGuard Demo Building\",\n    \"address\": \"123 Main Street, Lagos, Nigeria\",\n    \"city\": \"Lagos\",\n    \"state\": \"Lagos\",\n    \"country\": \"Nigeria\",\n    \"postal_code\": \"100001\",\n    \"phone\": \"+2348012345678\",\n    \"email\": \"demo@safeguard.com\",\n    \"website\": \"https://demo.safeguard.com\",\n    \"timezone\": \"Africa/Lagos\"\n  },\n  \"license\": {\n    \"type\": \"premium\",\n    \"max_residents\": 100,\n    \"max_visitors_per_month\": 5000,\n    \"expires_at\": \"2025-12-31T23:59:59Z\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/initial-setup",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"initial-setup"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register New Building (Self-Service)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.success && responseJson.data.building) {",
+									"        pm.environment.set('new_building_id', responseJson.data.building.id);",
+									"        pm.environment.set('building_admin_token', responseJson.data.building_admin.token);",
+									"    }",
+									"}",
+									"pm.test('Building registered successfully', function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"building\": {\n    \"name\": \"Sunset Gardens Estate\",\n    \"address\": \"45 Victoria Island Avenue\",\n    \"city\": \"Lagos\",\n    \"state\": \"Lagos\",\n    \"country\": \"Nigeria\",\n    \"postal_code\": \"101241\",\n    \"phone\": \"+2348098765432\",\n    \"email\": \"contact@sunsetgardens.com\",\n    \"website\": \"https://sunsetgardens.com\",\n    \"timezone\": \"Africa/Lagos\"\n  },\n  \"building_admin\": {\n    \"email\": \"admin@sunsetgardens.com\",\n    \"password\": \"{{admin_password}}\",\n    \"first_name\": \"Building\",\n    \"last_name\": \"Administrator\",\n    \"phone\": \"+2348098765433\",\n    \"apartment_number\": \"ADMIN\"\n  },\n  \"license_plan\": \"standard\",\n  \"estimated_residents\": 50,\n  \"estimated_monthly_visitors\": 2000\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/register-building",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"register-building"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register Building (Super Admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Building registered by super admin successfully', function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{super_admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"building\": {\n    \"name\": \"Premium Heights\",\n    \"address\": \"10 Ikoyi Crescent\",\n    \"city\": \"Lagos\",\n    \"state\": \"Lagos\",\n    \"country\": \"Nigeria\",\n    \"postal_code\": \"101233\",\n    \"phone\": \"+2348055512345\",\n    \"email\": \"info@premiumheights.com\",\n    \"website\": \"https://premiumheights.com\",\n    \"timezone\": \"Africa/Lagos\"\n  },\n  \"building_admin\": {\n    \"email\": \"manager@premiumheights.com\",\n    \"password\": \"{{admin_password}}\",\n    \"first_name\": \"Property\",\n    \"last_name\": \"Manager\",\n    \"phone\": \"+2348055512346\",\n    \"apartment_number\": \"MGR\"\n  },\n  \"license\": {\n    \"type\": \"premium\",\n    \"max_residents\": 200,\n    \"max_visitors_per_month\": 10000,\n    \"expires_at\": \"2025-12-31T23:59:59Z\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/buildings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"buildings"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Buildings",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Buildings retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{super_admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/buildings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"buildings"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User Registration & Management",
+			"description": "User registration endpoints for residents, security personnel, and admins",
+			"item": [
+				{
+					"name": "Resident Self Registration",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.success && responseJson.data.user) {",
+									"        pm.environment.set('resident_user_id', responseJson.data.user.id);",
+									"        if (responseJson.data.token) {",
+									"            pm.environment.set('resident_token', responseJson.data.token);",
+									"        }",
+									"    }",
+									"}",
+									"pm.test('Resident registration successful', function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\",\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"phone\": \"+1234567890\",\n  \"building_email\": \"{{building_contact_email}}\",\n  \"apartment_number\": \"{{test_apartment_number}}\",\n  \"emergency_contact_name\": \"Jane Doe\",\n  \"emergency_contact_phone\": \"+1234567891\",\n  \"terms_accepted\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/registration/self-register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"registration",
+								"self-register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register Security Personnel",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.success && responseJson.data.user) {",
+									"        pm.environment.set('security_user_id', responseJson.data.user.id);",
+									"    }",
+									"}",
+									"pm.test('Security personnel registered successfully', function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{building_admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{security_email}}\",\n  \"password\": \"{{security_password}}\",\n  \"first_name\": \"Security\",\n  \"last_name\": \"Guard\",\n  \"phone\": \"+2348012345679\",\n  \"building_id\": \"{{building_id}}\",\n  \"shift_pattern\": \"day\",\n  \"security_clearance\": \"level_2\",\n  \"emergency_contact_name\": \"Security Supervisor\",\n  \"emergency_contact_phone\": \"+2348012345680\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/registration/security",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"registration",
+								"security"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register Building Admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Building admin registered successfully', function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{super_admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"buildingadmin@example.com\",\n  \"password\": \"{{admin_password}}\",\n  \"first_name\": \"Building\",\n  \"last_name\": \"Administrator\",\n  \"phone\": \"+2348055555555\",\n  \"building_id\": \"{{building_id}}\",\n  \"apartment_number\": \"ADMIN_OFFICE\",\n  \"permissions\": [\"manage_users\", \"view_analytics\", \"manage_licenses\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/registration/building-admin",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"registration",
+								"building-admin"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Validate Registration Data",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Registration validation completed', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"test.validation@example.com\",\n  \"phone\": \"+1234567999\",\n  \"building_email\": \"{{building_contact_email}}\",\n  \"apartment_number\": \"A202\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/registration/validate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"registration",
+								"validate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Complete Registration Process",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Registration process completed', function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"complete.test@example.com\",\n  \"password\": \"CompleteTest123!\",\n  \"first_name\": \"Complete\",\n  \"last_name\": \"Test\",\n  \"phone\": \"+1234567888\",\n  \"building_id\": \"{{building_id}}\",\n  \"apartment_number\": \"C303\",\n  \"role\": \"resident\",\n  \"emergency_contact_name\": \"Emergency Contact\",\n  \"emergency_contact_phone\": \"+1234567887\",\n  \"terms_accepted\": true,\n  \"privacy_accepted\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/registration/complete",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"registration",
+								"complete"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Bulk User Registration",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Bulk registration completed', function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{building_admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"building_id\": \"{{building_id}}\",\n  \"users\": [\n    {\n      \"email\": \"bulk1@example.com\",\n      \"first_name\": \"Bulk\",\n      \"last_name\": \"User1\",\n      \"phone\": \"+1234567701\",\n      \"apartment_number\": \"B101\",\n      \"role\": \"resident\",\n      \"emergency_contact_name\": \"Emergency 1\",\n      \"emergency_contact_phone\": \"+1234567702\"\n    },\n    {\n      \"email\": \"bulk2@example.com\",\n      \"first_name\": \"Bulk\",\n      \"last_name\": \"User2\",\n      \"phone\": \"+1234567703\",\n      \"apartment_number\": \"B102\",\n      \"role\": \"resident\",\n      \"emergency_contact_name\": \"Emergency 2\",\n      \"emergency_contact_phone\": \"+1234567704\"\n    }\n  ],\n  \"send_welcome_emails\": true,\n  \"generate_temporary_passwords\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/registration/bulk",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"registration",
+								"bulk"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Registration Templates",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Registration templates retrieved', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{building_admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/registration/templates",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"registration",
+								"templates"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Authentication",
+			"description": "User authentication endpoints including registration, login, logout, and profile management",
+			"item": [
+				{
+					"name": "Register User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.success && responseJson.data.token) {",
+									"        pm.environment.set('token', responseJson.data.token);",
+									"        pm.environment.set('user_id', responseJson.data.user.id);",
+									"        pm.environment.set('building_id', responseJson.data.user.building_id);",
+									"        pm.environment.set('role', responseJson.data.user.role);",
+									"    }",
+									"}",
+									"pm.test('Registration successful', function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\",\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"phone\": \"+1234567890\",\n  \"building_id\": \"{{building_id}}\",\n  \"role\": \"resident\",\n  \"apartment_number\": \"101\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.success && responseJson.data.token) {",
+									"        pm.environment.set('token', responseJson.data.token);",
+									"        pm.environment.set('user_id', responseJson.data.user.id);",
+									"        pm.environment.set('building_id', responseJson.data.user.building_id);",
+									"        pm.environment.set('role', responseJson.data.user.role);",
+									"    }",
+									"}",
+									"pm.test('Login successful', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Logout successful', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/logout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"logout"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Profile retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"profile"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Change Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Password changed successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"current_password\": \"{{test_password}}\",\n  \"new_password\": \"NewSecurePass123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/change-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"change-password"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Security Authentication",
+			"description": "Security guard authentication for QR code scanning operations",
+			"item": [
+				{
+					"name": "Login Security Guard",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.success && responseJson.data.token) {",
+									"        pm.environment.set('security_token', responseJson.data.token);",
+									"        pm.environment.set('security_user_id', responseJson.data.user.id);",
+									"        pm.environment.set('security_role', responseJson.data.user.role);",
+									"    }",
+									"}",
+									"pm.test('Security login successful', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{security_email}}\",\n  \"password\": \"{{security_password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Visitor Management",
+			"description": "Create and manage visitor invitations, generate QR codes",
+			"item": [
+				{
+					"name": "Create Visitor Invitation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.success && responseJson.data.visit) {",
+									"        pm.environment.set('visit_id', responseJson.data.visit.id);",
+									"        pm.environment.set('qr_code', responseJson.data.qr_code);",
+									"    }",
+									"}",
+									"pm.test('Visitor invitation created successfully', function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Business Meeting\",\n  \"description\": \"Meeting with potential client\",\n  \"expected_start\": \"2024-08-15T14:00:00Z\",\n  \"expected_end\": \"2024-08-15T16:00:00Z\",\n  \"visit_type\": \"single\",\n  \"visitors\": [\n    {\n      \"name\": \"Jane Smith\",\n      \"phone\": \"+1987654321\",\n      \"email\": \"jane.smith@example.com\",\n      \"company\": \"ABC Corporation\"\n    }\n  ],\n  \"notes\": \"Visitor will need to sign NDA\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/visitors",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"visitors"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Visitor Invitations",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Visitor invitations retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/visitors?page=1&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"visitors"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Visitor Invitation Details",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Visitor invitation details retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/visitors/{{visit_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"visitors",
+								"{{visit_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Visitor Invitation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Visitor invitation updated successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Business Meeting\",\n  \"description\": \"Updated meeting with potential client\",\n  \"expected_end\": \"2024-08-15T17:00:00Z\",\n  \"notes\": \"Updated - Visitor will need to sign NDA and provide ID\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/visitors/{{visit_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"visitors",
+								"{{visit_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Visitor Invitation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Visitor invitation cancelled successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"Meeting cancelled due to scheduling conflict\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/visitors/{{visit_id}}/cancel",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"visitors",
+								"{{visit_id}}",
+								"cancel"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "QR Code Generation",
+			"description": "Generate and retrieve QR codes for visitor invitations",
+			"item": [
+				{
+					"name": "Generate QR Code for Visit",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('QR code generated successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.success && responseJson.data.qr_code) {",
+									"        pm.environment.set('generated_qr_code', responseJson.data.qr_code);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/visitors/{{visit_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"visitors",
+								"{{visit_id}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "QR Code Scanning (Security Only)",
+			"description": "QR code scanning endpoints for building entry and exit - Security personnel only",
+			"item": [
+				{
+					"name": "Scan QR Code for Entry",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('QR code entry scan successful', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.success && responseJson.data.visit) {",
+									"        pm.environment.set('scanned_visit_id', responseJson.data.visit.visit_id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{security_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"qr_code\": \"{{qr_code}}\",\n  \"gate_number\": \"Main Gate\",\n  \"location\": {\n    \"latitude\": 6.5244,\n    \"longitude\": 3.3792,\n    \"address\": \"Main Building Entrance\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/visitors/scan/entry",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"visitors",
+								"scan",
+								"entry"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Scan QR Code for Exit",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('QR code exit scan successful', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{security_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"qr_code\": \"{{qr_code}}\",\n  \"gate_number\": \"Main Gate\",\n  \"location\": {\n    \"latitude\": 6.5244,\n    \"longitude\": 3.3792,\n    \"address\": \"Main Building Exit\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/visitors/scan/exit",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"visitors",
+								"scan",
+								"exit"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Visitor Check-in Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Visitor check-in status retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{security_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/visitors/{{visit_id}}/checkin-status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"visitors",
+								"{{visit_id}}",
+								"checkin-status"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Frequent Visitors",
+			"description": "Manage frequently invited visitors for quick access",
+			"item": [
+				{
+					"name": "Add Frequent Visitor",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.success && responseJson.data.frequent_visitor) {",
+									"        pm.environment.set('frequent_visitor_id', responseJson.data.frequent_visitor.id);",
+									"    }",
+									"}",
+									"pm.test('Frequent visitor added successfully', function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Dr. Michael Johnson\",\n  \"phone\": \"+1555123456\",\n  \"email\": \"dr.johnson@healthcorp.com\",\n  \"company\": \"HealthCorp Medical\",\n  \"relationship\": \"family_doctor\",\n  \"notes\": \"Regular monthly checkup visits\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/frequent-visitors",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"frequent-visitors"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Frequent Visitors",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Frequent visitors retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/frequent-visitors",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"frequent-visitors"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Quick Invite from Frequent Visitors",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Quick invitation created successfully', function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"frequent_visitor_id\": \"{{frequent_visitor_id}}\",\n  \"title\": \"Quick Medical Checkup\",\n  \"expected_start\": \"2024-08-16T10:00:00Z\",\n  \"expected_end\": \"2024-08-16T11:00:00Z\",\n  \"notes\": \"Regular monthly visit\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/frequent-visitors/{{frequent_visitor_id}}/quick-invite",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"frequent-visitors",
+								"{{frequent_visitor_id}}",
+								"quick-invite"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Frequent Visitor",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Frequent visitor removed successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/frequent-visitors/{{frequent_visitor_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"frequent-visitors",
+								"{{frequent_visitor_id}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Visitor Bans",
+			"description": "Manage personal visitor blacklist - residents can ban specific visitors",
+			"item": [
+				{
+					"name": "Ban Visitor",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Visitor banned successfully', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"if (pm.response.code === 201) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.success && responseJson.data.visitor_ban) {",
+									"        pm.environment.set('visitor_ban_id', responseJson.data.visitor_ban.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"visitor_phone\": \"+1987654321\",\n  \"reason\": \"Inappropriate behavior during previous visit\",\n  \"ban_type\": \"temporary\",\n  \"expires_at\": \"2024-12-31T23:59:59Z\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/visitor-bans",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"visitor-bans"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Banned Visitors",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Banned visitors retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/visitor-bans",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"visitor-bans"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Unban Visitor",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Visitor unbanned successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/visitor-bans/{{visitor_ban_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"visitor-bans",
+								"{{visitor_ban_id}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Analytics & Reports",
+			"description": "Building analytics and visitor statistics",
+			"item": [
+				{
+					"name": "Get Building Visitor Statistics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Building statistics retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/visitors/stats?period=monthly",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"visitors",
+								"stats"
+							],
+							"query": [
+								{
+									"key": "period",
+									"value": "monthly"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Active Visits",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Active visits retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{security_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/visitors/active",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"visitors",
+								"active"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Visitor History",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Visitor history retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/visitors/{{visit_id}}/history",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"visitors",
+								"{{visit_id}}",
+								"history"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Search & Filters",
+			"description": "Search visitors and filter results",
+			"item": [
+				{
+					"name": "Search Visitors",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Visitor search completed successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/visitors/search?query=Jane&page=1&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"visitors",
+								"search"
+							],
+							"query": [
+								{
+									"key": "query",
+									"value": "Jane"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Filter Visits by Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Filtered visits retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/visitors?status=active&type=single",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"visitors"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "active"
+								},
+								{
+									"key": "type",
+									"value": "single"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Testing Workflow",
+			"description": "Complete end-to-end testing workflow from registration to QR scanning",
+			"item": [
+				{
+					"name": "Full Workflow Test - Create Visit & Scan",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// This test simulates a complete workflow:",
+									"// 1. Register resident user",
+									"// 2. Create visitor invitation",
+									"// 3. Generate QR code",
+									"// 4. Login as security guard",
+									"// 5. Scan QR for entry",
+									"// 6. Scan QR for exit",
+									"console.log('Starting full workflow test...');"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Full workflow completed successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"console.log('Full workflow test completed!');"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/visitors/active",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"visitors",
+								"active"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Auto-generate timestamps for dynamic testing",
+					"const now = new Date();",
+					"const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);",
+					"",
+					"pm.environment.set('current_timestamp', now.toISOString());",
+					"pm.environment.set('tomorrow_timestamp', tomorrow.toISOString());"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global test checks",
+					"pm.test('Status code is not 5xx', function () {",
+					"    pm.expect(pm.response.code).to.not.be.oneOf([500, 501, 502, 503, 504, 505]);",
+					"});",
+					"",
+					"pm.test('Response time is acceptable', function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(5000);",
+					"});"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		}
+	]
+}

@@ -461,6 +461,140 @@ class Visit extends BaseModel {
     const result = await this.query(query);
     return result.rowCount;
   }
+
+  /**
+   * Process QR code scan for entry (Version 2)
+   * @param {string} qrCode - QR code string
+   * @param {string} securityOfficerId - Security officer ID
+   * @param {string} gateNumber - Gate number (optional)
+   * @param {Object} location - Location data (optional)
+   * @returns {Promise<Object>} Entry scan result
+   */
+  async processEntryQRScan(qrCode, securityOfficerId, gateNumber = null, location = null) {
+    const result = await this.query(`
+      SELECT * FROM process_qr_entry_exit_scan($1, $2, $3, $4, $5)
+    `, [qrCode, 'entry', securityOfficerId, gateNumber, location]);
+
+    const scanResult = result.rows[0];
+    if (!scanResult.success) {
+      throw new QRCodeError(scanResult.message);
+    }
+
+    return scanResult;
+  }
+
+  /**
+   * Process QR code scan for exit (Version 2)
+   * @param {string} qrCode - QR code string
+   * @param {string} securityOfficerId - Security officer ID
+   * @param {string} gateNumber - Gate number (optional)
+   * @param {Object} location - Location data (optional)
+   * @returns {Promise<Object>} Exit scan result
+   */
+  async processExitQRScan(qrCode, securityOfficerId, gateNumber = null, location = null) {
+    const result = await this.query(`
+      SELECT * FROM process_qr_entry_exit_scan($1, $2, $3, $4, $5)
+    `, [qrCode, 'exit', securityOfficerId, gateNumber, location]);
+
+    const scanResult = result.rows[0];
+    if (!scanResult.success) {
+      throw new QRCodeError(scanResult.message);
+    }
+
+    return scanResult;
+  }
+
+  /**
+   * Get visit entry/exit status (Version 2)
+   * @param {string} visitId - Visit ID
+   * @returns {Promise<Object>} Entry/exit status
+   */
+  async getEntryExitStatus(visitId) {
+    const visit = await this.findById(visitId);
+    if (!visit) {
+      throw new NotFoundError('Visit not found');
+    }
+
+    return {
+      visit_id: visitId,
+      entry: visit.entry,
+      exit: visit.exit,
+      status: visit.status,
+      can_enter: !visit.entry && ['pending', 'confirmed'].includes(visit.status),
+      can_exit: visit.entry && !visit.exit && visit.status === 'active'
+    };
+  }
+
+  /**
+   * Update visit entry status (Version 2)
+   * @param {string} visitId - Visit ID
+   * @param {boolean} entry - Entry status
+   * @returns {Promise<Object>} Updated visit
+   */
+  async updateEntryStatus(visitId, entry = true) {
+    return await this.update(visitId, { 
+      entry,
+      status: entry ? VISIT_STATUS.ACTIVE : VISIT_STATUS.PENDING,
+      actual_start: entry ? new Date() : null
+    });
+  }
+
+  /**
+   * Update visit exit status (Version 2)
+   * @param {string} visitId - Visit ID
+   * @param {boolean} exit - Exit status
+   * @returns {Promise<Object>} Updated visit
+   */
+  async updateExitStatus(visitId, exit = true) {
+    return await this.update(visitId, { 
+      exit,
+      status: exit ? VISIT_STATUS.COMPLETED : VISIT_STATUS.ACTIVE,
+      actual_end: exit ? new Date() : null
+    });
+  }
+
+  /**
+   * Get visits by entry/exit status (Version 2)
+   * @param {string} buildingId - Building ID
+   * @param {boolean} entry - Entry status (null to ignore)
+   * @param {boolean} exit - Exit status (null to ignore)
+   * @returns {Promise<Array>} Filtered visits
+   */
+  async findByEntryExitStatus(buildingId, entry = null, exit = null) {
+    const conditions = { building_id: buildingId };
+    
+    if (entry !== null) conditions.entry = entry;
+    if (exit !== null) conditions.exit = exit;
+
+    return await this.findAll(conditions, { orderBy: 'expected_start DESC' });
+  }
+
+  /**
+   * Get visits currently in building (entered but not exited) (Version 2)
+   * @param {string} buildingId - Building ID
+   * @returns {Promise<Array>} Visits currently in building
+   */
+  async getVisitsInBuilding(buildingId) {
+    return await this.findByEntryExitStatus(buildingId, true, false);
+  }
+
+  /**
+   * Get visits that have not entered yet (Version 2)
+   * @param {string} buildingId - Building ID
+   * @returns {Promise<Array>} Visits awaiting entry
+   */
+  async getVisitsAwaitingEntry(buildingId) {
+    return await this.findByEntryExitStatus(buildingId, false, false);
+  }
+
+  /**
+   * Get completed visits (both entered and exited) (Version 2)
+   * @param {string} buildingId - Building ID
+   * @returns {Promise<Array>} Completed visits
+   */
+  async getCompletedVisits(buildingId) {
+    return await this.findByEntryExitStatus(buildingId, true, true);
+  }
 }
 
 export default new Visit();

@@ -242,6 +242,33 @@ const requireResidentAccess = authorize([USER_ROLES.SUPER_ADMIN, USER_ROLES.BUIL
 const requireSecurityAccess = authorize([USER_ROLES.SUPER_ADMIN, USER_ROLES.BUILDING_ADMIN, USER_ROLES.SECURITY]);
 
 /**
+ * Middleware to check if user is security personnel ONLY (for QR scanning)
+ * This is more restrictive than requireSecurityAccess
+ */
+const requireSecurityOnly = (req, res, next) => {
+  try {
+    if (!req.user) {
+      throw AuthenticationError.tokenMissing();
+    }
+    
+    if (req.user.role !== USER_ROLES.SECURITY) {
+      throw AuthorizationError.securityPersonnelOnly();
+    }
+
+    next();
+  } catch (error) {
+    auth.warn('Security-only access denied', {
+      userId: req.user?.id,
+      userRole: req.user?.role,
+      requiredRole: USER_ROLES.SECURITY,
+      error: error.message
+    });
+
+    next(error);
+  }
+};
+
+/**
  * Optional authentication middleware (doesn't fail if no token)
  */
 const optionalAuth = async (req, res, next) => {
@@ -351,6 +378,7 @@ export {
   requireSecurity,
   requireResidentAccess,
   requireSecurityAccess,
+  requireSecurityOnly,
   optionalAuth,
   setDatabaseUserContext,
   requireOwnership,

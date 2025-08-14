@@ -37,6 +37,10 @@ class AuthorizationError extends AppError {
     return new AuthorizationError('This action can only be performed by the owner');
   }
 
+  static securityPersonnelOnly() {
+    return new AuthorizationError('This action can only be performed by security personnel');
+  }
+
   toJSON() {
     return {
       ...super.toJSON(),
