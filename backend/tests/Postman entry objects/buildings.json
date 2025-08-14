@@ -4,7 +4,14 @@
   "email": "admin@dantatagroup.com",
   "password": "Qwerty@123",
   "device_name": "Building Admin Client"
-}
+  },
+  {
+  "email": "lv@lakeviewhomes.com",
+  "password": "Qwerty@123",
+  "remember_me": true,
+  "device_name": "Postman Test Client",
+  "location": "Lagos, Nigeria"
+  }
 ],
 [{
   "name": "Southside Beach Estates",

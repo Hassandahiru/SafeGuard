@@ -803,7 +803,7 @@ npm install
 
 3. **Environment setup**
 ```bash
-cp .env.example .env
+cp .env
 # Configure your environment variables
 ```
 
@@ -1779,9 +1779,13 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 
 
-# Some Tweaks
+# Version 2
 
-- 
+- One of the core features is that residents create visists that get turned into qr code, which is in turn scanned by the buildings security guard through the application. make sure that is the case in the backend '/backend'.
+- The qr codes are scanned at the entry and exit. the 'visit' table in the database should have two more columns, 'entry' and 'exit'. both are boolean. 
+- when the qr gets scanned at gate entry, the 'entry' column should be set to true and when scanned at the exit, the 'exit' column should be set to true also. 
+- only the users with the role 'security' are able to scan qr codes at entry and exit. keep that in mind. so the route should check the user id or email to lookup their role in the db. 
+- also have a route for logout. 
 ---
 
 **Built with ❤️ for safer communities**
