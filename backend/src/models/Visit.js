@@ -610,10 +610,10 @@ class Visit extends BaseModel {
     const query = `
       SELECT v.*, u.first_name as host_first_name, u.last_name as host_last_name,
              u.apartment_number, u.email as host_email,
-             COUNT(vi.id) as visitor_count
+             COUNT(vv.visitor_id) as visitor_count
       FROM ${this.tableName} v
       JOIN users u ON v.host_id = u.id
-      LEFT JOIN visitors vi ON v.id = vi.visit_id
+      LEFT JOIN visit_visitors vv ON v.id = vv.visit_id
       WHERE v.building_id = $1
       GROUP BY v.id, u.first_name, u.last_name, u.apartment_number, u.email
       ORDER BY v.created_at DESC
@@ -632,13 +632,13 @@ class Visit extends BaseModel {
    */
   async getLatestVisitsForResident(hostId, limit = 15) {
     const query = `
-      SELECT v.*, COUNT(vi.id) as visitor_count,
+      SELECT v.*, COUNT(vv.visitor_id) as visitor_count,
              CASE WHEN v.entry = true AND v.exit = false THEN 'active'
                   WHEN v.entry = true AND v.exit = true THEN 'completed'
                   ELSE v.status
              END as display_status
       FROM ${this.tableName} v
-      LEFT JOIN visitors vi ON v.id = vi.visit_id
+      LEFT JOIN visit_visitors vv ON v.id = vv.visit_id
       WHERE v.host_id = $1
       GROUP BY v.id
       ORDER BY v.created_at DESC
@@ -659,7 +659,7 @@ class Visit extends BaseModel {
   async getTodaysScannedVisits(buildingId, startOfDay, endOfDay) {
     const query = `
       SELECT v.*, u.first_name as host_first_name, u.last_name as host_last_name,
-             u.apartment_number, COUNT(vi.id) as visitor_count,
+             u.apartment_number, COUNT(vv.visitor_id) as visitor_count,
              v.entry, v.exit,
              CASE WHEN v.entry = true AND v.exit = false THEN 'inside'
                   WHEN v.entry = true AND v.exit = true THEN 'completed'
@@ -669,7 +669,7 @@ class Visit extends BaseModel {
              vl.notes as scan_notes
       FROM ${this.tableName} v
       JOIN users u ON v.host_id = u.id
-      LEFT JOIN visitors vi ON v.id = vi.visit_id
+      LEFT JOIN visit_visitors vv ON v.id = vv.visit_id
       LEFT JOIN visit_logs vl ON v.id = vl.visit_id 
         AND vl.action_time >= $2 AND vl.action_time < $3
         AND vl.action IN ('qr_scanned', 'entered', 'exited')
@@ -693,10 +693,10 @@ class Visit extends BaseModel {
     const query = `
       SELECT v.*, u.first_name as host_first_name, u.last_name as host_last_name,
              u.apartment_number, u.phone as host_phone,
-             COUNT(vi.id) as visitor_count
+             COUNT(vv.visitor_id) as visitor_count
       FROM ${this.tableName} v
       JOIN users u ON v.host_id = u.id
-      LEFT JOIN visitors vi ON v.id = vi.visit_id
+      LEFT JOIN visit_visitors vv ON v.id = vv.visit_id
       WHERE v.building_id = $1 
         AND v.entry = true 
         AND v.exit = false
