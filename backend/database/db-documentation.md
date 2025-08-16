@@ -98,6 +98,8 @@ Key Fields:
 **Business Rules**:
 - Residents and admins use licenses by default
 - Security and temporary users may not use licenses
+- Enhanced authentication tracking for security monitoring
+- Account lockout mechanism after failed login attempts
 - Email must be unique across the entire system
 - Enhanced login tracking for security and analytics
 

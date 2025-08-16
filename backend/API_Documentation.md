@@ -724,20 +724,23 @@ DELETE /api/visitors/{visit_id}
 Authorization: Bearer <access-token>
 ```
 
-### QR Code Processing
+### QR Code Processing (Version 2)
 
-#### Process QR Code Scan
+SafeGuard Version 2 introduces enhanced QR code scanning with separate entry and exit tracking, providing complete visitor lifecycle management.
+
+#### Scan QR Code for Building Entry (Security Only)
 ```http
-POST /api/visitors/qr-scan
+POST /api/visitors/scan/entry
 Authorization: Bearer <security-token>
 Content-Type: application/json
 
 {
   "qr_code": "SG_ABC123DEF456",
-  "gate_number": "Gate A",
+  "gate_number": "Main Gate",
   "location": {
     "latitude": 6.5244,
-    "longitude": 3.3792
+    "longitude": 3.3792,
+    "address": "Main Building Entrance"
   }
 }
 ```
@@ -748,32 +751,111 @@ Content-Type: application/json
   "success": true,
   "data": {
     "visit": {
-      "id": "visit-uuid",
+      "visit_id": "visit-uuid",
       "title": "Birthday Party",
       "host": "John Resident",
       "apartment_number": "A101",
-      "status": "active"
+      "status": "active",
+      "entry": true,
+      "exit": false
     },
-    "visitors": [
-      {
-        "id": "visitor-uuid-1",
-        "name": "John Doe",
-        "phone": "+2348123456789",
-        "status": "expected",
-        "is_banned": false
-      },
-      {
-        "id": "visitor-uuid-2",
-        "name": "Jane Smith", 
-        "phone": "+2348987654321",
-        "status": "expected",
-        "is_banned": false
-      }
-    ]
+    "scan_type": "entry",
+    "scanned_at": "2024-01-15T10:30:00Z",
+    "scanner": {
+      "id": "security-uuid",
+      "name": "Security Guard",
+      "role": "security"
+    },
+    "gate_number": "Main Gate"
   },
-  "message": "QR code processed successfully"
+  "message": "Visitor successfully entered building"
 }
 ```
+
+#### Scan QR Code for Building Exit (Security Only)
+```http
+POST /api/visitors/scan/exit
+Authorization: Bearer <security-token>
+Content-Type: application/json
+
+{
+  "qr_code": "SG_ABC123DEF456",
+  "gate_number": "Main Gate",
+  "location": {
+    "latitude": 6.5244,
+    "longitude": 3.3792,
+    "address": "Main Building Exit"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "visit": {
+      "visit_id": "visit-uuid",
+      "title": "Birthday Party",
+      "host": "John Resident",
+      "apartment_number": "A101",
+      "status": "completed",
+      "entry": true,
+      "exit": true
+    },
+    "scan_type": "exit",
+    "scanned_at": "2024-01-15T18:30:00Z",
+    "scanner": {
+      "id": "security-uuid",
+      "name": "Security Guard",
+      "role": "security"
+    },
+    "gate_number": "Main Gate"
+  },
+  "message": "Visitor successfully exited building"
+}
+```
+
+#### Get Visitor Check-in Status
+```http
+GET /api/visitors/{visit_id}/checkin-status
+Authorization: Bearer <security-token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "visit_id": "visit-uuid",
+    "entry": true,
+    "exit": false,
+    "status": "active",
+    "can_enter": false,
+    "can_exit": true,
+    "entry_time": "2024-01-15T10:30:00Z",
+    "exit_time": null
+  },
+  "message": "Check-in status retrieved successfully"
+}
+```
+
+### QR Code Security Features
+
+#### Role-Based Access Control
+- **Entry/Exit Scanning**: Only users with `security` role can scan QR codes
+- **Authorization Validation**: Each scan request validates user role
+- **Access Denied Response**: Non-security users receive `403 Forbidden`
+
+#### Sequential Validation
+- **Entry Required**: Visitors must scan for entry before exit
+- **Duplicate Prevention**: Cannot scan entry twice without exit
+- **Status Tracking**: Real-time visit status updates
+
+#### Database Integration
+- **Entry/Exit Columns**: Boolean flags in `visits` table
+- **PostgreSQL Functions**: `process_qr_entry_exit_scan()` handles business logic
+- **Audit Trail**: Complete logging of all scan activities
 
 ### Visitor Status Management
 
@@ -1119,31 +1201,46 @@ X-RateLimit-Reset: 1642248000
 
 ## 🧪 Testing
 
-### Postman Collections
-The API includes comprehensive Postman collections for testing:
+### Comprehensive Postman Collection
+The API includes a complete Postman collection for end-to-end testing:
 
-1. **SafeGuard_Enhanced_Auth.postman_collection.json**
-   - Authentication workflows
-   - Resident approval system
-   - Access control testing
-   - End-to-end resident lifecycle
+**SafeGuard_Complete_API.postman_collection.json**
+- **System Setup & Building Registration**: Initial setup, building registration (self-service and admin)
+- **User Registration & Management**: Resident self-registration, security personnel, building admins
+- **Authentication**: Login/logout for all user types, profile management, password changes
+- **Security Authentication**: Dedicated security guard authentication for QR operations
+- **Visitor Management**: Create, update, cancel visitor invitations with QR generation
+- **QR Code Generation**: Generate secure QR codes for visitor invitations
+- **QR Code Scanning (Security Only)**: Version 2 entry/exit scanning with role-based access control
+- **Frequent Visitors**: Manage favorite visitors for quick invitations
+- **Visitor Bans**: Personal visitor blacklist management
+- **Analytics & Reports**: Building statistics and visitor insights
+- **Search & Filters**: Search and filter functionality
+- **Testing Workflow**: Complete end-to-end testing scenarios
 
-2. **SafeGuard_Complete_Testing.postman_collection.json**  
-   - Complete system testing
-   - Initial setup and configuration
-   - Multi-user scenarios
-   - Security validation
-
-### Test Environment Setup
+### Environment Configuration
+**SafeGuard_Complete_Environment.postman_environment.json**
 ```json
 {
-  "baseUrl": "http://localhost:4500",
-  "buildingId": "building-uuid",
-  "superAdminToken": "super-admin-jwt-token",
-  "buildingAdminToken": "building-admin-jwt-token",
-  "residentToken": "resident-jwt-token"
+  "base_url": "http://localhost:3000",
+  "super_admin_email": "superadmin@safeguard.com",
+  "super_admin_password": "SuperAdmin123!",
+  "building_contact_email": "demo@safeguard.com",
+  "admin_email": "admin@safeguard.com",
+  "admin_password": "AdminPass123!",
+  "security_email": "security@safeguard.com",
+  "security_password": "SecurityPass123!",
+  "test_email": "john.doe@example.com",
+  "test_password": "SecurePass123!",
+  "building_id": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
+
+### Automated Token Management
+- **Dynamic Token Capture**: All authentication tokens are automatically captured and stored
+- **Role-based Testing**: Separate token management for residents, security, and admin users
+- **Session Management**: Support for multiple concurrent user sessions
+- **Environment Variables**: All dynamic values stored as environment variables
 
 ### Example Test Flows
 

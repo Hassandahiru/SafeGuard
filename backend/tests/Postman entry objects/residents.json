@@ -6,7 +6,19 @@
   "remember_me": true,
   "device_name": "Postman Test Client",
   "location": "Lagos, Nigeria"
-  }
+  },
+  {
+  "email": "bellotijjani@gmaill.com",
+  "password": "ColdDay@1975",
+  "first_name": "Bello",
+  "last_name": "Tijjani",
+  "phone": "+2348188303566",
+  "building_email": "lakeview@lakeviewhomes.com",
+  "apartment_number": "Flat-B1",
+  "emergency_contact_name": "Jane Campion",
+  "emergency_contact_phone": "+2348188404504",
+  "terms_accepted": true
+}
 ],
 [{
   "email": "david.wilson@metroplex.com",
