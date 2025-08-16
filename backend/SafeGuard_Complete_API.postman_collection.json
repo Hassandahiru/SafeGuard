@@ -742,6 +742,183 @@
 			]
 		},
 		{
+			"name": "Dashboard System",
+			"description": "Role-based dashboard endpoints for Admin, Resident, and Security users",
+			"item": [
+				{
+					"name": "Get Dashboard (Role-based)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Dashboard data retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.success).to.be.true;",
+									"    pm.expect(responseJson.data).to.have.property('user_role');",
+									"    pm.expect(responseJson.data).to.have.property('statistics');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/dashboard",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"dashboard"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Admin Dashboard",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Admin dashboard retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.success).to.be.true;",
+									"    pm.expect(responseJson.data.user_role).to.be.oneOf(['building_admin', 'super_admin']);",
+									"    pm.expect(responseJson.data).to.have.property('latest_visits');",
+									"    pm.expect(responseJson.data).to.have.property('building_users');",
+									"    pm.expect(responseJson.data).to.have.property('other_admins');",
+									"    pm.expect(responseJson.data).to.have.property('security_guards');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/dashboard/admin",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"dashboard",
+								"admin"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Resident Dashboard",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Resident dashboard retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.success).to.be.true;",
+									"    pm.expect(responseJson.data.user_role).to.equal('resident');",
+									"    pm.expect(responseJson.data).to.have.property('latest_visits');",
+									"    pm.expect(responseJson.data).to.have.property('banned_visitors');",
+									"    pm.expect(responseJson.data).to.have.property('frequent_visitors');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resident_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/dashboard/resident",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"dashboard",
+								"resident"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Security Dashboard",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Security dashboard retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.success).to.be.true;",
+									"    pm.expect(responseJson.data.user_role).to.equal('security');",
+									"    pm.expect(responseJson.data).to.have.property('todays_scanned_visits');",
+									"    pm.expect(responseJson.data).to.have.property('building_residents');",
+									"    pm.expect(responseJson.data).to.have.property('active_visits_inside');",
+									"    pm.expect(responseJson.data).to.have.property('scan_date');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{security_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/dashboard/security",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"dashboard",
+								"security"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
 			"name": "Security Authentication",
 			"description": "Security guard authentication for QR code scanning operations",
 			"item": [
