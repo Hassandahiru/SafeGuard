@@ -481,11 +481,12 @@ class FrequentVisitor extends BaseModel {
    */
   async getFrequentVisitorsForResident(userId) {
     const query = `
-      SELECT fv.*, fv.name as visitor_name, fv.phone as visitor_phone,
-             fv.relationship, fv.notes, fv.visit_count, fv.last_visited
+      SELECT fv.*, v.name as visitor_name, v.phone as visitor_phone,
+             fv.relationship, fv.notes, v.visit_count, v.last_visit as last_visited
       FROM ${this.tableName} fv
+      JOIN visitors v ON fv.visitor_id = v.id
       WHERE fv.user_id = $1 AND fv.is_active = true
-      ORDER BY fv.visit_count DESC, fv.last_visited DESC
+      ORDER BY v.visit_count DESC, v.last_visit DESC
     `;
 
     const result = await this.query(query, [userId]);
