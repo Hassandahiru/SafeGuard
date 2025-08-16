@@ -524,6 +524,98 @@ class User extends BaseModel {
 
     return user;
   }
+
+  // =============================================
+  // DASHBOARD METHODS (Version 3)
+  // =============================================
+
+  /**
+   * Get all users in building for admin dashboard
+   * @param {string} buildingId - Building ID
+   * @returns {Promise<Array>} Building users
+   */
+  async getBuildingUsers(buildingId) {
+    const query = `
+      SELECT id, first_name, last_name, email, phone, apartment_number, 
+             role, is_verified, last_login, created_at
+      FROM ${this.tableName}
+      WHERE building_id = $1 AND role IN ($2, $3, $4)
+      ORDER BY created_at DESC
+    `;
+
+    const result = await this.query(query, [buildingId, USER_ROLES.RESIDENT, USER_ROLES.BUILDING_ADMIN, USER_ROLES.SECURITY]);
+    return result.rows;
+  }
+
+  /**
+   * Get other admins in building
+   * @param {string} buildingId - Building ID
+   * @param {string} currentUserId - Current user ID to exclude
+   * @returns {Promise<Array>} Other admins
+   */
+  async getOtherAdmins(buildingId, currentUserId) {
+    const query = `
+      SELECT id, first_name, last_name, email, phone, apartment_number,
+             is_verified, last_login, created_at
+      FROM ${this.tableName}
+      WHERE building_id = $1 AND role = $2 AND id != $3
+      ORDER BY created_at DESC
+    `;
+
+    const result = await this.query(query, [buildingId, USER_ROLES.BUILDING_ADMIN, currentUserId]);
+    return result.rows;
+  }
+
+  /**
+   * Get security guards in building
+   * @param {string} buildingId - Building ID
+   * @returns {Promise<Array>} Security guards
+   */
+  async getSecurityGuards(buildingId) {
+    const query = `
+      SELECT id, first_name, last_name, email, phone,
+             is_verified, last_login, created_at
+      FROM ${this.tableName}
+      WHERE building_id = $1 AND role = $2
+      ORDER BY created_at DESC
+    `;
+
+    const result = await this.query(query, [buildingId, USER_ROLES.SECURITY]);
+    return result.rows;
+  }
+
+  /**
+   * Get building residents for security dashboard
+   * @param {string} buildingId - Building ID
+   * @returns {Promise<Array>} Building residents
+   */
+  async getBuildingResidents(buildingId) {
+    const query = `
+      SELECT id, first_name, last_name, email, phone, apartment_number,
+             is_verified, last_login, created_at
+      FROM ${this.tableName}
+      WHERE building_id = $1 AND role = $2
+      ORDER BY apartment_number, last_name, first_name
+    `;
+
+    const result = await this.query(query, [buildingId, USER_ROLES.RESIDENT]);
+    return result.rows;
+  }
+
+  /**
+   * Get admin dashboard statistics
+   * @param {string} buildingId - Building ID
+   * @returns {Promise<Object>} User statistics
+   */
+  async getAdminDashboardStats(buildingId) {
+    const totalUsers = await this.query(`
+      SELECT COUNT(*) as count FROM ${this.tableName} WHERE building_id = $1
+    `, [buildingId]);
+
+    return {
+      total_users: parseInt(totalUsers.rows[0].count)
+    };
+  }
 }
 
 export default new User();

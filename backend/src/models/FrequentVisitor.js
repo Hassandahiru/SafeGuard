@@ -469,6 +469,44 @@ class FrequentVisitor extends BaseModel {
       count: frequentVisitors.length
     };
   }
+
+  // =============================================
+  // DASHBOARD METHODS (Version 3)
+  // =============================================
+
+  /**
+   * Get frequent visitors for resident dashboard
+   * @param {string} userId - User ID
+   * @returns {Promise<Array>} Frequent visitors
+   */
+  async getFrequentVisitorsForResident(userId) {
+    const query = `
+      SELECT fv.*, fv.name as visitor_name, fv.phone as visitor_phone,
+             fv.relationship, fv.notes, fv.visit_count, fv.last_visit
+      FROM ${this.tableName} fv
+      WHERE fv.user_id = $1 AND fv.is_active = true
+      ORDER BY fv.visit_count DESC, fv.last_visit DESC
+    `;
+
+    const result = await this.query(query, [userId]);
+    return result.rows;
+  }
+
+  /**
+   * Get resident dashboard statistics for frequent visitors
+   * @param {string} userId - User ID
+   * @returns {Promise<Object>} Frequent visitor statistics
+   */
+  async getResidentDashboardStats(userId) {
+    const totalFrequentVisitors = await this.query(`
+      SELECT COUNT(*) as count FROM ${this.tableName} 
+      WHERE user_id = $1 AND is_active = true
+    `, [userId]);
+
+    return {
+      frequent_visitors: parseInt(totalFrequentVisitors.rows[0].count)
+    };
+  }
 }
 
 export default new FrequentVisitor();

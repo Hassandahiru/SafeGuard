@@ -11,6 +11,7 @@
 - [User Management](#user-management)
 - [Visitor Management](#visitor-management)
 - [Building Management](#building-management)
+- [Dashboard System](#dashboard-system)
 - [Real-time Features](#real-time-features)
 - [Rate Limiting](#rate-limiting)
 - [WebSocket Events](#websocket-events)
@@ -1088,6 +1089,264 @@ Authorization: Bearer <building-admin-token>
   }
 }
 ```
+
+---
+
+## 📊 Dashboard System
+
+The SafeGuard Dashboard System provides role-based dashboard data for different user types. After successful login, users are redirected to the dashboard endpoint which serves customized data based on their role.
+
+### Dashboard Endpoint
+
+#### Get Dashboard Data
+```http
+GET /api/dashboard
+Authorization: Bearer <jwt-token>
+```
+
+**Response Format:**
+The dashboard endpoint returns different data structures based on the authenticated user's role:
+
+#### Admin Dashboard Response
+```json
+{
+  "success": true,
+  "data": {
+    "user_role": "building_admin",
+    "latest_visits": [
+      {
+        "id": "uuid",
+        "title": "Business Meeting",
+        "host_first_name": "John",
+        "host_last_name": "Doe",
+        "apartment_number": "101",
+        "host_email": "john@example.com",
+        "visitor_count": 2,
+        "status": "active",
+        "created_at": "2024-01-15T10:30:00Z",
+        "expected_start": "2024-01-15T14:00:00Z"
+      }
+    ],
+    "building_users": [
+      {
+        "id": "uuid",
+        "first_name": "Jane",
+        "last_name": "Smith",
+        "email": "jane@example.com",
+        "phone": "+1234567890",
+        "apartment_number": "102",
+        "role": "resident",
+        "is_verified": true,
+        "last_login": "2024-01-15T09:00:00Z",
+        "created_at": "2024-01-10T00:00:00Z"
+      }
+    ],
+    "other_admins": [],
+    "security_guards": [
+      {
+        "id": "uuid",
+        "first_name": "Bob",
+        "last_name": "Security",
+        "email": "security@example.com",
+        "phone": "+1234567891",
+        "is_verified": true,
+        "last_login": "2024-01-15T08:00:00Z"
+      }
+    ],
+    "statistics": {
+      "total_users": 25,
+      "total_visits_today": 8,
+      "active_visits_inside": 3,
+      "total_visits_this_month": 120
+    }
+  },
+  "message": "Dashboard data retrieved successfully"
+}
+```
+
+#### Resident Dashboard Response
+```json
+{
+  "success": true,
+  "data": {
+    "user_role": "resident",
+    "latest_visits": [
+      {
+        "id": "uuid",
+        "title": "Family Visit",
+        "visitor_count": 3,
+        "status": "pending",
+        "display_status": "pending",
+        "created_at": "2024-01-15T10:30:00Z",
+        "expected_start": "2024-01-15T16:00:00Z",
+        "entry": false,
+        "exit": false
+      }
+    ],
+    "banned_visitors": [
+      {
+        "id": "uuid",
+        "visitor_name": "John Blocked",
+        "visitor_phone": "+1234567899",
+        "reason": "Inappropriate behavior",
+        "severity": "medium",
+        "ban_date": "2024-01-10T00:00:00Z"
+      }
+    ],
+    "frequent_visitors": [
+      {
+        "id": "uuid",
+        "visitor_name": "Alice Frequent",
+        "visitor_phone": "+1234567898",
+        "relationship": "friend",
+        "visit_count": 15,
+        "last_visit": "2024-01-10T00:00:00Z",
+        "notes": "Regular visitor"
+      }
+    ],
+    "statistics": {
+      "total_visits": 45,
+      "completed_visits": 42,
+      "active_bans": 1,
+      "frequent_visitors": 3
+    }
+  },
+  "message": "Dashboard data retrieved successfully"
+}
+```
+
+#### Security Dashboard Response
+```json
+{
+  "success": true,
+  "data": {
+    "user_role": "security",
+    "todays_scanned_visits": [
+      {
+        "id": "uuid",
+        "title": "Delivery",
+        "host_first_name": "John",
+        "host_last_name": "Doe",
+        "apartment_number": "101",
+        "visitor_count": 1,
+        "entry": true,
+        "exit": false,
+        "visit_status": "inside",
+        "last_scan_time": "2024-01-15T09:30:00Z",
+        "scan_notes": "QR scanned at main gate"
+      }
+    ],
+    "building_residents": [
+      {
+        "id": "uuid",
+        "first_name": "Jane",
+        "last_name": "Smith",
+        "email": "jane@example.com",
+        "phone": "+1234567890",
+        "apartment_number": "102",
+        "is_verified": true,
+        "last_login": "2024-01-15T09:00:00Z"
+      }
+    ],
+    "active_visits_inside": [
+      {
+        "id": "uuid",
+        "title": "Business Meeting",
+        "host_first_name": "John",
+        "host_last_name": "Doe",
+        "apartment_number": "101",
+        "host_phone": "+1234567890",
+        "visitor_count": 2,
+        "entry": true,
+        "exit": false
+      }
+    ],
+    "statistics": {
+      "total_scans_today": 12,
+      "entries_scanned_today": 8,
+      "exits_scanned_today": 4,
+      "currently_inside": 3
+    },
+    "scan_date": "2024-01-15"
+  },
+  "message": "Dashboard data retrieved successfully"
+}
+```
+
+### Role-Specific Dashboard Routes
+
+For testing purposes, role-specific dashboard endpoints are available:
+
+#### Admin Dashboard
+```http
+GET /api/dashboard/admin
+Authorization: Bearer <admin-jwt-token>
+```
+
+#### Resident Dashboard
+```http
+GET /api/dashboard/resident
+Authorization: Bearer <resident-jwt-token>
+```
+
+#### Security Dashboard
+```http
+GET /api/dashboard/security
+Authorization: Bearer <security-jwt-token>
+```
+
+### Login Redirect Integration
+
+After successful login, both basic and enhanced login endpoints return redirect information:
+
+#### Login Response with Redirect
+```json
+{
+  "success": true,
+  "data": {
+    "user": { "id": "uuid", "email": "user@example.com", "role": "resident" },
+    "token": "jwt-token",
+    "refreshToken": "refresh-token",
+    "expiresIn": "24h",
+    "redirectTo": "/api/dashboard"
+  },
+  "message": "Login successful"
+}
+```
+
+**Frontend Integration:**
+1. User logs in successfully
+2. Frontend receives `redirectTo: "/api/dashboard"` in response
+3. Frontend makes authenticated request to `/api/dashboard`
+4. Dashboard returns role-appropriate data
+5. Frontend renders dashboard based on user role
+
+### Dashboard Data Features
+
+#### Admin Dashboard Features
+- **Latest Visits**: Recent visits across the building with host information
+- **Building Users**: All residents, admins, and security in the building
+- **Team Management**: Other admins and security guards
+- **Statistics**: Building-wide metrics and analytics
+
+#### Resident Dashboard Features
+- **Personal Visits**: User's recent visit invitations with entry/exit status
+- **Banned Visitors**: Personal blacklist management
+- **Frequent Visitors**: Quick-access favorite visitors
+- **Personal Statistics**: Visit history and management metrics
+
+#### Security Dashboard Features
+- **Daily Operations**: All QR scans performed today
+- **Building Directory**: Complete resident list with contact info
+- **Live Status**: Visitors currently inside the building
+- **Security Metrics**: Entry/exit statistics and building occupancy
+
+### Access Control
+
+- **Authentication Required**: All dashboard endpoints require valid JWT token
+- **Role-Based Access**: Data is filtered and customized per user role
+- **Building Scope**: Users only see data for their assigned building
+- **Real-time Data**: Dashboard provides current status and live metrics
 
 ---
 

@@ -1786,6 +1786,11 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - when the qr gets scanned at gate entry, the 'entry' column should be set to true and when scanned at the exit, the 'exit' column should be set to true also. 
 - only the users with the role 'security' are able to scan qr codes at entry and exit. keep that in mind. so the route should check the user id or email to lookup their role in the db. 
 - also have a route for logout. 
----
+
+# Version 3
+
+- Implement a user dashboard. residents, admin and security will have different data on their dashboard. upon a successful sign in the page should be redirected to the dashboard page. 
+- dashnoards should contain the following data: Admin: All visists by latest, all users in theri building and basic info, all other admin, and security guards. Residents: latest visists, banned visistors, frequest visistors. Security: all visists scanned for that day, all residents and basic info. 
+- create controllers for all these functionalities. 
 
 **Built with ❤️ for safer communities**

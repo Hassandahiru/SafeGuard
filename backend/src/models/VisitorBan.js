@@ -478,6 +478,44 @@ class VisitorBan extends BaseModel {
     const result = await this.query(query);
     return result.rowCount;
   }
+
+  // =============================================
+  // DASHBOARD METHODS (Version 3)
+  // =============================================
+
+  /**
+   * Get banned visitors for resident dashboard
+   * @param {string} userId - User ID
+   * @returns {Promise<Array>} Banned visitors
+   */
+  async getBannedVisitorsForResident(userId) {
+    const query = `
+      SELECT vb.*, vb.name as visitor_name, vb.phone as visitor_phone,
+             vb.reason, vb.severity, vb.created_at as ban_date
+      FROM ${this.tableName} vb
+      WHERE vb.banned_by = $1 AND vb.is_active = true
+      ORDER BY vb.created_at DESC
+    `;
+
+    const result = await this.query(query, [userId]);
+    return result.rows;
+  }
+
+  /**
+   * Get resident dashboard statistics for bans
+   * @param {string} userId - User ID
+   * @returns {Promise<Object>} Ban statistics
+   */
+  async getResidentDashboardStats(userId) {
+    const activeBans = await this.query(`
+      SELECT COUNT(*) as count FROM ${this.tableName} 
+      WHERE banned_by = $1 AND is_active = true
+    `, [userId]);
+
+    return {
+      active_bans: parseInt(activeBans.rows[0].count)
+    };
+  }
 }
 
 export default new VisitorBan();

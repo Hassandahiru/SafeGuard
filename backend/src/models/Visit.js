@@ -595,6 +595,211 @@ class Visit extends BaseModel {
   async getCompletedVisits(buildingId) {
     return await this.findByEntryExitStatus(buildingId, true, true);
   }
+
+  // =============================================
+  // DASHBOARD METHODS (Version 3)
+  // =============================================
+
+  /**
+   * Get latest visits for admin dashboard
+   * @param {string} buildingId - Building ID
+   * @param {number} limit - Number of visits to retrieve
+   * @returns {Promise<Array>} Latest visits with host info
+   */
+  async getLatestVisitsForAdmin(buildingId, limit = 20) {
+    const query = `
+      SELECT v.*, u.first_name as host_first_name, u.last_name as host_last_name,
+             u.apartment_number, u.email as host_email,
+             COUNT(vi.id) as visitor_count
+      FROM ${this.tableName} v
+      JOIN users u ON v.host_id = u.id
+      LEFT JOIN visitors vi ON v.id = vi.visit_id
+      WHERE v.building_id = $1
+      GROUP BY v.id, u.first_name, u.last_name, u.apartment_number, u.email
+      ORDER BY v.created_at DESC
+      LIMIT $2
+    `;
+
+    const result = await this.query(query, [buildingId, limit]);
+    return result.rows;
+  }
+
+  /**
+   * Get latest visits for resident dashboard
+   * @param {string} hostId - Host user ID
+   * @param {number} limit - Number of visits to retrieve
+   * @returns {Promise<Array>} Latest visits with enhanced status
+   */
+  async getLatestVisitsForResident(hostId, limit = 15) {
+    const query = `
+      SELECT v.*, COUNT(vi.id) as visitor_count,
+             CASE WHEN v.entry = true AND v.exit = false THEN 'active'
+                  WHEN v.entry = true AND v.exit = true THEN 'completed'
+                  ELSE v.status
+             END as display_status
+      FROM ${this.tableName} v
+      LEFT JOIN visitors vi ON v.id = vi.visit_id
+      WHERE v.host_id = $1
+      GROUP BY v.id
+      ORDER BY v.created_at DESC
+      LIMIT $2
+    `;
+
+    const result = await this.query(query, [hostId, limit]);
+    return result.rows;
+  }
+
+  /**
+   * Get today's scanned visits for security dashboard
+   * @param {string} buildingId - Building ID
+   * @param {Date} startOfDay - Start of day
+   * @param {Date} endOfDay - End of day
+   * @returns {Promise<Array>} Today's scanned visits
+   */
+  async getTodaysScannedVisits(buildingId, startOfDay, endOfDay) {
+    const query = `
+      SELECT v.*, u.first_name as host_first_name, u.last_name as host_last_name,
+             u.apartment_number, COUNT(vi.id) as visitor_count,
+             v.entry, v.exit,
+             CASE WHEN v.entry = true AND v.exit = false THEN 'inside'
+                  WHEN v.entry = true AND v.exit = true THEN 'completed'
+                  ELSE 'pending'
+             END as visit_status,
+             vl.action_time as last_scan_time,
+             vl.notes as scan_notes
+      FROM ${this.tableName} v
+      JOIN users u ON v.host_id = u.id
+      LEFT JOIN visitors vi ON v.id = vi.visit_id
+      LEFT JOIN visit_logs vl ON v.id = vl.visit_id 
+        AND vl.action_time >= $2 AND vl.action_time < $3
+        AND vl.action IN ('qr_scanned', 'entered', 'exited')
+      WHERE v.building_id = $1 
+        AND (v.entry = true OR v.exit = true)
+        AND (v.updated_at >= $2 OR vl.action_time IS NOT NULL)
+      GROUP BY v.id, u.first_name, u.last_name, u.apartment_number, vl.action_time, vl.notes
+      ORDER BY COALESCE(vl.action_time, v.updated_at) DESC
+    `;
+
+    const result = await this.query(query, [buildingId, startOfDay, endOfDay]);
+    return result.rows;
+  }
+
+  /**
+   * Get visits currently inside building for security dashboard
+   * @param {string} buildingId - Building ID
+   * @returns {Promise<Array>} Active visits inside building
+   */
+  async getActiveVisitsInside(buildingId) {
+    const query = `
+      SELECT v.*, u.first_name as host_first_name, u.last_name as host_last_name,
+             u.apartment_number, u.phone as host_phone,
+             COUNT(vi.id) as visitor_count
+      FROM ${this.tableName} v
+      JOIN users u ON v.host_id = u.id
+      LEFT JOIN visitors vi ON v.id = vi.visit_id
+      WHERE v.building_id = $1 
+        AND v.entry = true 
+        AND v.exit = false
+        AND v.status IN ($2, $3)
+      GROUP BY v.id, u.first_name, u.last_name, u.apartment_number, u.phone
+      ORDER BY v.updated_at DESC
+    `;
+
+    const result = await this.query(query, [buildingId, VISIT_STATUS.ACTIVE, VISIT_STATUS.CONFIRMED]);
+    return result.rows;
+  }
+
+  /**
+   * Get dashboard statistics for admin
+   * @param {string} buildingId - Building ID
+   * @returns {Promise<Object>} Admin dashboard statistics
+   */
+  async getAdminDashboardStats(buildingId) {
+    const totalVisitsToday = await this.query(`
+      SELECT COUNT(*) as count FROM ${this.tableName} 
+      WHERE building_id = $1 AND DATE(created_at) = CURRENT_DATE
+    `, [buildingId]);
+
+    const activeVisits = await this.query(`
+      SELECT COUNT(*) as count FROM ${this.tableName} 
+      WHERE building_id = $1 AND entry = true AND exit = false
+    `, [buildingId]);
+
+    const totalVisitsThisMonth = await this.query(`
+      SELECT COUNT(*) as count FROM ${this.tableName} 
+      WHERE building_id = $1 AND DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE)
+    `, [buildingId]);
+
+    return {
+      total_visits_today: parseInt(totalVisitsToday.rows[0].count),
+      active_visits_inside: parseInt(activeVisits.rows[0].count),
+      total_visits_this_month: parseInt(totalVisitsThisMonth.rows[0].count)
+    };
+  }
+
+  /**
+   * Get dashboard statistics for resident
+   * @param {string} userId - User ID
+   * @returns {Promise<Object>} Resident dashboard statistics
+   */
+  async getResidentDashboardStats(userId) {
+    const totalVisits = await this.query(`
+      SELECT COUNT(*) as count FROM ${this.tableName} WHERE host_id = $1
+    `, [userId]);
+
+    const completedVisits = await this.query(`
+      SELECT COUNT(*) as count FROM ${this.tableName} 
+      WHERE host_id = $1 AND status = $2
+    `, [userId, VISIT_STATUS.COMPLETED]);
+
+    return {
+      total_visits: parseInt(totalVisits.rows[0].count),
+      completed_visits: parseInt(completedVisits.rows[0].count)
+    };
+  }
+
+  /**
+   * Get dashboard statistics for security
+   * @param {string} buildingId - Building ID
+   * @param {Date} startOfDay - Start of day
+   * @param {Date} endOfDay - End of day
+   * @returns {Promise<Object>} Security dashboard statistics
+   */
+  async getSecurityDashboardStats(buildingId, startOfDay, endOfDay) {
+    const totalScansToday = await this.query(`
+      SELECT COUNT(*) as count FROM visit_logs vl
+      JOIN ${this.tableName} v ON vl.visit_id = v.id
+      WHERE v.building_id = $1 
+        AND vl.action_time >= $2 AND vl.action_time < $3
+        AND vl.action IN ('qr_scanned', 'entered', 'exited')
+    `, [buildingId, startOfDay, endOfDay]);
+
+    const entriesScannedToday = await this.query(`
+      SELECT COUNT(*) as count FROM ${this.tableName} 
+      WHERE building_id = $1 
+        AND entry = true 
+        AND updated_at >= $2 AND updated_at < $3
+    `, [buildingId, startOfDay, endOfDay]);
+
+    const exitsScannedToday = await this.query(`
+      SELECT COUNT(*) as count FROM ${this.tableName} 
+      WHERE building_id = $1 
+        AND exit = true 
+        AND updated_at >= $2 AND updated_at < $3
+    `, [buildingId, startOfDay, endOfDay]);
+
+    const currentlyInside = await this.query(`
+      SELECT COUNT(*) as count FROM ${this.tableName} 
+      WHERE building_id = $1 AND entry = true AND exit = false
+    `, [buildingId]);
+
+    return {
+      total_scans_today: parseInt(totalScansToday.rows[0].count),
+      entries_scanned_today: parseInt(entriesScannedToday.rows[0].count),
+      exits_scanned_today: parseInt(exitsScannedToday.rows[0].count),
+      currently_inside: parseInt(currentlyInside.rows[0].count)
+    };
+  }
 }
 
 export default new Visit();

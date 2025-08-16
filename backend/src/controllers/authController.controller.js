@@ -168,7 +168,8 @@ class AuthController {
           user: authenticatedUser,
           token,
           refreshToken,
-          expiresIn: config.jwt.expiresIn
+          expiresIn: config.jwt.expiresIn,
+          redirectTo: '/api/dashboard'
         },
         'Login successful'
       ));
@@ -326,7 +327,8 @@ class AuthController {
         expiresIn: tokenExpiry,
         sessionId,
         deviceVerified: true,
-        securityLevel: suspiciousActivity.securityLevel || 'NORMAL'
+        securityLevel: suspiciousActivity.securityLevel || 'NORMAL',
+        redirectTo: '/api/dashboard'
       },
       'Enhanced login successful'
     ));
