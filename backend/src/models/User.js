@@ -56,6 +56,48 @@ class User extends BaseModel {
   }
 
   /**
+   * Find user by email with security information
+   * @param {string} email - User email
+   * @returns {Promise<Object|null>} Found user with security fields or null
+   */
+  async findByEmailWithSecurity(email) {
+    const query = `
+      SELECT 
+        id, building_id, email, password_hash, first_name, last_name, 
+        phone, apartment_number, role, avatar_url, is_active, is_verified,
+        uses_license, last_login, login_attempts, locked_until, 
+        emergency_contact, preferences, created_at, updated_at,
+        registration_ip, registration_user_agent, status
+      FROM ${this.tableName}
+      WHERE email = $1 AND is_active = true
+    `;
+    
+    const result = await this.query(query, [email]);
+    return result.rows[0] || null;
+  }
+
+  /**
+   * Find user by ID with security information
+   * @param {string} userId - User ID
+   * @returns {Promise<Object|null>} Found user with security fields or null
+   */
+  async findByIdWithSecurity(userId) {
+    const query = `
+      SELECT 
+        id, building_id, email, password_hash, first_name, last_name, 
+        phone, apartment_number, role, avatar_url, is_active, is_verified,
+        uses_license, last_login, login_attempts, locked_until, 
+        emergency_contact, preferences, created_at, updated_at,
+        registration_ip, registration_user_agent, status
+      FROM ${this.tableName}
+      WHERE id = $1 AND is_active = true
+    `;
+    
+    const result = await this.query(query, [userId]);
+    return result.rows[0] || null;
+  }
+
+  /**
    * Authenticate user with email and password
    * @param {string} email - User email
    * @param {string} password - User password
@@ -357,6 +399,130 @@ class User extends BaseModel {
       locked_until: null,
       login_attempts: 0
     });
+  }
+
+  /**
+   * Set user verification status
+   * @param {string} userId - User ID
+   * @param {boolean} verified - Verification status
+   * @returns {Promise<Object>} Updated user
+   */
+  async setVerificationStatus(userId, verified) {
+    return await this.update(userId, { 
+      verified,
+      updated_at: new Date()
+    });
+  }
+
+  /**
+   * Find verified user by email (for authentication)
+   * @param {string} email - User email
+   * @returns {Promise<Object|null>} Found verified user or null
+   */
+  async findVerifiedByEmail(email) {
+    return await this.findOne({ 
+      email: email.toLowerCase(), 
+      is_active: true, 
+      verified: true 
+    });
+  }
+
+  /**
+   * Find unverified admins by building
+   * @param {string} buildingId - Building ID (optional)
+   * @returns {Promise<Array>} Unverified admin users
+   */
+  async findUnverifiedAdmins(buildingId = null) {
+    const conditions = { 
+      role: 'building_admin', 
+      is_active: true, 
+      verified: false 
+    };
+    if (buildingId) {
+      conditions.building_id = buildingId;
+    }
+    return await this.findAll(conditions);
+  }
+
+  /**
+   * Get users requiring verification (pending admins)
+   * @param {string} buildingId - Building ID (optional)
+   * @returns {Promise<Array>} Users pending verification
+   */
+  async getPendingVerifications(buildingId = null) {
+    let query = `
+      SELECT 
+        u.*,
+        b.name as building_name,
+        b.email as building_email,
+        aar.created_at as request_date,
+        aar.status as approval_status
+      FROM users u
+      LEFT JOIN buildings b ON u.building_id = b.id
+      LEFT JOIN admin_approval_requests aar ON u.id = aar.admin_user_id
+      WHERE u.role IN ('building_admin', 'security') 
+      AND u.is_active = true 
+      AND u.verified = false
+    `;
+
+    const params = [];
+    let paramCount = 1;
+
+    if (buildingId) {
+      query += ` AND u.building_id = $${paramCount}`;
+      params.push(buildingId);
+      paramCount++;
+    }
+
+    query += ' ORDER BY u.created_at DESC';
+
+    const result = await this.query(query, params);
+    return result.rows;
+  }
+
+  /**
+   * Check if user needs verification for admin operations
+   * @param {string} userId - User ID
+   * @returns {Promise<boolean>} True if verification required
+   */
+  async needsVerification(userId) {
+    const user = await this.findById(userId);
+    if (!user) return true;
+
+    // Super admins are always verified
+    if (user.role === 'super_admin') return false;
+
+    // Building admins and security need verification
+    if (['building_admin', 'security'].includes(user.role)) {
+      return !user.verified;
+    }
+
+    // Residents don't need special verification
+    return false;
+  }
+
+  /**
+   * Authenticate user and check verification status
+   * @param {string} email - User email
+   * @param {string} password - User password
+   * @param {boolean} requireVerification - Whether to require verification
+   * @returns {Promise<Object>} Authenticated user with verification status
+   */
+  async authenticateWithVerification(email, password, requireVerification = false) {
+    // First authenticate normally
+    const user = await this.authenticate(email, password);
+    
+    // Check verification status for admin roles
+    if (requireVerification && ['building_admin', 'security'].includes(user.role)) {
+      if (!user.verified) {
+        const error = new Error('Account pending approval. Contact your administrator.');
+        error.code = 'ACCOUNT_NOT_VERIFIED';
+        error.statusCode = 403;
+        throw error;
+      }
+    }
+
+    return user;
   }
 }
 

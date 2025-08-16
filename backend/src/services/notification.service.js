@@ -527,6 +527,151 @@ class NotificationService {
   async getBuildingNotificationStats(buildingId, startDate, endDate) {
     return await Notification.getBuildingNotificationStats(buildingId, startDate, endDate);
   }
+
+  // ============================================================================
+  // ADMIN APPROVAL WORKFLOW NOTIFICATIONS
+  // ============================================================================
+
+  /**
+   * Notify super admin about new admin registration request
+   * @param {string} superAdminId - Super admin user ID
+   * @param {string} adminUserId - New admin user ID
+   * @param {string} requestType - Type of request (building_admin, security)
+   * @param {Object} additionalData - Additional context data
+   */
+  async notifyAdminForApproval(superAdminId, adminUserId, requestType = 'building_admin', additionalData = {}) {
+    try {
+      logger.info('Creating admin approval notification', {
+        superAdminId,
+        adminUserId,
+        requestType
+      });
+
+      // Get admin user details for notification
+      const adminUser = await User.findById(adminUserId);
+      if (!adminUser) {
+        throw new Error('Admin user not found for notification');
+      }
+
+      const building = await Building.findById(adminUser.building_id);
+
+      // Create notification data
+      const notificationData = {
+        type: 'admin_approval_request',
+        title: `New ${requestType.replace('_', ' ')} Approval Required`,
+        message: `${adminUser.first_name} ${adminUser.last_name} (${adminUser.email}) has registered as ${requestType.replace('_', ' ')} for ${building?.name || 'building'}. Approval required.`,
+        data: {
+          admin_user_id: adminUserId,
+          request_type: requestType,
+          admin_name: `${adminUser.first_name} ${adminUser.last_name}`,
+          admin_email: adminUser.email,
+          building_name: building?.name || 'Unknown Building',
+          building_email: building?.email,
+          ...additionalData
+        },
+        priority: PRIORITY_LEVELS.HIGH
+      };
+
+      // Send notification with real-time delivery
+      const notification = await this.sendToUser(superAdminId, notificationData, true);
+
+      logger.info('Admin approval notification created successfully', {
+        superAdminId,
+        adminUserId,
+        requestType,
+        notificationId: notification.id
+      });
+
+      return notification;
+
+    } catch (error) {
+      logger.error('Failed to create admin approval notification', {
+        error: error.message,
+        superAdminId,
+        adminUserId,
+        requestType
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Notify admin about approval decision
+   * @param {string} adminUserId - Admin user ID
+   * @param {boolean} approved - Approval decision
+   * @param {string} approvedBy - Super admin ID who made decision
+   * @param {string} reason - Rejection reason (if rejected)
+   */
+  async notifyApprovalDecision(adminUserId, approved, approvedBy, reason = null) {
+    try {
+      const status = approved ? 'approved' : 'rejected';
+      
+      // Get approver details
+      const approver = await User.findById(approvedBy);
+      const approverName = approver ? `${approver.first_name} ${approver.last_name}` : 'Administrator';
+
+      let title, message;
+      if (approved) {
+        title = 'Account Approved!';
+        message = `Your building administrator account has been approved by ${approverName}. You can now access all admin features.`;
+      } else {
+        title = 'Account Application Rejected';
+        message = `Your building administrator application has been rejected by ${approverName}. ${reason || 'Please contact support for more information.'}`;
+      }
+
+      const notificationData = {
+        type: `admin_${status}`,
+        title,
+        message,
+        data: {
+          approved,
+          approved_by: approvedBy,
+          approver_name: approverName,
+          reason,
+          timestamp: new Date().toISOString()
+        },
+        priority: approved ? PRIORITY_LEVELS.MEDIUM : PRIORITY_LEVELS.HIGH
+      };
+
+      // Send notification with real-time delivery
+      const notification = await this.sendToUser(adminUserId, notificationData, true);
+
+      logger.info('Approval decision notification sent', {
+        adminUserId,
+        approved,
+        approvedBy,
+        notificationId: notification.id
+      });
+
+      return notification;
+
+    } catch (error) {
+      logger.error('Failed to send approval decision notification', {
+        error: error.message,
+        adminUserId,
+        approved
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get unread notifications count for user
+   * @param {string} userId - User ID
+   * @returns {Promise<number>} Unread count
+   */
+  async getUnreadCount(userId) {
+    try {
+      const counts = await this.getNotificationCounts(userId);
+      return counts.unread || 0;
+    } catch (error) {
+      logger.error('Failed to get unread notifications count', {
+        error: error.message,
+        userId
+      });
+      return 0;
+    }
+  }
 }
 
 export default new NotificationService();

@@ -48,7 +48,7 @@ const comparePassword = async (password, hash) => {
  * @param {string} expiresIn - Token expiration
  * @returns {string} JWT token
  */
-const generateJWT = async (payload, expiresIn = '24h') => {
+const generateJWT = (payload, expiresIn = '24h') => {
   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn });
 };
 
@@ -57,7 +57,7 @@ const generateJWT = async (payload, expiresIn = '24h') => {
  * @param {string} token - JWT token
  * @returns {object} Decoded token payload
  */
-const verifyJWT = async (token) => {
+const verifyJWT = (token) => {
   return jwt.verify(token, process.env.JWT_SECRET);
 };
 

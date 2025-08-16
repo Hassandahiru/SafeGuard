@@ -6,14 +6,54 @@
     "auditLog": "logs/.3c0f8637c4aa15f98f86316e262e7a1d761a4e2b-audit.json",
     "files": [
         {
-            "date": 1752526590681,
-            "name": "logs/database-2025-07-14.log",
-            "hash": "2a438fbb733c54d7554f716b8b0172b71fa16efc1083b671743e3f6838e74a8e"
+            "date": 1754222033671,
+            "name": "logs/database-2025-08-03.log",
+            "hash": "9ace22b858381f50897cb6b38126efd0f3be71c815369ecda3139b87cda2f841"
         },
         {
-            "date": 1752572432726,
-            "name": "logs/database-2025-07-15.log",
-            "hash": "82ead6523134fb6eda0ab0d9b27bc88975d3021aa8c30f3daac8de111141c43b"
+            "date": 1754266981291,
+            "name": "logs/database-2025-08-04.log",
+            "hash": "ff571b4816a69e936ac581b3b9a1166769c871288f74edd310bfdb7be0800c14"
+        },
+        {
+            "date": 1754368134098,
+            "name": "logs/database-2025-08-05.log",
+            "hash": "fd3abce06f8ffdd5805f004bb751ad5bc4018d14708e2d312bee85639976a7f0"
+        },
+        {
+            "date": 1754468955154,
+            "name": "logs/database-2025-08-06.log",
+            "hash": "fb18eadc08dac6a9edd9777c31adcbdaa909268ee88c5c74028bd756298b1c5e"
+        },
+        {
+            "date": 1754522171903,
+            "name": "logs/database-2025-08-07.log",
+            "hash": "4f35547d5e5ad38f49b04c804b77dfcf5423bdbe552f572f7c3d267886dbee94"
+        },
+        {
+            "date": 1754610168289,
+            "name": "logs/database-2025-08-08.log",
+            "hash": "96c89125c31ca9c1e6a53012cded75dc1493db89a0666b96ba7a46ee9dab0fd4"
+        },
+        {
+            "date": 1754994111798,
+            "name": "logs/database-2025-08-12.log",
+            "hash": "c1235a4290cad38a537eb167dd9fd4e037a6a12e855c2a6501b99321763c5dc7"
+        },
+        {
+            "date": 1755090989683,
+            "name": "logs/database-2025-08-13.log",
+            "hash": "adf24b51099111ece3c6df28937936372134b4d2bb572454a1ffb9343e587b2c"
+        },
+        {
+            "date": 1755173843604,
+            "name": "logs/database-2025-08-14.log",
+            "hash": "7329e974d329256734977273b8271d9a2ad52c8f55c9e9ff21711c5e74ec884a"
+        },
+        {
+            "date": 1755380894684,
+            "name": "logs/database-2025-08-16.log",
+            "hash": "2cc3523dd7f57e059d551b5a7b41f1838592993107dcfc7d3f7e9fa886b05aec"
         }
     ],
     "hashType": "sha256"

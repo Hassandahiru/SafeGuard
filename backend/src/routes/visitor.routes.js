@@ -4,6 +4,7 @@ import {
   authenticate, 
   requireResidentAccess, 
   requireSecurityAccess,
+  requireSecurityOnly,
   requireBuildingAccess 
 } from '../middleware/auth.js';
 import { 
@@ -78,13 +79,35 @@ router.delete('/invitations/:visitId',
 
 /**
  * @route   POST /api/visitors/scan
- * @desc    Scan visitor QR code
+ * @desc    Scan visitor QR code (legacy)
  * @access  Security, Building Admin, Super Admin
  */
 router.post('/scan',
   requireSecurityAccess,
   visitValidations.scan,
   visitorController.scanVisitorQRCode
+);
+
+/**
+ * @route   POST /api/visitors/scan/entry
+ * @desc    Scan visitor QR code for building entry
+ * @access  Security users only
+ */
+router.post('/scan/entry',
+  requireSecurityOnly,
+  visitValidations.scan,
+  visitorController.scanVisitorEntry
+);
+
+/**
+ * @route   POST /api/visitors/scan/exit
+ * @desc    Scan visitor QR code for building exit
+ * @access  Security users only
+ */
+router.post('/scan/exit',
+  requireSecurityOnly,
+  visitValidations.scan,
+  visitorController.scanVisitorExit
 );
 
 /**

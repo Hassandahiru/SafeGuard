@@ -14,6 +14,71 @@
             "date": 1752572432727,
             "name": "logs/payment-2025-07-15.log",
             "hash": "5436f8910227c14c2a1494a87939ce8eff042249ac70e3ba765b5c3cc1884dbf"
+        },
+        {
+            "date": 1752684521761,
+            "name": "logs/payment-2025-07-16.log",
+            "hash": "25cbc7ae56eecbb05d27b7818534db75653790375e9b6e14223beeb52d845656"
+        },
+        {
+            "date": 1752831607081,
+            "name": "logs/payment-2025-07-18.log",
+            "hash": "946ee6880f9780834f1176d44a7e0d7cab3523f16507fc90fd25d63e55c858a3"
+        },
+        {
+            "date": 1753197820149,
+            "name": "logs/payment-2025-07-22.log",
+            "hash": "527c0abc782f5410532e1598204b115ef381da8fa9fdab312f19ad987a2c0bcd"
+        },
+        {
+            "date": 1754222033673,
+            "name": "logs/payment-2025-08-03.log",
+            "hash": "ad5feb00805f18a4acc4e299433daa2012e7b99781638a81629a3dc8d8267be4"
+        },
+        {
+            "date": 1754266981292,
+            "name": "logs/payment-2025-08-04.log",
+            "hash": "95e58b55a70f857d03843add8cd58413440e0545eb2df2a77350aa40a4c27fb5"
+        },
+        {
+            "date": 1754368134100,
+            "name": "logs/payment-2025-08-05.log",
+            "hash": "f0363285a90ee4090f01102af9aeada91bcd9e157de8a3f5faed5c00089a2822"
+        },
+        {
+            "date": 1754468955156,
+            "name": "logs/payment-2025-08-06.log",
+            "hash": "e24a7d6884517835e6c7c7e7d44077b29369f48078137556ed4f279d6bbe705c"
+        },
+        {
+            "date": 1754522171904,
+            "name": "logs/payment-2025-08-07.log",
+            "hash": "f1c7818808473478fa7b6f4967b1a795ffca79d300dc517ade579ed2858ff0f4"
+        },
+        {
+            "date": 1754610168290,
+            "name": "logs/payment-2025-08-08.log",
+            "hash": "7cb336f303b120ed5f57022506324213696846a5c13082bba79baadefa61bacb"
+        },
+        {
+            "date": 1754994111802,
+            "name": "logs/payment-2025-08-12.log",
+            "hash": "da3fb21bed59745b6fccd0e28c0605b3e4907bbf1837eb722df845eaedb87713"
+        },
+        {
+            "date": 1755090989685,
+            "name": "logs/payment-2025-08-13.log",
+            "hash": "bdc9eeee362f84ba94fad3f6c8d4b175989f8a1fdead7f68f2cfa526dca0b6cb"
+        },
+        {
+            "date": 1755173843605,
+            "name": "logs/payment-2025-08-14.log",
+            "hash": "c80d42583dd13d184173ca3425f45c06de9e97b62ba299dbde91ba7473f46b17"
+        },
+        {
+            "date": 1755380894685,
+            "name": "logs/payment-2025-08-16.log",
+            "hash": "45ce78afac6ce7f05e0542f7e4c04d683e9f6dbaa5e2137a240ae31d9579bc8c"
         }
     ],
     "hashType": "sha256"

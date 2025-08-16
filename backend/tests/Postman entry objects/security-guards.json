@@ -1,0 +1,26 @@
+[
+{
+  "building_email": "dantata@dantatagroup.com",
+  "email": "security2@dantatagroup.com",
+  "password": "ColdDay@1975",
+  "first_name": "Sarah",
+  "last_name": "Marshall",
+  "phone": "+2348012345910",
+  "apartment_number": "SECURITY-02",
+  "emergency_contact_name": "Security Supervisor",
+  "emergency_contact_phone": "+2348012345901",
+  "role": "security"
+},
+{
+  "building_email": "lakeview@lakeviewhomes.com",
+  "email": "security.guard@lakeviewhomes.com",
+  "password": "Qwerty@123",
+  "first_name": "John",
+  "last_name": "Musa",
+  "phone": "+2348012345900",
+  "apartment_number": "SECURITY-01",
+  "emergency_contact_name": "Security Supervisor",
+  "emergency_contact_phone": "+2348012345901",
+  "role": "security"
+}
+]

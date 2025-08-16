@@ -1,0 +1,1316 @@
+# SafeGuard API Documentation
+
+## 📋 Table of Contents
+- [Overview](#overview)
+- [Authentication](#authentication)
+- [Base URLs and Environment](#base-urls-and-environment)
+- [Response Format](#response-format)
+- [Error Handling](#error-handling)
+- [Core API Endpoints](#core-api-endpoints)
+- [Resident Approval System](#resident-approval-system)
+- [User Management](#user-management)
+- [Visitor Management](#visitor-management)
+- [Building Management](#building-management)
+- [Real-time Features](#real-time-features)
+- [Rate Limiting](#rate-limiting)
+- [WebSocket Events](#websocket-events)
+- [Testing](#testing)
+
+---
+
+## 🏗️ Overview
+
+The SafeGuard API is a comprehensive visitor management system designed for gated communities and residential buildings. It provides RESTful endpoints with real-time Socket.io integration for managing visitors, residents, and building access control.
+
+### Key Features
+- **Visit-Centric Architecture**: QR codes are generated per visit, not per visitor
+- **Resident Approval Workflow**: New residents require admin approval before activation
+- **Real-time Communications**: Socket.io for instant updates and notifications
+- **Multi-building Support**: Single platform managing multiple buildings
+- **Advanced Security**: JWT authentication with role-based access control
+- **Visitor Ban System**: Personal and building-wide visitor restrictions
+
+### API Philosophy
+- **RESTful Design**: Standard HTTP methods and status codes
+- **JSON-First**: All request/response bodies in JSON format
+- **Stateless**: JWT tokens for authentication, no server-side sessions
+- **Defensive**: Comprehensive validation and error handling
+- **Audit Trail**: Complete logging of all critical operations
+
+---
+
+## 🔐 Authentication
+
+### JWT Token-Based Authentication
+All protected endpoints require a valid JWT token in the Authorization header:
+
+```http
+Authorization: Bearer <your-jwt-token>
+```
+
+### Authentication Flow
+
+#### 1. Enhanced Login
+```http
+POST /api/auth/enhanced/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "securePassword123!",
+  "device_name": "Mobile App",
+  "location": "Lagos, Nigeria",
+  "remember_me": false
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "user-uuid",
+      "email": "user@example.com",
+      "role": "resident",
+      "building_id": "building-uuid",
+      "is_active": true
+    },
+    "accessToken": "jwt-access-token",
+    "refreshToken": "jwt-refresh-token",
+    "sessionId": "session-uuid"
+  },
+  "message": "Login successful",
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+#### 2. Token Refresh
+```http
+POST /api/auth/refresh
+Authorization: Bearer <refresh-token>
+```
+
+#### 3. Logout
+```http
+POST /api/auth/logout
+Authorization: Bearer <access-token>
+```
+
+### User Roles
+- **super_admin**: Platform-wide management
+- **building_admin**: Building-specific administration
+- **resident**: Visitor management within building
+- **security**: Gate operations and visitor processing
+- **visitor**: Limited temporary access
+
+---
+
+## 🌐 Base URLs and Environment
+
+### Development Environment
+```
+Base URL: http://localhost:4500
+WebSocket: ws://localhost:4500
+```
+
+### Production Environment
+```
+Base URL: https://api.safeguard.com
+WebSocket: wss://api.safeguard.com
+```
+
+### Health Check
+```http
+GET /health
+
+Response:
+{
+  "success": true,
+  "data": {
+    "status": "healthy",
+    "timestamp": "2024-01-15T10:30:00Z",
+    "version": "2.0.0",
+    "database": "connected",
+    "redis": "connected"
+  }
+}
+```
+
+---
+
+## 📊 Response Format
+
+### Standard Success Response
+```json
+{
+  "success": true,
+  "data": {
+    // Response data here
+  },
+  "message": "Operation completed successfully",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "total": 100,
+    "hasNext": true
+  }
+}
+```
+
+### Standard Error Response
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid input data",
+    "details": [
+      {
+        "field": "email",
+        "message": "Invalid email format"
+      }
+    ]
+  },
+  "timestamp": "2024-01-15T10:30:00Z",
+  "requestId": "req-uuid"
+}
+```
+
+### Pagination Format
+```json
+{
+  "success": true,
+  "data": {
+    "items": [...],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 150,
+      "totalPages": 8,
+      "hasNext": true,
+      "hasPrev": false
+    }
+  }
+}
+```
+
+---
+
+## 🚨 Error Handling
+
+### HTTP Status Codes
+- **200 OK**: Successful operation
+- **201 Created**: Resource created successfully
+- **400 Bad Request**: Invalid request data
+- **401 Unauthorized**: Authentication required
+- **403 Forbidden**: Insufficient permissions
+- **404 Not Found**: Resource not found
+- **409 Conflict**: Resource conflict (duplicate)
+- **422 Unprocessable Entity**: Validation error
+- **429 Too Many Requests**: Rate limit exceeded
+- **500 Internal Server Error**: Server error
+
+### Error Types
+```typescript
+interface APIError {
+  code: string;
+  message: string;
+  details?: ValidationError[];
+  requestId?: string;
+}
+
+interface ValidationError {
+  field: string;
+  message: string;
+  value?: any;
+}
+```
+
+### Common Error Codes
+- `VALIDATION_ERROR`: Input validation failed
+- `AUTHENTICATION_ERROR`: Invalid or expired token
+- `AUTHORIZATION_ERROR`: Insufficient permissions
+- `NOT_FOUND`: Requested resource not found
+- `CONFLICT_ERROR`: Resource already exists
+- `RATE_LIMIT_ERROR`: Too many requests
+- `DATABASE_ERROR`: Database operation failed
+- `EXTERNAL_SERVICE_ERROR`: Third-party service failure
+
+---
+
+## 🏢 Core API Endpoints
+
+### System Setup
+
+#### Initial System Setup
+```http
+POST /api/admin/initial-setup
+Content-Type: application/json
+
+{
+  "name": "Dantata Building Complex",
+  "address": "123 Victoria Island, Lagos",
+  "city": "Lagos",
+  "state": "Lagos State",
+  "building_email": "admin@dantatagroup.com",
+  "total_licenses": 250,
+  "adminEmail": "admin@dantatagroup.com",
+  "adminPassword": "AdminPass123!",
+  "adminFirstName": "Building",
+  "adminLastName": "Admin",
+  "adminPhone": "+2348012345600"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "building": {
+      "id": "building-uuid",
+      "name": "Dantata Building Complex",
+      "email": "admin@dantatagroup.com",
+      "total_licenses": 250
+    },
+    "admin": {
+      "id": "admin-uuid",
+      "email": "admin@dantatagroup.com",
+      "role": "building_admin"
+    },
+    "license": {
+      "id": "license-uuid",
+      "type": "building",
+      "expires_at": "2025-01-15T10:30:00Z"
+    }
+  },
+  "message": "System setup completed successfully"
+}
+```
+
+---
+
+## ✅ Resident Approval System
+
+The resident approval system manages the workflow for new resident registrations, requiring building admin approval before account activation.
+
+### Architecture Overview
+- **Self-Registration**: Residents submit registration requests
+- **Admin Approval**: Building admins review and approve/reject requests
+- **Account Activation**: Approved residents can login and access the system
+- **Audit Trail**: Complete tracking of approval decisions
+
+### Core Endpoints
+
+#### 1. Resident Self-Registration
+```http
+POST /api/registration/self-register
+Content-Type: application/json
+
+{
+  "building_email": "admin@dantatagroup.com",
+  "email": "john.doe@example.com",
+  "password": "ResidentPass123!",
+  "first_name": "John",
+  "last_name": "Doe",
+  "phone": "+2348012345700",
+  "apartment_number": "A101",
+  "emergency_contact_name": "Jane Doe",
+  "emergency_contact_phone": "+2348012345701"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "user-uuid",
+      "email": "john.doe@example.com",
+      "first_name": "John",
+      "last_name": "Doe",
+      "is_active": false,
+      "approval_status": "pending"
+    },
+    "approval_request": {
+      "id": "approval-uuid",
+      "status": "pending",
+      "created_at": "2024-01-15T10:30:00Z",
+      "expires_at": "2024-02-14T10:30:00Z"
+    }
+  },
+  "message": "Registration pending approval"
+}
+```
+
+#### 2. Get Pending Approvals (Building Admin)
+```http
+GET /api/resident-approval/pending/{building_id}?limit=20&offset=0
+Authorization: Bearer <building-admin-token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "approvals": [
+      {
+        "id": "approval-uuid",
+        "user": {
+          "id": "user-uuid",
+          "email": "john.doe@example.com",
+          "first_name": "John",
+          "last_name": "Doe",
+          "phone": "+2348012345700",
+          "apartment_number": "A101"
+        },
+        "status": "pending",
+        "request_type": "resident_registration",
+        "registration_data": {
+          "emergency_contact_name": "Jane Doe",
+          "emergency_contact_phone": "+2348012345701"
+        },
+        "created_at": "2024-01-15T10:30:00Z",
+        "expires_at": "2024-02-14T10:30:00Z"
+      }
+    ],
+    "total": 5,
+    "pending_count": 3,
+    "expired_count": 2
+  }
+}
+```
+
+#### 3. Process Approval Decision (Building Admin)
+```http
+POST /api/resident-approval/{approval_id}/process
+Authorization: Bearer <building-admin-token>
+Content-Type: application/json
+
+{
+  "approved": true,
+  "reason": "Application meets all requirements",
+  "notes": "Welcome to Dantata Building Complex!"
+}
+```
+
+**Response (Approval):**
+```json
+{
+  "success": true,
+  "data": {
+    "approval": {
+      "id": "approval-uuid",
+      "status": "approved",
+      "approved_by": "admin-uuid",
+      "approved_at": "2024-01-15T11:00:00Z",
+      "reason": "Application meets all requirements",
+      "notes": "Welcome to Dantata Building Complex!"
+    },
+    "user": {
+      "id": "user-uuid",
+      "email": "john.doe@example.com",
+      "is_active": true
+    }
+  },
+  "message": "Resident approved successfully"
+}
+```
+
+**Response (Rejection):**
+```json
+{
+  "success": true,
+  "data": {
+    "approval": {
+      "id": "approval-uuid",
+      "status": "rejected",
+      "approved_by": "admin-uuid",
+      "approved_at": "2024-01-15T11:00:00Z",
+      "reason": "Incomplete documentation provided",
+      "notes": "Please resubmit with valid ID documents and proof of residence."
+    }
+  },
+  "message": "Registration rejected"
+}
+```
+
+#### 4. Get Approval Details
+```http
+GET /api/resident-approval/{approval_id}
+Authorization: Bearer <building-admin-token>
+```
+
+#### 5. Get Approval Dashboard
+```http
+GET /api/resident-approval/dashboard/{building_id}
+Authorization: Bearer <building-admin-token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "statistics": {
+      "total_requests": 25,
+      "pending_requests": 3,
+      "approved_requests": 20,
+      "rejected_requests": 2,
+      "expired_requests": 0
+    },
+    "recent_activity": [
+      {
+        "approval_id": "approval-uuid",
+        "user_name": "John Doe",
+        "action": "approved",
+        "processed_by": "Building Admin",
+        "processed_at": "2024-01-15T11:00:00Z"
+      }
+    ],
+    "pending_approvals": [...],
+    "expiring_soon": []
+  }
+}
+```
+
+#### 6. Bulk Process Approvals
+```http
+POST /api/resident-approval/bulk-process
+Authorization: Bearer <building-admin-token>
+Content-Type: application/json
+
+{
+  "approval_ids": ["approval-uuid-1", "approval-uuid-2"],
+  "action": "approve",
+  "reason": "Batch approval for verified residents",
+  "notes": "Welcome to the building!"
+}
+```
+
+#### 7. Health Check (Approval System)
+```http
+GET /api/resident-approval/health
+Authorization: Bearer <building-admin-token>
+```
+
+### Super Admin Global Access
+
+#### Get All Pending Approvals (Cross-Building)
+```http
+GET /api/resident-approval/all/pending?limit=50&offset=0
+Authorization: Bearer <super-admin-token>
+```
+
+### Access Control Features
+
+#### Building-Specific Access
+- Building admins can only access approvals for their own building
+- Cross-building access attempts return `403 Forbidden`
+- Super admins have global access to all buildings
+
+#### Security Validations
+- Token validation on all endpoints
+- Role-based access control (RBAC)
+- Building ownership verification
+- Request rate limiting
+
+### Approval Workflow States
+- **pending**: Initial state after registration
+- **approved**: Admin approved the request, user activated
+- **rejected**: Admin rejected the request with reason
+- **expired**: Request expired after 30 days without action
+
+### Integration with Authentication
+- Approved residents can login immediately
+- Rejected residents cannot access the system
+- Pending residents receive "account not activated" error on login
+- Email notifications sent for all approval decisions
+
+---
+
+## 👥 User Management
+
+### User Registration Flow
+
+#### 1. Validate Registration
+```http
+POST /api/registration/validate
+Content-Type: application/json
+
+{
+  "building_id": "building-uuid",
+  "email": "user@example.com",
+  "phone": "+1555-0102",
+  "role": "resident"
+}
+```
+
+#### 2. Complete Registration  
+```http
+POST /api/registration/complete
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "StrongPassword123!",
+  "first_name": "John",
+  "last_name": "Doe",
+  "phone": "+1555-0102",
+  "building_id": "building-uuid",
+  "role": "resident",
+  "apartment_number": "A101",
+  "emergency_contact": {
+    "name": "Jane Doe",
+    "phone": "+1555-0103",
+    "relationship": "spouse"
+  },
+  "agreed_to_terms": true
+}
+```
+
+### User Profile Management
+
+#### Get User Profile
+```http
+GET /api/users/profile
+Authorization: Bearer <access-token>
+```
+
+#### Update User Profile
+```http
+PUT /api/users/profile
+Authorization: Bearer <access-token>
+Content-Type: application/json
+
+{
+  "first_name": "John",
+  "last_name": "Doe",
+  "phone": "+1555-0102",
+  "apartment_number": "A101",
+  "notification_preferences": {
+    "email": true,
+    "push": true,
+    "sms": false
+  }
+}
+```
+
+### Security Settings
+
+#### Get Security Settings
+```http
+GET /api/auth/enhanced/security-settings
+Authorization: Bearer <access-token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "two_factor_enabled": false,
+    "login_notifications": true,
+    "session_timeout": 3600,
+    "last_password_change": "2024-01-01T10:30:00Z",
+    "active_sessions": 2,
+    "recent_logins": [
+      {
+        "timestamp": "2024-01-15T10:30:00Z",
+        "ip_address": "192.168.1.100",
+        "user_agent": "Mozilla/5.0...",
+        "location": "Lagos, Nigeria"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## 🏠 Visitor Management
+
+### Visit-Centric Architecture
+SafeGuard uses a **visit-centric approach** where QR codes are generated per visit (not per visitor), and multiple visitors can be associated with a single visit.
+
+### Core Visit Endpoints
+
+#### 1. Create Visit with Visitors
+```http
+POST /api/visitors
+Authorization: Bearer <access-token>
+Content-Type: application/json
+
+{
+  "title": "Birthday Party",
+  "description": "Family birthday celebration",
+  "visit_type": "group",
+  "expected_start": "2024-01-20T15:00:00Z",
+  "expected_end": "2024-01-20T22:00:00Z",
+  "max_visitors": 10,
+  "visitors": [
+    {
+      "name": "John Doe",
+      "phone": "+2348123456789",
+      "email": "john@example.com"
+    },
+    {
+      "name": "Jane Smith", 
+      "phone": "+2348987654321",
+      "email": "jane@example.com"
+    }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "visit": {
+      "id": "visit-uuid",
+      "title": "Birthday Party",
+      "qr_code": "SG_ABC123DEF456",
+      "status": "pending",
+      "current_visitors": 2,
+      "max_visitors": 10
+    },
+    "visitors": [
+      {
+        "id": "visitor-uuid-1",
+        "name": "John Doe",
+        "phone": "+2348123456789",
+        "status": "expected"
+      },
+      {
+        "id": "visitor-uuid-2", 
+        "name": "Jane Smith",
+        "phone": "+2348987654321",
+        "status": "expected"
+      }
+    ]
+  },
+  "message": "Visit created successfully"
+}
+```
+
+#### 2. Get User's Visits
+```http
+GET /api/visitors?status=active&limit=20&offset=0
+Authorization: Bearer <access-token>
+```
+
+#### 3. Update Visit Details
+```http
+PUT /api/visitors/{visit_id}
+Authorization: Bearer <access-token>
+Content-Type: application/json
+
+{
+  "title": "Updated Birthday Party",
+  "expected_end": "2024-01-20T23:00:00Z",
+  "max_visitors": 15
+}
+```
+
+#### 4. Cancel Visit
+```http
+DELETE /api/visitors/{visit_id}
+Authorization: Bearer <access-token>
+```
+
+### QR Code Processing (Version 2)
+
+SafeGuard Version 2 introduces enhanced QR code scanning with separate entry and exit tracking, providing complete visitor lifecycle management.
+
+#### Scan QR Code for Building Entry (Security Only)
+```http
+POST /api/visitors/scan/entry
+Authorization: Bearer <security-token>
+Content-Type: application/json
+
+{
+  "qr_code": "SG_ABC123DEF456",
+  "gate_number": "Main Gate",
+  "location": {
+    "latitude": 6.5244,
+    "longitude": 3.3792,
+    "address": "Main Building Entrance"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "visit": {
+      "visit_id": "visit-uuid",
+      "title": "Birthday Party",
+      "host": "John Resident",
+      "apartment_number": "A101",
+      "status": "active",
+      "entry": true,
+      "exit": false
+    },
+    "scan_type": "entry",
+    "scanned_at": "2024-01-15T10:30:00Z",
+    "scanner": {
+      "id": "security-uuid",
+      "name": "Security Guard",
+      "role": "security"
+    },
+    "gate_number": "Main Gate"
+  },
+  "message": "Visitor successfully entered building"
+}
+```
+
+#### Scan QR Code for Building Exit (Security Only)
+```http
+POST /api/visitors/scan/exit
+Authorization: Bearer <security-token>
+Content-Type: application/json
+
+{
+  "qr_code": "SG_ABC123DEF456",
+  "gate_number": "Main Gate",
+  "location": {
+    "latitude": 6.5244,
+    "longitude": 3.3792,
+    "address": "Main Building Exit"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "visit": {
+      "visit_id": "visit-uuid",
+      "title": "Birthday Party",
+      "host": "John Resident",
+      "apartment_number": "A101",
+      "status": "completed",
+      "entry": true,
+      "exit": true
+    },
+    "scan_type": "exit",
+    "scanned_at": "2024-01-15T18:30:00Z",
+    "scanner": {
+      "id": "security-uuid",
+      "name": "Security Guard",
+      "role": "security"
+    },
+    "gate_number": "Main Gate"
+  },
+  "message": "Visitor successfully exited building"
+}
+```
+
+#### Get Visitor Check-in Status
+```http
+GET /api/visitors/{visit_id}/checkin-status
+Authorization: Bearer <security-token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "visit_id": "visit-uuid",
+    "entry": true,
+    "exit": false,
+    "status": "active",
+    "can_enter": false,
+    "can_exit": true,
+    "entry_time": "2024-01-15T10:30:00Z",
+    "exit_time": null
+  },
+  "message": "Check-in status retrieved successfully"
+}
+```
+
+### QR Code Security Features
+
+#### Role-Based Access Control
+- **Entry/Exit Scanning**: Only users with `security` role can scan QR codes
+- **Authorization Validation**: Each scan request validates user role
+- **Access Denied Response**: Non-security users receive `403 Forbidden`
+
+#### Sequential Validation
+- **Entry Required**: Visitors must scan for entry before exit
+- **Duplicate Prevention**: Cannot scan entry twice without exit
+- **Status Tracking**: Real-time visit status updates
+
+#### Database Integration
+- **Entry/Exit Columns**: Boolean flags in `visits` table
+- **PostgreSQL Functions**: `process_qr_entry_exit_scan()` handles business logic
+- **Audit Trail**: Complete logging of all scan activities
+
+### Visitor Status Management
+
+#### Update Individual Visitor Status
+```http
+POST /api/visitors/{visit_id}/visitors/{visitor_id}/status
+Authorization: Bearer <security-token>
+Content-Type: application/json
+
+{
+  "status": "arrived",
+  "notes": "Visitor arrived at main gate",
+  "location": {
+    "gate": "Gate A"
+  }
+}
+```
+
+**Visitor Status Flow:**
+- `expected` → `arrived` → `entered` → `exited`
+
+### Frequent Visitors
+
+#### Add to Frequent Visitors
+```http
+POST /api/frequent-visitors
+Authorization: Bearer <access-token>
+Content-Type: application/json
+
+{
+  "visitor_id": "visitor-uuid",
+  "nickname": "My Brother John",
+  "relationship": "family",
+  "priority": 1
+}
+```
+
+#### Get Frequent Visitors
+```http
+GET /api/frequent-visitors?limit=20
+Authorization: Bearer <access-token>
+```
+
+#### Remove from Frequent Visitors
+```http
+DELETE /api/frequent-visitors/{frequent_visitor_id}
+Authorization: Bearer <access-token>
+```
+
+---
+
+## 🚫 Visitor Ban System
+
+### Phone-Centric Ban Architecture
+The visitor ban system operates on phone numbers rather than visitor profiles, allowing:
+- **Personal Blacklists**: Individual residents can ban specific visitors
+- **Building Awareness**: Residents can see if others have banned the same visitor
+- **Flexible Management**: Direct phone-based bans without profile dependencies
+
+### Ban Management Endpoints
+
+#### 1. Create Visitor Ban
+```http
+POST /api/visitor-bans
+Authorization: Bearer <access-token>
+Content-Type: application/json
+
+{
+  "name": "Problem Visitor",
+  "phone": "+2348123456789",
+  "reason": "Inappropriate behavior during last visit",
+  "severity": "medium",
+  "notes": "Resident requested permanent ban due to security concerns",
+  "expires_at": null
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "ban": {
+      "id": "ban-uuid",
+      "name": "Problem Visitor",
+      "phone": "+2348123456789",
+      "reason": "Inappropriate behavior during last visit",
+      "severity": "medium",
+      "ban_type": "manual",
+      "is_active": true,
+      "banned_at": "2024-01-15T10:30:00Z",
+      "expires_at": null
+    }
+  },
+  "message": "Visitor banned successfully"
+}
+```
+
+#### 2. Get User's Banned Visitors
+```http
+GET /api/visitor-bans?status=active&limit=20&offset=0
+Authorization: Bearer <access-token>
+```
+
+#### 3. Check Visitor Ban Status
+```http
+GET /api/visitor-bans/check?phone=+2348123456789
+Authorization: Bearer <access-token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "is_banned": true,
+    "ban_details": {
+      "banned_by_user": true,
+      "banned_in_building": true,
+      "system_banned": false,
+      "bans": [
+        {
+          "id": "ban-uuid",
+          "severity": "medium",
+          "reason": "Inappropriate behavior",
+          "banned_by": "A101",
+          "banned_at": "2024-01-15T10:30:00Z"
+        }
+      ]
+    }
+  }
+}
+```
+
+#### 4. Update/Unban Visitor
+```http
+PUT /api/visitor-bans/{ban_id}
+Authorization: Bearer <access-token>
+Content-Type: application/json
+
+{
+  "is_active": false,
+  "unban_reason": "Issue resolved, apology accepted"
+}
+```
+
+#### 5. Get Building Ban Statistics
+```http
+GET /api/visitor-bans/building-stats
+Authorization: Bearer <building-admin-token>
+```
+
+### Ban Severity Levels
+- **low**: Minor incidents, temporary restrictions
+- **medium**: Serious incidents, longer restrictions
+- **high**: Severe incidents, permanent restrictions
+
+### Automatic Ban Features
+- **Temporary Bans**: Auto-expire based on `expires_at` field
+- **Escalation**: Severity increases with repeated incidents
+- **Phone Formatting**: Automatic standardization for consistency
+
+---
+
+## 🏢 Building Management
+
+### Building Operations
+
+#### Get Building Information
+```http
+GET /api/buildings/{building_id}
+Authorization: Bearer <access-token>
+```
+
+#### Update Building Details
+```http
+PUT /api/buildings/{building_id}
+Authorization: Bearer <building-admin-token>
+Content-Type: application/json
+
+{
+  "name": "Updated Building Name",
+  "address": "New Address",
+  "total_licenses": 300
+}
+```
+
+#### Get Building Residents
+```http
+GET /api/buildings/{building_id}/residents?role=resident&status=active
+Authorization: Bearer <building-admin-token>
+```
+
+#### Get Building Analytics
+```http
+GET /api/buildings/{building_id}/analytics?start_date=2024-01-01&end_date=2024-01-31
+Authorization: Bearer <building-admin-token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "visit_statistics": {
+      "total_visits": 150,
+      "completed_visits": 125,
+      "active_visits": 15,
+      "cancelled_visits": 10,
+      "completion_rate": 83.3
+    },
+    "visitor_statistics": {
+      "total_visitors": 400,
+      "unique_visitors": 200,
+      "frequent_visitors": 50,
+      "average_visit_duration": 180
+    },
+    "security_statistics": {
+      "active_bans": 5,
+      "emergency_alerts": 0,
+      "security_incidents": 2
+    },
+    "trends": {
+      "peak_hours": ["18:00-20:00", "14:00-16:00"],
+      "busiest_days": ["Saturday", "Sunday"],
+      "most_active_hosts": [
+        {"name": "John Doe", "visit_count": 15}
+      ]
+    }
+  }
+}
+```
+
+---
+
+## 📱 Real-time Features
+
+### WebSocket Connection
+```javascript
+// Client connection
+const socket = io('http://localhost:4500', {
+  auth: {
+    token: 'your-jwt-token'
+  }
+});
+```
+
+### Socket Events
+
+#### Visit Events
+```javascript
+// Create visit
+socket.emit('visit:create', {
+  title: 'Business Meeting',
+  expected_start: '2024-01-15T14:00:00Z',
+  visitors: [...]
+});
+
+// Listen for visit updates
+socket.on('visit:updated', (data) => {
+  console.log('Visit updated:', data);
+});
+
+// QR code scanned
+socket.on('visit:qr_scanned', (data) => {
+  console.log('QR code scanned:', data);
+});
+```
+
+#### Visitor Events
+```javascript
+// Visitor arrival
+socket.on('visitor:arrived', (data) => {
+  console.log('Visitor arrived:', data);
+});
+
+// Visitor entry
+socket.on('visitor:entered', (data) => {
+  console.log('Visitor entered building:', data);
+});
+```
+
+#### Notification Events
+```javascript
+// New notification
+socket.on('notification:new', (data) => {
+  console.log('New notification:', data);
+});
+
+// Emergency alert
+socket.on('emergency:alert', (data) => {
+  console.log('Emergency alert:', data);
+});
+```
+
+#### Ban Events
+```javascript
+// Visitor banned
+socket.emit('visitor:ban', {
+  phone: '+2348123456789',
+  reason: 'Security concern'
+});
+
+// Ban status check
+socket.emit('visitor:ban-check', {
+  phone: '+2348123456789'
+});
+```
+
+---
+
+## 🔒 Rate Limiting
+
+### Rate Limit Headers
+All responses include rate limiting information:
+```http
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 1642248000
+```
+
+### Rate Limits by Endpoint Type
+- **Authentication**: 5 requests/minute
+- **Registration**: 3 requests/minute  
+- **Visit Creation**: 20 requests/minute
+- **QR Scanning**: 100 requests/minute
+- **General API**: 100 requests/minute
+
+### Rate Limit Response
+```json
+{
+  "success": false,
+  "error": {
+    "code": "RATE_LIMIT_ERROR",
+    "message": "Too many requests. Please try again later.",
+    "retryAfter": 60
+  },
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+---
+
+## 🧪 Testing
+
+### Comprehensive Postman Collection
+The API includes a complete Postman collection for end-to-end testing:
+
+**SafeGuard_Complete_API.postman_collection.json**
+- **System Setup & Building Registration**: Initial setup, building registration (self-service and admin)
+- **User Registration & Management**: Resident self-registration, security personnel, building admins
+- **Authentication**: Login/logout for all user types, profile management, password changes
+- **Security Authentication**: Dedicated security guard authentication for QR operations
+- **Visitor Management**: Create, update, cancel visitor invitations with QR generation
+- **QR Code Generation**: Generate secure QR codes for visitor invitations
+- **QR Code Scanning (Security Only)**: Version 2 entry/exit scanning with role-based access control
+- **Frequent Visitors**: Manage favorite visitors for quick invitations
+- **Visitor Bans**: Personal visitor blacklist management
+- **Analytics & Reports**: Building statistics and visitor insights
+- **Search & Filters**: Search and filter functionality
+- **Testing Workflow**: Complete end-to-end testing scenarios
+
+### Environment Configuration
+**SafeGuard_Complete_Environment.postman_environment.json**
+```json
+{
+  "base_url": "http://localhost:3000",
+  "super_admin_email": "superadmin@safeguard.com",
+  "super_admin_password": "SuperAdmin123!",
+  "building_contact_email": "demo@safeguard.com",
+  "admin_email": "admin@safeguard.com",
+  "admin_password": "AdminPass123!",
+  "security_email": "security@safeguard.com",
+  "security_password": "SecurityPass123!",
+  "test_email": "john.doe@example.com",
+  "test_password": "SecurePass123!",
+  "building_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+### Automated Token Management
+- **Dynamic Token Capture**: All authentication tokens are automatically captured and stored
+- **Role-based Testing**: Separate token management for residents, security, and admin users
+- **Session Management**: Support for multiple concurrent user sessions
+- **Environment Variables**: All dynamic values stored as environment variables
+
+### Example Test Flows
+
+#### 1. Complete Registration and Approval Flow
+1. **System Setup**: `POST /api/admin/initial-setup`
+2. **Resident Registration**: `POST /api/registration/self-register`
+3. **Admin Login**: `POST /api/auth/enhanced/login`
+4. **Get Pending Approvals**: `GET /api/resident-approval/pending/{building_id}`
+5. **Approve Resident**: `POST /api/resident-approval/{approval_id}/process`
+6. **Resident Login**: `POST /api/auth/enhanced/login` (now succeeds)
+
+#### 2. Visit Management Flow
+1. **Create Visit**: `POST /api/visitors`
+2. **QR Code Scan**: `POST /api/visitors/qr-scan`
+3. **Update Visitor Status**: `POST /api/visitors/{visit_id}/visitors/{visitor_id}/status`
+4. **Complete Visit**: Automated when all visitors exit
+
+#### 3. Visitor Ban Flow
+1. **Create Ban**: `POST /api/visitor-bans`
+2. **Check Ban Status**: `GET /api/visitor-bans/check?phone=+234...`
+3. **Attempt Visit Creation**: Should fail for banned visitors
+4. **Unban Visitor**: `PUT /api/visitor-bans/{ban_id}`
+
+### Automated Testing
+```bash
+# Run API tests
+npm run test:api
+
+# Run integration tests  
+npm run test:integration
+
+# Run security tests
+npm run test:security
+```
+
+---
+
+## 📚 Additional Resources
+
+### Related Documentation
+- **Database Documentation**: [db-documentation.md](database/db-documentation.md)
+- **Deployment Guide**: [DEPLOYMENT-GUIDE.md](database/DEPLOYMENT-GUIDE.md)
+- **Startup Guide**: [STARTUP-GUIDE.md](STARTUP-GUIDE.md)
+
+### OpenAPI Specification
+The complete OpenAPI 3.0 specification is available at:
+```
+GET /api/docs
+GET /api/docs/swagger.json
+```
+
+### Support and Resources
+- **GitHub Repository**: [SafeGuard Backend](https://github.com/Hassandahiru/SafeGuard)
+- **Issue Reporting**: GitHub Issues
+- **API Status**: [status.safeguard.com](https://status.safeguard.com)
+
+---
+
+## 🔄 API Versioning
+
+### Current Version: v2.0
+- **Base Path**: `/api/`
+- **Version Header**: `API-Version: 2.0`
+- **Backwards Compatibility**: Maintained for v1.x endpoints
+
+### Version Migration Guide
+- **v1.x → v2.0**: Visit-centric architecture changes
+- **Breaking Changes**: Visitor QR codes → Visit QR codes
+- **Migration Path**: Update client logic to handle visit-based QR codes
+
+---
+
+This comprehensive API documentation covers all aspects of the SafeGuard visitor management system, including the new resident approval workflow, visitor ban system, and real-time features. Use the provided Postman collections for hands-on testing and integration.

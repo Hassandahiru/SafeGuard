@@ -36,6 +36,18 @@ class AuthenticationError extends AppError {
     return new AuthenticationError('Email address not verified', 'EMAIL_NOT_VERIFIED');
   }
 
+  static sessionExpired() {
+    return new AuthenticationError('Session has expired', 'SESSION_EXPIRED');
+  }
+
+  static sessionInvalid() {
+    return new AuthenticationError('Invalid session', 'SESSION_INVALID');
+  }
+
+  static twoFactorRequired() {
+    return new AuthenticationError('Two-factor authentication required', 'TWO_FACTOR_REQUIRED');
+  }
+
   toJSON() {
     return {
       ...super.toJSON(),

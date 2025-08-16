@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeGuard - QR Code Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .qr-code {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border: 2px dashed #ddd;
+        }
+        .qr-code img {
+            max-width: 300px;
+            height: auto;
+            border: 2px solid #333;
+            border-radius: 4px;
+        }
+        .visit-details {
+            text-align: left;
+            margin-top: 20px;
+            background: #f0f8ff;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .detail-row {
+            margin: 8px 0;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .label {
+            font-weight: bold;
+            color: #333;
+        }
+        .value {
+            color: #666;
+            margin-left: 10px;
+        }
+        .qr-code-text {
+            font-family: monospace;
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+            background: #ecf0f1;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .expires {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .status {
+            color: #f39c12;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎫 SafeGuard Visitor Invitation</h1>
+        
+        <div class="qr-code">
+            <h2>📱 QR Code</h2>
+            <img src="data:image/png;base64,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" alt="Visit QR Code">
+            
+            <div class="qr-code-text">
+                SG_9A8A78379329DA5216BB492BF584988B
+            </div>
+        </div>
+        
+        <div class="visit-details">
+            <h3>📋 Visit Details</h3>
+            
+            <div class="detail-row">
+                <span class="label">Visit ID:</span>
+                <span class="value">c521aabd-5d6a-4c90-93df-2ea8e4c22e4e</span>
+            </div>
+            
+            <div class="detail-row">
+                <span class="label">Title:</span>
+                <span class="value">Business Meeting - Financial Consultation</span>
+            </div>
+            
+            <div class="detail-row">
+                <span class="label">Description:</span>
+                <span class="value">Quarterly financial review and investment planning session</span>
+            </div>
+            
+            <div class="detail-row">
+                <span class="label">Expected Start:</span>
+                <span class="value">August 15, 2025 at 2:00 PM</span>
+            </div>
+            
+            <div class="detail-row">
+                <span class="label">Expected End:</span>
+                <span class="value">August 15, 2025 at 4:30 PM</span>
+            </div>
+            
+            <div class="detail-row">
+                <span class="label">Visit Type:</span>
+                <span class="value">Single visitor</span>
+            </div>
+            
+            <div class="detail-row">
+                <span class="label">Status:</span>
+                <span class="value status">Pending</span>
+            </div>
+            
+            <div class="detail-row">
+                <span class="label">Visitor Count:</span>
+                <span class="value">1 person</span>
+            </div>
+            
+            <div class="detail-row">
+                <span class="label">QR Code Expires:</span>
+                <span class="value expires">August 13, 2025 at 3:09 PM</span>
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px; padding: 15px; background: #e8f5e8; border-radius: 5px;">
+            <h3>📱 Instructions for Visitor</h3>
+            <p>1. Save this QR code image to your phone</p>
+            <p>2. Show this QR code to the security guard at the building entrance</p>
+            <p>3. The security guard will scan it to grant you access</p>
+            <p>4. Keep the QR code handy for entry and exit</p>
+        </div>
+    </div>
+</body>
+</html>

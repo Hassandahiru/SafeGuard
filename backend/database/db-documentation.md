@@ -36,11 +36,23 @@ The SafeGuard database implements a **visit-centric visitor management system** 
 3. **License Management**: Only registered users count against building licenses
 4. **Security-First**: Comprehensive audit trails and multi-level access control
 5. **Performance-Optimized**: Strategic indexing and materialized views
+6. **Schema Separation**: Logical organization with dedicated schemas for different domains
+7. **Profile Management**: Extended user profiles with approval workflows
 
 ### Technology Stack
 - **Database**: PostgreSQL 12+
 - **Extensions**: uuid-ossp, postgis (optional for location features)
 - **Features**: Row Level Security, Triggers, Materialized Views, Custom Types
+- **Schema Organization**: Multi-schema architecture for better maintainability
+
+### Schema Organization (Planned v2.0)
+```
+safeguard_db
+├── public                    # Core system tables
+├── profile_management        # User profiles and registration workflows
+├── building_management       # Buildings, licenses, and admin operations
+└── visitor_management        # Visitor and visit management
+```
 
 ---
 
@@ -76,12 +88,20 @@ Key Fields:
 - uses_license (BOOLEAN): Whether user counts against building licenses
 - apartment_number (VARCHAR): Resident's apartment
 - is_active (BOOLEAN): User status
+- last_login (TIMESTAMPTZ): Most recent successful login timestamp
+- last_login_ip (INET): IP address from most recent successful login
+- last_user_agent (TEXT): User agent string from most recent successful login
+- login_attempts (INTEGER): Failed login attempt counter (security feature)
+- locked_until (TIMESTAMPTZ): Account lockout timestamp for security
 ```
 
 **Business Rules**:
 - Residents and admins use licenses by default
 - Security and temporary users may not use licenses
+- Enhanced authentication tracking for security monitoring
+- Account lockout mechanism after failed login attempts
 - Email must be unique across the entire system
+- Enhanced login tracking for security and analytics
 
 ### 3. Visitors (`visitors`)
 **Purpose**: Reusable visitor profiles per building
@@ -118,12 +138,17 @@ Key Fields:
 - expected_start/end (TIMESTAMPTZ): Planned visit times
 - current_visitors (INT): Number of visitors added to this visit
 - max_visitors (INT): Maximum allowed visitors
+- entry (BOOLEAN): QR code scanned at building entry (Version 2)
+- exit (BOOLEAN): QR code scanned at building exit (Version 2)
 ```
 
 **Business Rules**:
 - QR codes are generated AFTER visit creation by business logic
 - One QR code per visit, regardless of visitor count
 - Status automatically transitions based on visitor actions
+- **Version 2**: Entry and exit tracking via separate QR scans
+- **Sequential Validation**: Cannot exit without entry scan first
+- **Security Role Only**: Only security personnel can scan QR codes for entry/exit
 
 ### 5. Visit Visitors (`visit_visitors`)
 **Purpose**: Junction table linking visits to multiple visitors
@@ -229,7 +254,96 @@ Key Fields:
 - priority (INT): 1-5 priority level
 ```
 
-### 10. Supporting Tables
+### 10. Resident Approval System ✅ **IMPLEMENTED**
+
+#### Resident Approval Requests (`resident_approval_requests`)
+**Purpose**: Complete registration approval workflow for new residents
+
+```sql
+Key Fields:
+- id (UUID, PK): Unique approval request identifier
+- user_id (UUID, FK): Reference to user account (created with is_active=false)
+- building_id (UUID, FK): Reference to building
+- request_type (VARCHAR): Type of approval ('resident_registration')
+- status (VARCHAR): 'pending', 'approved', 'rejected', 'expired'
+- registration_data (JSONB): Complete registration form data
+- approved_by (UUID, FK): Building admin who processed the request
+- approved_at (TIMESTAMPTZ): When request was processed
+- rejection_reason (TEXT): Admin feedback for rejections
+- approval_notes (TEXT): Additional admin notes
+- created_at (TIMESTAMPTZ): When approval request was created
+- updated_at (TIMESTAMPTZ): Last modification timestamp
+- expires_at (TIMESTAMPTZ): Auto-expiry date (30 days from creation)
+```
+
+**Business Rules**:
+- Created automatically when resident self-registers
+- User account created with `is_active = false` until approved
+- Building admins can approve/reject requests for their building only
+- Auto-expires after 30 days if no action taken
+- Complete audit trail of approval decisions
+- Approved users become active and can login immediately
+- Rejected users remain inactive and cannot access system
+
+**Database Schema**:
+```sql
+CREATE TABLE resident_approval_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  building_id UUID NOT NULL REFERENCES buildings(id) ON DELETE CASCADE,
+  request_type VARCHAR(50) DEFAULT 'resident_registration',
+  status VARCHAR(20) DEFAULT 'pending',
+  registration_data JSONB DEFAULT '{}',
+  approved_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  approved_at TIMESTAMP,
+  rejection_reason TEXT,
+  approval_notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  expires_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP + INTERVAL '30 days'),
+  
+  -- Constraints
+  CONSTRAINT unique_user_approval UNIQUE(user_id),
+  CONSTRAINT check_status CHECK (status IN ('pending', 'approved', 'rejected', 'expired'))
+);
+
+-- Performance Indexes
+CREATE INDEX idx_resident_approval_building_status ON resident_approval_requests (building_id, status);
+CREATE INDEX idx_resident_approval_user ON resident_approval_requests (user_id);
+CREATE INDEX idx_resident_approval_expires ON resident_approval_requests (expires_at);
+CREATE INDEX idx_resident_approval_created ON resident_approval_requests (created_at);
+```
+
+### 11. Profile Management System (Planned v3.0)
+
+#### Extended User Profiles (`profile_management.user_profiles`)
+**Purpose**: Enhanced user profile data beyond basic account information
+
+```sql
+Key Fields:
+- user_id (UUID, FK): Reference to core user account
+- avatar_url (TEXT): Profile picture URL
+- bio (TEXT): User biography (max 500 chars)
+- date_of_birth (DATE): For age verification
+- emergency_contact (JSONB): Emergency contact information
+- notification_preferences (JSONB): Email, push, alert preferences
+- privacy_settings (JSONB): Visibility and sharing controls
+- theme_preferences (JSONB): UI theme and language settings
+```
+
+#### License Allocations (`building_management.license_allocations`)
+**Purpose**: Track license assignments by building admins
+
+```sql
+Key Fields:
+- building_id, user_id: License assignment
+- allocated_by (UUID, FK): Admin who assigned license
+- allocation_method (ENUM): 'admin', 'auto', 'system'
+- expires_at (TIMESTAMPTZ): License expiry date
+- is_active (BOOLEAN): Current license status
+```
+
+### 11. Supporting Tables
 - **`licenses`**: Building subscription management
 - **`payments`**: Payment processing tracking
 - **`emergency_alerts`**: Security incident management
@@ -470,6 +584,64 @@ SELECT * FROM get_visitor_recommendations(
 #### 12. `daily_maintenance()`
 **Purpose**: Automated maintenance tasks
 
+### Resident Approval Functions ✅ **IMPLEMENTED**
+
+#### 13. `process_resident_approval()`
+**Purpose**: Processes resident approval requests (approve/reject)
+
+```sql
+SELECT * FROM process_resident_approval(
+    p_approval_id UUID,
+    p_admin_id UUID,
+    p_approved BOOLEAN,
+    p_reason TEXT DEFAULT NULL,
+    p_notes TEXT DEFAULT NULL
+);
+
+-- Returns: success, message, user_id, approval_status
+```
+
+**What it does**:
+1. Validates approval request exists and is pending
+2. Checks admin has permission for the building
+3. Updates approval status and timestamps
+4. Activates/deactivates user account based on decision
+5. Records admin who processed the request
+6. Creates audit trail of the decision
+
+#### 14. `get_building_approval_statistics()`
+**Purpose**: Building-wide approval statistics for dashboards
+
+```sql
+SELECT * FROM get_building_approval_statistics(
+    p_building_id UUID,
+    p_start_date TIMESTAMP DEFAULT (CURRENT_DATE - INTERVAL '30 days'),
+    p_end_date TIMESTAMP DEFAULT CURRENT_DATE
+);
+
+-- Returns: total_requests, pending, approved, rejected, expired, avg_processing_time
+```
+
+**What it does**:
+1. Aggregates approval request statistics for date range
+2. Calculates approval rates and processing times
+3. Provides data for building admin dashboards
+4. Tracks approval workflow efficiency
+
+#### 15. `expire_approval_requests()`
+**Purpose**: Automatically expires old pending approval requests
+
+```sql
+SELECT expire_approval_requests() RETURNS INTEGER;
+```
+
+**What it does**:
+1. Finds approval requests older than 30 days with pending status
+2. Updates status to 'expired'
+3. Optionally deactivates associated user accounts
+4. Returns count of expired requests
+5. Intended for automated/scheduled execution
+
 ---
 
 ## 🔄 Triggers
@@ -531,6 +703,41 @@ tr_[table]_analytics: create_analytics_event()
 - Captures business events (visit created, status changed, user login)
 - Feeds real-time dashboard
 - Enables pattern analysis
+
+### Resident Approval Triggers ✅ **IMPLEMENTED**
+
+#### Approval Request Expiry
+```sql
+-- Automatically expires old approval requests
+tr_approval_expiry: expire_approval_requests()
+```
+**Behavior**:
+- Runs daily via maintenance job
+- Marks requests older than 30 days as 'expired'
+- Updates associated user accounts if needed
+- Maintains clean approval queue
+
+#### User Status Updates
+```sql
+-- Updates user is_active status based on approval decisions
+tr_approval_user_status: update_user_activation_status()
+```
+**Behavior**:
+- Triggered when approval status changes
+- Sets user.is_active = true when approved
+- Sets user.is_active = false when rejected
+- Maintains user account state consistency
+
+#### Approval Audit Trail
+```sql
+-- Comprehensive audit logging for approval decisions
+tr_approval_audit: create_approval_audit_log()
+```
+**Behavior**:
+- Logs all approval decision changes
+- Records admin who processed the request
+- Captures before/after states
+- Enables compliance and audit requirements
 
 ---
 
@@ -1007,6 +1214,271 @@ WHERE utilization_percentage > 90;
 
 ---
 
+## 🗄️ Database Reset and Constraint Management
+
+### Database Reset Process
+
+When you need to completely reset the SafeGuard database (for development or troubleshooting), follow this comprehensive process that handles foreign key constraints and triggers properly.
+
+#### Understanding the Challenge
+
+The SafeGuard database has complex relationships with:
+- **48 foreign key constraints** maintaining data integrity
+- **Audit triggers** that log all changes to critical tables
+- **Analytical triggers** collecting real-time metrics
+- **Business logic triggers** managing license counts and visit completion
+
+Simply deleting data can cause **foreign key constraint violations** because:
+1. Audit triggers try to log deletions while referencing being-deleted records
+2. CASCADE operations may not reach all dependent records
+3. Trigger execution order can create circular dependencies
+
+#### The Force Reset Solution
+
+The database reset process uses a **multi-step approach** to safely clear all data:
+
+```sql
+-- 1. DROP ALL TRIGGERS
+-- Remove all triggers to prevent constraint violations during deletion
+SELECT trigger_name, event_object_table 
+FROM information_schema.triggers 
+WHERE trigger_schema = 'public';
+
+-- Drop each trigger:
+DROP TRIGGER IF EXISTS trigger_name ON table_name CASCADE;
+
+-- 2. DISABLE FOREIGN KEY CONSTRAINTS
+-- Temporarily disable constraint checking
+SET session_replication_role = replica;
+
+-- 3. TRUNCATE WITH CASCADE
+-- Force clear all data ignoring foreign keys
+TRUNCATE TABLE table_name RESTART IDENTITY CASCADE;
+
+-- 4. RE-ENABLE CONSTRAINTS
+-- Restore normal constraint checking
+SET session_replication_role = DEFAULT;
+
+-- 5. RECREATE ESSENTIAL TRIGGERS
+-- Restore only the critical audit trigger with safety checks
+CREATE OR REPLACE FUNCTION create_audit_log() RETURNS TRIGGER AS $$
+DECLARE
+    user_id UUID;
+    building_id UUID;
+    visit_id UUID;
+    action TEXT;
+BEGIN
+    -- Only create audit log if user exists
+    IF TG_OP = 'DELETE' THEN
+        user_id := OLD.user_id;
+        building_id := OLD.building_id;
+        visit_id := OLD.visit_id;
+        action := 'DELETE';
+        
+        -- Check if user exists before creating audit log
+        IF EXISTS (SELECT 1 FROM users WHERE id = user_id) THEN
+            INSERT INTO audit_logs (user_id, building_id, visit_id, action, resource_type, resource_id, old_values)
+            VALUES (user_id, building_id, visit_id, action, TG_TABLE_NAME, OLD.id, row_to_json(OLD));
+        END IF;
+        
+        RETURN OLD;
+    END IF;
+    
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+#### Current Database State After Reset
+
+After a successful force reset, the database has:
+
+✅ **Foreign Key Constraints**: **48 active constraints** maintaining data integrity
+```sql
+-- Major constraint relationships:
+users.building_id → buildings.id
+visits.host_id → users.id
+visitors.created_by → users.id
+visit_visitors.visit_id → visits.id
+visitor_bans.user_id → users.id
+audit_logs.user_id → users.id
+-- ... and 42 more
+```
+
+✅ **Clean Tables**: All data tables have **0 records**
+- 0 users (including super admins)
+- 0 buildings
+- 0 visitors, visits, licenses
+- 0 audit logs, notifications
+
+❌ **No Active Triggers**: **0 triggers** currently attached (prevents constraint conflicts)
+- Triggers are NOT automatically recreated
+- Only the `create_audit_log()` function exists
+- This is intentional to prevent future constraint issues
+
+✅ **Available Trigger Functions**: **16 trigger functions** ready for use
+- `create_audit_log()` - Safe audit logging
+- License management functions
+- Analytics collection functions
+- Timestamp update functions
+
+### Constraint Management Best Practices
+
+#### 1. **Understanding CASCADE Behavior**
+```sql
+-- CASCADE operations propagate through foreign key relationships
+DELETE FROM buildings CASCADE;
+-- This would delete:
+-- - All users in the building
+-- - All visits hosted by those users  
+-- - All visitors created by those users
+-- - All related audit logs, notifications, etc.
+```
+
+#### 2. **Safe Constraint Disabling**
+```sql
+-- Temporary constraint disabling (use with extreme caution)
+SET session_replication_role = replica;  -- Disables triggers and FKs
+-- Perform bulk operations
+SET session_replication_role = DEFAULT;  -- Re-enables constraints
+```
+
+#### 3. **Checking Constraint Status**
+```sql
+-- List all foreign key constraints
+SELECT 
+    tc.constraint_name,
+    tc.table_name,
+    kcu.column_name,
+    ccu.table_name AS foreign_table_name,
+    ccu.column_name AS foreign_column_name
+FROM information_schema.table_constraints AS tc
+JOIN information_schema.key_column_usage AS kcu
+  ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage AS ccu
+  ON ccu.constraint_name = tc.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY'
+  AND tc.table_schema = 'public'
+ORDER BY tc.table_name;
+```
+
+#### 4. **Monitoring Constraint Violations**
+Look for these common error patterns:
+```sql
+-- Foreign key constraint violation
+ERROR: insert or update on table "table_name" violates foreign key constraint
+Detail: Key (column_name)=(value) is not present in table "referenced_table"
+
+-- Circular dependency in CASCADE
+ERROR: cannot delete from table because other objects depend on it
+Detail: constraint xyz on table abc depends on table def
+```
+
+### Trigger Management
+
+#### Current Trigger State
+After database reset:
+- **All triggers removed** to prevent constraint conflicts
+- **Trigger functions preserved** and ready for reattachment
+- **create_audit_log()** function enhanced with safety checks
+
+#### Trigger Recreation Strategy
+You can selectively recreate triggers based on your needs:
+
+```sql
+-- 1. Critical Audit Triggers (recommended)
+CREATE TRIGGER tr_users_audit
+    BEFORE DELETE ON users
+    FOR EACH ROW EXECUTE FUNCTION create_audit_log();
+
+-- 2. License Management (for production)
+CREATE TRIGGER tr_user_license_count
+    AFTER INSERT OR UPDATE OR DELETE ON users
+    FOR EACH ROW EXECUTE FUNCTION update_building_license_count();
+
+-- 3. Analytics Collection (optional)
+CREATE TRIGGER tr_visits_analytics
+    AFTER INSERT OR UPDATE ON visits
+    FOR EACH ROW EXECUTE FUNCTION create_analytics_event();
+```
+
+#### Trigger Safety Patterns
+All new triggers should follow this safety pattern:
+```sql
+CREATE OR REPLACE FUNCTION safe_trigger_function() RETURNS TRIGGER AS $$
+BEGIN
+    -- Always check if referenced records exist
+    IF TG_OP = 'DELETE' THEN
+        -- Verify parent records exist before logging
+        IF EXISTS (SELECT 1 FROM parent_table WHERE id = OLD.parent_id) THEN
+            -- Safe to proceed with trigger logic
+            INSERT INTO audit_logs (...);
+        END IF;
+        RETURN OLD;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Database Recovery Procedures
+
+#### Full System Recovery
+```sql
+-- 1. Database reset (clears all data)
+-- Run force reset script
+
+-- 2. Initial system setup
+POST /api/admin/initial-setup
+{
+  "email": "superadmin@metroplex.com",
+  "password": "SuperSecure2024!",
+  "firstName": "Sarah",
+  "lastName": "Johnson",
+  "buildingData": {
+    "name": "Metroplex Towers",
+    "address": "123 Business District",
+    "city": "Lagos"
+  }
+}
+
+-- 3. Verify system state
+SELECT COUNT(*) FROM users;      -- Should be 1 (super admin)
+SELECT COUNT(*) FROM buildings;  -- Should be 1 (initial building)
+SELECT COUNT(*) FROM licenses;   -- Should be 1 (building license)
+```
+
+#### Partial Recovery (Development)
+```sql
+-- Clear specific data while preserving structure
+DELETE FROM visit_logs;
+DELETE FROM notifications;
+DELETE FROM visits;
+DELETE FROM visitors;
+-- Keep users and buildings for testing
+```
+
+### Important Notes
+
+⚠️ **Production Warnings**:
+- Never disable constraints in production without proper backup
+- Always test recovery procedures in development first
+- Monitor constraint violations in application logs
+
+✅ **Development Benefits**:
+- Clean slate for testing new features
+- Consistent database state across team members
+- Easy troubleshooting of schema issues
+
+💡 **Next Steps After Reset**:
+1. Use `/api/admin/initial-setup` to create first super admin and building
+2. Test with updated Postman collections using new test data
+3. Recreate any custom triggers needed for development
+4. Verify all foreign key relationships are working correctly
+
+---
+
 ## 🚀 Getting Started
 
 ### For New Developers
@@ -1047,6 +1519,269 @@ If migrating from a visitor-centric system:
 - **Security**: See audit logs for all database changes
 - **Performance**: Monitor slow queries and table growth
 - **Backup**: Daily backups recommended with point-in-time recovery
+
+---
+
+## 📝 Migration History
+
+### Migration: Enhanced Login Tracking (2025-01-06)
+**Migration ID**: `2025_01_06_001_enhanced_login_tracking`  
+**File**: `migrations/add_enhanced_login_tracking.sql`  
+**Status**: ✅ Completed Successfully
+
+#### Summary
+Added enhanced authentication tracking capabilities to the users table to support advanced security features and analytics.
+
+#### Changes Made
+1. **Added Columns**:
+   - `last_login_ip (INET)`: Tracks the IP address from the user's most recent successful login
+   - `last_user_agent (TEXT)`: Stores the user agent string from the user's most recent successful login
+
+2. **Performance Optimizations**:
+   - Added `idx_users_last_login_ip` index on `last_login_ip` (partial index for non-NULL values)
+   - Added `idx_users_last_login` index on `last_login` (partial index for non-NULL values)
+
+3. **Documentation**:
+   - Added column comments explaining the purpose of each new field
+   - Updated existing records to have NULL values explicitly
+
+#### Impact
+- **Enhanced Security**: System can now track login locations and detect suspicious access patterns
+- **Improved Analytics**: Device and location-based user behavior analysis
+- **Better User Experience**: Foundation for features like "New device detected" notifications
+- **Performance**: Strategic indexing ensures fast lookups for security checks
+
+#### Database Schema Changes
+```sql
+-- Before Migration
+users table: 20 columns (id through updated_at)
+
+-- After Migration  
+users table: 22 columns (added last_login_ip, last_user_agent)
+```
+
+#### Migration Execution Details
+- **Execution Date**: 2025-01-06
+- **Execution Time**: < 1 second (2 existing records updated)
+- **Rollback Available**: Standard column drop procedures
+- **Data Loss**: None (all operations are additive)
+
+#### Supporting Features
+This migration enables the enhanced authentication controller consolidation, which includes:
+- Risk-based authentication
+- Device fingerprinting
+- Location-based access controls
+- Suspicious activity detection
+- Session management improvements
+
+### Migration: Fix Login Tracking Columns (2025-01-06) 
+**Migration ID**: `2025_01_06_002_fix_login_tracking_columns`  
+**File**: `migrations/fix_login_tracking_columns.sql`  
+**Status**: ✅ Completed Successfully
+
+#### Summary
+Fixed database connection issue and ensured login tracking columns are properly created.
+
+#### Issue Resolved
+- **Problem**: Application error "column 'last_login_ip' of relation 'users' does not exist"  
+- **Root Cause**: URL encoding issue with `@` character in database password
+- **Solution**: URL-encoded password (`%40`) and re-ran migration
+
+#### Changes Made
+1. **Fixed DATABASE_URL**: Properly encoded password with `%40` instead of `@`
+2. **Verified Columns**: Confirmed both columns exist with proper indexing
+3. **Added Safety Checks**: Migration includes verification that columns were created
+
+#### Database Connection Fix
+```bash
+# Before (broken):
+DATABASE_URL='postgresql://user:pass@word@host:5432/db'
+
+# After (working): 
+DATABASE_URL='postgresql://user:pass%40word@host:5432/db'
+```
+
+#### Future Migrations Planned
+- Enhanced session tracking with device fingerprints
+- Location-based security policies  
+- Multi-factor authentication support
+
+### Migration: Resident Approval System (2025-01-08)
+**Migration ID**: `2025_01_08_001_resident_approval_system`  
+**File**: `migrations/create_resident_approval_requests.sql`  
+**Status**: ✅ Completed Successfully
+
+#### Summary
+Implemented comprehensive resident approval workflow system that requires building admin approval for new resident registrations.
+
+#### Changes Made
+1. **Added Table**: `resident_approval_requests`
+   - Complete approval workflow with 13 columns
+   - Automatic expiry after 30 days
+   - Building-specific access control
+   - Comprehensive audit trail
+   
+2. **Performance Optimizations**:
+   - `idx_resident_approval_building_status` index for admin queries
+   - `idx_resident_approval_user` index for user lookup
+   - `idx_resident_approval_expires` index for expiry processing
+   - `idx_resident_approval_created` index for chronological sorting
+
+3. **Business Logic Integration**:
+   - Updated user registration to create is_active=false users
+   - Approval process activates user accounts
+   - Complete integration with existing authentication system
+
+#### Impact
+- **Enhanced Security**: All new residents require admin approval before system access
+- **Improved Management**: Building admins control resident onboarding
+- **Complete Audit Trail**: Full tracking of approval decisions and reasons
+- **Scalable Architecture**: Supports multiple buildings with isolated approval queues
+
+#### Database Schema Changes
+```sql
+-- Before Migration
+- 9 core tables (users, buildings, visitors, etc.)
+
+-- After Migration  
+- 10 core tables (added resident_approval_requests)
+- 4 new indexes for optimal performance
+- 2 new constraints for data integrity
+```
+
+#### API Integration
+- **New Endpoints**: 7 resident approval API endpoints
+- **Authentication**: Building-specific access control
+- **Real-time Updates**: Socket.io integration for approval notifications
+- **Postman Testing**: Comprehensive test collections updated
+
+#### Migration Execution Details
+- **Execution Date**: 2025-01-08
+- **Execution Time**: < 1 second (clean database)
+- **Rollback Available**: Standard table drop procedures
+- **Data Loss**: None (all operations are additive)
+
+#### Supporting Features
+This migration enables:
+- Self-service resident registration
+- Building admin approval dashboard
+- Automated approval request expiry
+- Email notifications for approval decisions
+- Complete integration with existing user management
+
+### Migration: QR Code Entry/Exit Tracking - Version 2 (2025-01-14)
+**Migration ID**: `2025_01_14_001_qr_entry_exit_tracking`  
+**File**: `migrations/006_add_entry_exit_columns.sql`  
+**Status**: ✅ Completed Successfully
+
+#### Summary
+Implemented Version 2 QR code scanning functionality that tracks building entry and exit separately, providing granular visitor access control and enhanced security monitoring.
+
+#### Changes Made
+1. **Added Columns to `visits` Table**:
+   - `entry (BOOLEAN)`: Tracks if visitor has scanned QR code at building entry (DEFAULT: FALSE)
+   - `exit (BOOLEAN)`: Tracks if visitor has scanned QR code at building exit (DEFAULT: FALSE)
+
+2. **Performance Optimizations**:
+   - `idx_visits_entry` index for entry status queries
+   - `idx_visits_exit` index for exit status queries
+   - `idx_visits_entry_exit` composite index for entry/exit status combinations
+
+3. **New Database Function**: `process_qr_entry_exit_scan()`
+   ```sql
+   SELECT * FROM process_qr_entry_exit_scan(
+       p_qr_code TEXT,
+       p_scan_type VARCHAR(10), -- 'entry' or 'exit'
+       p_security_officer UUID,
+       p_gate_number VARCHAR(20) DEFAULT NULL,
+       p_location POINT DEFAULT NULL
+   );
+   ```
+
+4. **Business Logic Enhancements**:
+   - **Entry Scanning**: Sets `entry = TRUE`, updates visit status to 'active'
+   - **Exit Scanning**: Sets `exit = TRUE`, updates visit status to 'completed'
+   - **Validation**: Cannot exit without entry scan first
+   - **Prevents Duplicate Scans**: Checks existing entry/exit status
+   - **Real-time Notifications**: Sends appropriate notifications for entry/exit
+
+#### Impact
+- **Enhanced Security**: Separate tracking of building entry and exit points
+- **Granular Control**: Security can control both entry and exit processes independently
+- **Audit Trail**: Complete tracking of visitor movement through building access points
+- **Compliance**: Meets security requirements for visitor access monitoring
+
+#### API Integration
+- **New Endpoints**: 
+  - `POST /api/visitors/scan/entry` - Scan QR for building entry (security only)
+  - `POST /api/visitors/scan/exit` - Scan QR for building exit (security only)
+- **Role-Based Access**: Only users with 'security' role can scan QR codes
+- **Enhanced Middleware**: New `requireSecurityOnly` middleware for strict role enforcement
+
+#### Database Schema Changes
+```sql
+-- Before Migration
+visits table: 28 columns (id through updated_at)
+
+-- After Migration  
+visits table: 30 columns (added entry, exit)
+- entry (BOOLEAN DEFAULT FALSE)
+- exit (BOOLEAN DEFAULT FALSE)
+- 3 new indexes for performance optimization
+```
+
+#### Security Enhancements
+1. **Strict Role Enforcement**: Only security personnel can scan QR codes
+2. **Sequential Validation**: Must scan entry before exit
+3. **Duplicate Prevention**: Cannot scan same QR multiple times for same action
+4. **Complete Audit Trail**: All scans logged with timestamp, officer, and location
+
+#### Migration Execution Details
+- **Execution Date**: 2025-01-14
+- **Execution Time**: < 1 second (schema changes only)
+- **Rollback Available**: Column drop procedures available
+- **Data Loss**: None (all operations are additive)
+- **Existing Data**: All existing visits default to entry=false, exit=false
+
+#### Supporting Features
+This migration enables:
+- Separate entry/exit gate scanning
+- Enhanced visitor flow tracking
+- Security checkpoint management
+- Building access compliance
+- Real-time visitor location awareness within building
+- Advanced analytics on visitor entry/exit patterns
+
+#### Function Details
+The new `process_qr_entry_exit_scan()` function provides:
+- **Validation**: QR code format and expiry checking
+- **Status Management**: Automatic visit status transitions
+- **Logging**: Comprehensive action logging with security officer details
+- **Notifications**: Real-time alerts to hosts about visitor entry/exit
+- **Error Handling**: Detailed error messages for invalid operations
+
+#### Usage Example
+```sql
+-- Entry scan
+SELECT * FROM process_qr_entry_exit_scan(
+    'SG_ABC123DEF456', 
+    'entry', 
+    '550e8400-e29b-41d4-a716-446655440000',
+    'Main Gate',
+    POINT(-6.5244, 3.3792)
+);
+
+-- Exit scan  
+SELECT * FROM process_qr_entry_exit_scan(
+    'SG_ABC123DEF456',
+    'exit',
+    '550e8400-e29b-41d4-a716-446655440000', 
+    'Main Gate',
+    POINT(-6.5244, 3.3792)
+);
+```
+
+This migration represents a significant enhancement to the SafeGuard system's access control capabilities, providing building administrators and security personnel with granular control over visitor movement tracking.
 
 ---
 

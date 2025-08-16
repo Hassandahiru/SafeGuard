@@ -1,0 +1,68 @@
+[
+[ 
+  {
+  "email": "ummiahmed@gmail.com",
+  "password": "ColdDay@1975",
+  "remember_me": true,
+  "device_name": "Postman Test Client",
+  "location": "Lagos, Nigeria"
+  },
+  {
+  "email": "bellotijjani@gmaill.com",
+  "password": "ColdDay@1975",
+  "first_name": "Bello",
+  "last_name": "Tijjani",
+  "phone": "+2348188303566",
+  "building_email": "lakeview@lakeviewhomes.com",
+  "apartment_number": "Flat-B1",
+  "emergency_contact_name": "Jane Campion",
+  "emergency_contact_phone": "+2348188404504",
+  "terms_accepted": true
+}
+],
+[{
+  "email": "david.wilson@metroplex.com",
+  "password": "ResidentSecure2024!",
+  "first_name": "David",
+  "last_name": "Wilson",
+  "phone": "+1555-0103",
+  "building_email": "superadmin@metroplex.com",
+  "apartment_number": "15B",
+  "emergency_contact_name": "Sarah Wilson",
+  "emergency_contact_phone": "+1555-0203"
+},
+{
+  "email": "amos.dauda@gmail.com",
+  "password": "Qwerty@123",
+  "first_name": "Dauda",
+  "last_name": "Amos",
+  "phone": "+2348163753687",
+  "building_email": "admin@dantatagroup.com",
+  "apartment_number": "15B",
+  "emergency_contact_name": "Hauwa Dauda",
+  "emergency_contact_phone": "+2348165480756"
+},
+{
+  "email": "najib@gmail.com",
+  "password": "ColdDay@1975",
+  "first_name": "Najib",
+  "last_name": "Nipsey",
+  "phone": "+2348163753587",
+  "building_email": "dantata@dantatagroup.com",
+  "apartment_number": "16B",
+  "emergency_contact_name": "Moses Dauda",
+  "emergency_contact_phone": "+2348165490756"
+}, 
+{
+  "building_email": "dantata@dantatagroup.com",
+  "email": "lex@gmail.com",
+  "password": "ColdDay@1975",
+  "first_name": "Alex",
+  "last_name": "Steel",
+  "phone": "+2348012345710",
+  "apartment_number": "B205",
+  "emergency_contact_name": "Bob Smith",
+  "emergency_contact_phone": "+2348012345711"
+}
+]
+]

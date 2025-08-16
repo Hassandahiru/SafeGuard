@@ -67,7 +67,7 @@ const commonValidations = {
   password: (field = 'password') => body(field)
     .isLength({ min: 8 })
     .withMessage('Password must be at least 8 characters long')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/)
     .withMessage('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
 
   name: (field) => body(field)
@@ -163,6 +163,10 @@ const buildingValidations = {
       .withMessage('Postal code must be between 3 and 20 characters'),
     commonValidations.phone().optional(),
     commonValidations.email().optional(),
+    body('website')
+      .optional()
+      .isURL({ protocols: ['http', 'https'], require_protocol: true })
+      .withMessage('Website must be a valid URL starting with http:// or https://'),
     body('total_licenses')
       .optional()
       .isInt({ min: 1, max: 10000 })
@@ -186,6 +190,10 @@ const buildingValidations = {
       .withMessage('Postal code must be between 3 and 20 characters'),
     commonValidations.phone().optional(),
     commonValidations.email().optional(),
+    body('website')
+      .optional()
+      .isURL({ protocols: ['http', 'https'], require_protocol: true })
+      .withMessage('Website must be a valid URL starting with http:// or https://'),
     body('total_licenses')
       .optional()
       .isInt({ min: 1, max: 10000 })
@@ -203,7 +211,6 @@ const buildingValidations = {
  */
 const visitValidations = {
   create: [
-    commonValidations.uuid('building_id'),
     commonValidations.requiredString('title'),
     commonValidations.text('description').optional(),
     commonValidations.text('purpose').optional(),
@@ -320,7 +327,6 @@ const visitValidations = {
  */
 const visitorValidations = {
   create: [
-    commonValidations.uuid('building_id'),
     commonValidations.name('name'),
     commonValidations.phone(),
     commonValidations.email().optional(),
@@ -652,9 +658,499 @@ const searchValidations = {
   ]
 };
 
+/**
+ * Admin validation rules
+ */
+const adminValidations = {
+  initialSetup: [
+    // Building details validation
+    commonValidations.requiredString('name', 2, 255),
+    commonValidations.requiredString('address', 10, 500),
+    commonValidations.requiredString('city', 2, 100),
+    commonValidations.requiredString('state', 2, 100),
+    body('country')
+      .optional()
+      .isLength({ min: 2, max: 100 })
+      .withMessage('Country must be between 2 and 100 characters'),
+    body('postalCode')
+      .optional()
+      .isLength({ min: 3, max: 20 })
+      .withMessage('Postal code must be between 3 and 20 characters'),
+    body('buildingPhone')
+      .optional()
+      .isMobilePhone()
+      .withMessage('Building phone must be a valid phone number'),
+    body('buildingEmail')
+      .optional()
+      .isEmail()
+      .normalizeEmail()
+      .withMessage('Building email must be valid'),
+    body('website')
+      .optional()
+      .isURL({ protocols: ['http', 'https'], require_protocol: true })
+      .withMessage('Website must be a valid URL starting with http:// or https://'),
+    body('totalLicenses')
+      .optional()
+      .isInt({ min: 50, max: 1000 })
+      .withMessage('Total licenses must be between 50 and 1000'),
+    body('securityLevel')
+      .optional()
+      .isInt({ min: 1, max: 5 })
+      .withMessage('Security level must be between 1 and 5'),
+    
+    // Super admin details validation
+    body('adminEmail')
+      .isEmail()
+      .normalizeEmail()
+      .withMessage('Admin email must be valid'),
+    commonValidations.password('adminPassword'),
+    commonValidations.name('adminFirstName'),
+    commonValidations.name('adminLastName'),
+    body('adminPhone')
+      .isMobilePhone()
+      .withMessage('Admin phone must be a valid phone number'),
+    body('adminApartment')
+      .optional()
+      .isLength({ min: 1, max: 20 })
+      .withMessage('Admin apartment must be between 1 and 20 characters'),
+    
+    // License data validation
+    body('licenseData')
+      .optional()
+      .isObject()
+      .withMessage('License data must be an object'),
+    body('licenseData.planType')
+      .optional()
+      .isIn(['standard', 'premium', 'enterprise'])
+      .withMessage('Plan type must be one of: standard, premium, enterprise'),
+    body('licenseData.durationMonths')
+      .optional()
+      .isInt({ min: 1, max: 60 })
+      .withMessage('Duration must be between 1 and 60 months'),
+    body('licenseData.amount')
+      .optional()
+      .isNumeric()
+      .withMessage('Amount must be a valid number'),
+    body('licenseData.currency')
+      .optional()
+      .isIn(['NGN', 'USD', 'EUR'])
+      .withMessage('Currency must be one of: NGN, USD, EUR'),
+    body('licenseData.paymentReference')
+      .optional()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Payment reference must be between 1 and 100 characters'),
+    
+    handleValidationErrors
+  ],
+  selfServiceBuildingRegistration: [
+    // Building details validation
+    commonValidations.requiredString('name', 2, 255),
+    commonValidations.requiredString('address', 10, 500),
+    commonValidations.requiredString('city', 2, 100),
+    commonValidations.requiredString('state', 2, 100),
+    body('country')
+      .optional()
+      .isLength({ min: 2, max: 100 })
+      .withMessage('Country must be between 2 and 100 characters'),
+    body('postalCode')
+      .optional()
+      .isLength({ min: 3, max: 20 })
+      .withMessage('Postal code must be between 3 and 20 characters'),
+    body('buildingPhone')
+      .optional()
+      .matches(/^\+?[1-9]\d{1,14}$/)
+      .withMessage('Building phone must be a valid phone number'),
+    body('buildingEmail')
+      .optional()
+      .isEmail()
+      .normalizeEmail()
+      .withMessage('Building email must be valid'),
+    body('website')
+      .optional()
+      .isURL({ protocols: ['http', 'https'], require_protocol: true })
+      .withMessage('Website must be a valid URL starting with http:// or https://'),
+    body('totalLicenses')
+      .optional()
+      .isInt({ min: 50, max: 1000 })
+      .withMessage('Total licenses must be between 50 and 1000'),
+    
+    // Building admin details validation
+    body('adminEmail')
+      .isEmail()
+      .normalizeEmail()
+      .withMessage('Admin email must be valid'),
+    commonValidations.password('adminPassword'),
+    commonValidations.name('adminFirstName'),
+    commonValidations.name('adminLastName'),
+    body('adminPhone')
+      .matches(/^\+?[1-9]\d{1,14}$/)
+      .withMessage('Admin phone must be a valid phone number'),
+    body('adminApartment')
+      .optional()
+      .isLength({ min: 1, max: 20 })
+      .withMessage('Admin apartment must be between 1 and 20 characters'),
+    
+    // Optional company/organization details
+    body('companyName')
+      .optional()
+      .isLength({ min: 2, max: 255 })
+      .withMessage('Company name must be between 2 and 255 characters'),
+    body('contactEmail')
+      .optional()
+      .isEmail()
+      .normalizeEmail()
+      .withMessage('Contact email must be valid'),
+    body('contactPhone')
+      .optional()
+      .matches(/^\+?[1-9]\d{1,14}$/)
+      .withMessage('Contact phone must be a valid phone number'),
+    
+    handleValidationErrors
+  ],
+
+  registerBuilding: [
+    // Building details
+    commonValidations.requiredString('name', 2, 255),
+    commonValidations.requiredString('address', 10, 500),
+    commonValidations.requiredString('city', 2, 100),
+    commonValidations.requiredString('state', 2, 100),
+    body('country')
+      .optional()
+      .isLength({ min: 2, max: 100 })
+      .withMessage('Country must be between 2 and 100 characters'),
+    body('postalCode')
+      .optional()
+      .isLength({ min: 3, max: 20 })
+      .withMessage('Postal code must be between 3 and 20 characters'),
+    commonValidations.phone().optional(),
+    commonValidations.email().optional(),
+    body('website')
+      .optional()
+      .isURL({ protocols: ['http', 'https'], require_protocol: true })
+      .withMessage('Website must be a valid URL starting with http:// or https://'),
+    body('totalLicenses')
+      .optional()
+      .isInt({ min: 50, max: 1000 })
+      .withMessage('Total licenses must be between 50 and 1000'),
+    body('securityLevel')
+      .optional()
+      .isInt({ min: 1, max: 5 })
+      .withMessage('Security level must be between 1 and 5'),
+    
+    // Building admin details
+    body('adminEmail')
+      .isEmail()
+      .normalizeEmail()
+      .withMessage('Admin email must be valid'),
+    commonValidations.password('adminPassword'),
+    commonValidations.name('adminFirstName'),
+    commonValidations.name('adminLastName'),
+    body('adminPhone')
+      .isMobilePhone()
+      .withMessage('Admin phone must be a valid phone number'),
+    body('adminApartment')
+      .optional()
+      .isLength({ min: 1, max: 20 })
+      .withMessage('Admin apartment must be between 1 and 20 characters'),
+    
+    // License data
+    body('licenseData')
+      .optional()
+      .isObject()
+      .withMessage('License data must be an object'),
+    body('licenseData.planType')
+      .optional()
+      .isIn(['standard', 'premium', 'enterprise'])
+      .withMessage('Plan type must be one of: standard, premium, enterprise'),
+    body('licenseData.durationMonths')
+      .optional()
+      .isInt({ min: 1, max: 60 })
+      .withMessage('Duration must be between 1 and 60 months'),
+    body('licenseData.amount')
+      .optional()
+      .isNumeric()
+      .withMessage('Amount must be a valid number'),
+    body('licenseData.currency')
+      .optional()
+      .isIn(['NGN', 'USD', 'EUR'])
+      .withMessage('Currency must be one of: NGN, USD, EUR'),
+    
+    handleValidationErrors
+  ],
+
+  createBuildingAdmin: [
+    commonValidations.email(),
+    commonValidations.password(),
+    commonValidations.name('firstName'),
+    commonValidations.name('lastName'),
+    commonValidations.phone(),
+    commonValidations.uuid('buildingId'),
+    body('apartmentNumber')
+      .optional()
+      .isLength({ min: 1, max: 20 })
+      .withMessage('Apartment number must be between 1 and 20 characters'),
+    handleValidationErrors
+  ],
+
+  allocateLicense: [
+    commonValidations.uuid('buildingId'),
+    body('planType')
+      .optional()
+      .isIn(['standard', 'premium', 'enterprise'])
+      .withMessage('Plan type must be one of: standard, premium, enterprise'),
+    body('totalLicenses')
+      .optional()
+      .isInt({ min: 50, max: 1000 })
+      .withMessage('Total licenses must be between 50 and 1000'),
+    body('durationMonths')
+      .optional()
+      .isInt({ min: 1, max: 60 })
+      .withMessage('Duration must be between 1 and 60 months'),
+    body('amount')
+      .optional()
+      .isNumeric()
+      .withMessage('Amount must be a valid number'),
+    body('currency')
+      .optional()
+      .isIn(['NGN', 'USD', 'EUR'])
+      .withMessage('Currency must be one of: NGN, USD, EUR'),
+    body('paymentReference')
+      .optional()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Payment reference must be between 1 and 100 characters'),
+    body('features')
+      .optional()
+      .isObject()
+      .withMessage('Features must be an object'),
+    handleValidationErrors
+  ],
+
+  extendLicense: [
+    commonValidations.uuid('licenseId'),
+    body('months')
+      .isInt({ min: 1, max: 60 })
+      .withMessage('Months must be between 1 and 60'),
+    handleValidationErrors
+  ],
+
+  suspendLicense: [
+    commonValidations.uuid('licenseId'),
+    commonValidations.requiredString('reason', 10, 500),
+    handleValidationErrors
+  ],
+
+  getBuildingDetails: [
+    commonValidations.uuid('buildingId'),
+    handleValidationErrors
+  ],
+
+  getLicenseStats: [
+    commonValidations.uuid('licenseId'),
+    handleValidationErrors
+  ],
+
+  getAllBuildings: [
+    query('page')
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage('Page must be a positive integer'),
+    query('limit')
+      .optional()
+      .isInt({ min: 1, max: 100 })
+      .withMessage('Limit must be between 1 and 100'),
+    query('search')
+      .optional()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Search query must be between 1 and 100 characters'),
+    query('city')
+      .optional()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('City must be between 1 and 100 characters'),
+    query('state')
+      .optional()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('State must be between 1 and 100 characters'),
+    query('status')
+      .optional()
+      .isIn(['active', 'inactive', 'all'])
+      .withMessage('Status must be one of: active, inactive, all'),
+    handleValidationErrors
+  ],
+
+  getAllLicenses: [
+    query('page')
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage('Page must be a positive integer'),
+    query('limit')
+      .optional()
+      .isInt({ min: 1, max: 100 })
+      .withMessage('Limit must be between 1 and 100'),
+    query('status')
+      .optional()
+      .isIn(['active', 'inactive', 'suspended', 'expired'])
+      .withMessage('Status must be one of: active, inactive, suspended, expired'),
+    query('buildingId')
+      .optional()
+      .isUUID()
+      .withMessage('Building ID must be a valid UUID'),
+    query('expiringOnly')
+      .optional()
+      .isBoolean()
+      .withMessage('Expiring only must be true or false'),
+    handleValidationErrors
+  ]
+};
+
+/**
+ * Simple validation middleware for admin routes
+ * @param {Object} schema - Validation schema
+ * @returns {Function} Express middleware
+ */
+const validateRequest = (schema) => {
+  return (req, res, next) => {
+    const errors = [];
+
+    // Validate body
+    if (schema.body) {
+      for (const [field, rules] of Object.entries(schema.body)) {
+        const value = req.body[field];
+        
+        // Check if field is required
+        if (rules.required && (value === undefined || value === null || value === '')) {
+          errors.push({ field, message: `${field} is required` });
+          continue;
+        }
+
+        // Skip validation if field is optional and empty
+        if (rules.optional && (value === undefined || value === null || value === '')) {
+          continue;
+        }
+
+        // Type validation
+        if (rules.type && value !== undefined) {
+          if (rules.type === 'string' && typeof value !== 'string') {
+            errors.push({ field, message: `${field} must be a string` });
+          } else if (rules.type === 'number' && typeof value !== 'number') {
+            errors.push({ field, message: `${field} must be a number` });
+          } else if (rules.type === 'boolean' && typeof value !== 'boolean') {
+            errors.push({ field, message: `${field} must be a boolean` });
+          } else if (rules.type === 'object' && typeof value !== 'object') {
+            errors.push({ field, message: `${field} must be an object` });
+          }
+        }
+
+        // String length validation
+        if (rules.minLength && typeof value === 'string' && value.length < rules.minLength) {
+          errors.push({ field, message: `${field} must be at least ${rules.minLength} characters` });
+        }
+        if (rules.maxLength && typeof value === 'string' && value.length > rules.maxLength) {
+          errors.push({ field, message: `${field} must be at most ${rules.maxLength} characters` });
+        }
+
+        // Number range validation
+        if (rules.min && typeof value === 'number' && value < rules.min) {
+          errors.push({ field, message: `${field} must be at least ${rules.min}` });
+        }
+        if (rules.max && typeof value === 'number' && value > rules.max) {
+          errors.push({ field, message: `${field} must be at most ${rules.max}` });
+        }
+
+        // Email validation
+        if (rules.format === 'email' && typeof value === 'string' && !isValidEmail(value)) {
+          errors.push({ field, message: `${field} must be a valid email` });
+        }
+
+        // UUID validation
+        if (rules.format === 'uuid' && typeof value === 'string' && !isValidUUID(value)) {
+          errors.push({ field, message: `${field} must be a valid UUID` });
+        }
+
+        // Enum validation
+        if (rules.enum && !rules.enum.includes(value)) {
+          errors.push({ field, message: `${field} must be one of: ${rules.enum.join(', ')}` });
+        }
+      }
+    }
+
+    // Validate params
+    if (schema.params) {
+      for (const [field, rules] of Object.entries(schema.params)) {
+        const value = req.params[field];
+        
+        if (rules.required && !value) {
+          errors.push({ field, message: `${field} parameter is required` });
+          continue;
+        }
+
+        // UUID validation for params
+        if (rules.format === 'uuid' && value && !isValidUUID(value)) {
+          errors.push({ field, message: `${field} must be a valid UUID` });
+        }
+      }
+    }
+
+    // Validate query
+    if (schema.query) {
+      for (const [field, rules] of Object.entries(schema.query)) {
+        const value = req.query[field];
+        
+        if (rules.required && !value) {
+          errors.push({ field, message: `${field} query parameter is required` });
+          continue;
+        }
+
+        // Skip validation if field is optional and empty
+        if (rules.optional && !value) {
+          continue;
+        }
+
+        // Type validation for query params
+        if (rules.type === 'number' && value) {
+          const numValue = Number(value);
+          if (isNaN(numValue)) {
+            errors.push({ field, message: `${field} must be a number` });
+          } else {
+            req.query[field] = numValue;
+          }
+        }
+
+        if (rules.type === 'boolean' && value) {
+          if (value !== 'true' && value !== 'false') {
+            errors.push({ field, message: `${field} must be true or false` });
+          } else {
+            req.query[field] = value === 'true';
+          }
+        }
+
+        // Number range validation for query
+        if (rules.min && typeof req.query[field] === 'number' && req.query[field] < rules.min) {
+          errors.push({ field, message: `${field} must be at least ${rules.min}` });
+        }
+        if (rules.max && typeof req.query[field] === 'number' && req.query[field] > rules.max) {
+          errors.push({ field, message: `${field} must be at most ${rules.max}` });
+        }
+
+        // Enum validation for query
+        if (rules.enum && value && !rules.enum.includes(value)) {
+          errors.push({ field, message: `${field} must be one of: ${rules.enum.join(', ')}` });
+        }
+      }
+    }
+
+    if (errors.length > 0) {
+      const validationError = new ValidationError('Validation failed', errors);
+      return next(validationError);
+    }
+
+    next();
+  };
+};
+
 export {
   sanitizeInputs,
   handleValidationErrors,
+  validateRequest,
   userValidations,
   buildingValidations,
   visitValidations,
@@ -663,5 +1159,6 @@ export {
   visitorBanValidations,
   paginationValidations,
   searchValidations,
+  adminValidations,
   commonValidations
 };
