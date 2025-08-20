@@ -671,6 +671,31 @@ class Visit extends BaseModel {
   }
 
   /**
+   * Get upcoming visits for security dashboard (visits awaiting entry)
+   * @param {string} buildingId - Building ID
+   * @returns {Promise<Array>} Upcoming visits where entry is false
+   */
+  async getUpcomingVisitsForSecurity(buildingId) {
+    const query = `
+      SELECT v.*, u.first_name as host_first_name, u.last_name as host_last_name,
+             u.apartment_number, u.phone as host_phone,
+             COUNT(vv.visitor_id) as visitor_count
+      FROM ${this.tableName} v
+      JOIN users u ON v.host_id = u.id
+      LEFT JOIN visit_visitors vv ON v.id = vv.visit_id
+      WHERE v.building_id = $1 
+        AND v.entry = false
+        AND v.status NOT IN ($2, $3)
+        AND v.expected_start >= NOW() - INTERVAL '6 hours'
+      GROUP BY v.id, u.first_name, u.last_name, u.apartment_number, u.phone
+      ORDER BY v.expected_start ASC
+    `;
+
+    const result = await this.query(query, [buildingId, VISIT_STATUS.CANCELLED, VISIT_STATUS.EXPIRED]);
+    return result.rows;
+  }
+
+  /**
    * Get today's scanned visits for security dashboard
    * @param {string} buildingId - Building ID
    * @param {Date} startOfDay - Start of day

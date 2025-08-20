@@ -116,6 +116,9 @@ class DashboardController {
     // Get all visits scanned today (entry or exit)
     const todaysScannedVisits = await Visit.getTodaysScannedVisits(user.building_id, startOfDay, endOfDay);
 
+    // Get upcoming visits (awaiting entry)
+    const upcomingVisits = await Visit.getUpcomingVisitsForSecurity(user.building_id);
+
     // Get all residents in the building
     const buildingResidents = await User.getBuildingResidents(user.building_id);
 
@@ -128,6 +131,7 @@ class DashboardController {
     return {
       user_role: user.role,
       todays_scanned_visits: todaysScannedVisits,
+      upcoming_visits: upcomingVisits,
       building_residents: buildingResidents,
       active_visits_inside: activeVisitsInside,
       statistics: stats,
