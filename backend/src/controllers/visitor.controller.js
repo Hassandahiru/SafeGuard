@@ -184,22 +184,9 @@ class VisitorController {
       throw new AuthorizationError('Access denied to this visitor invitation');
     }
 
-    // Get QR code if visit is active
-    let qrCode = null;
-    if (visitData.status === 'confirmed' || visitData.status === 'active') {
-      try {
-        qrCode = await QRCodeService.generateVisitQRCode(visitData);
-      } catch (error) {
-        visitorLogger.warn('Failed to generate QR code for visit', {
-          visitId,
-          error: error.message
-        });
-      }
-    }
-
     res.json(createResponse(true, {
       visit: visitData,
-      qr_code: qrCode
+      qr_code: null
     }, 'Visitor invitation details retrieved successfully'));
   });
 
@@ -227,11 +214,8 @@ class VisitorController {
       throw new ConflictError('Cannot update completed or cancelled visitor invitations');
     }
 
-    // Update visit
-    const updatedVisit = await Visit.update(visitId, {
-      ...updateData,
-      updated_at: new Date()
-    });
+    // Update visit (updated_at is handled automatically by BaseModel)
+    const updatedVisit = await Visit.update(visitId, updateData);
 
     // If visitors were updated, handle visitor changes
     if (updateData.visitors) {

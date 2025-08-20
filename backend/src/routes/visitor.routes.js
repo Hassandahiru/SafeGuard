@@ -50,7 +50,7 @@ router.get('/invitations',
  * @access  Owner, Building Admin, Super Admin, Security
  */
 router.get('/invitations/:visitId',
-  requireBuildingAccess,
+  requireResidentAccess,
   visitValidations.getById,
   visitorController.getVisitorInvitationDetails
 );
@@ -116,7 +116,7 @@ router.post('/scan/exit',
  * @access  Owner, Building Admin, Super Admin, Security
  */
 router.get('/invitations/:visitId/history',
-  requireBuildingAccess,
+  requireResidentAccess,
   visitValidations.getById,
   visitorController.getVisitorHistory
 );
