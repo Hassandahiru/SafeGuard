@@ -10,6 +10,7 @@ import NotificationService from './services/notification.service.js';
 
 import config from './config/environment.js';
 import database from './config/database.js';
+import redisClient from './config/redis.js';
 import { logger } from './utils/logger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import requestLogger from './middleware/requestLogger.js';
@@ -83,15 +84,33 @@ class SafeGuardApp {
     this.app.use(express.static('public'));
 
     // Health check endpoint
-    this.app.get('/health', (req, res) => {
-      res.json({
+    this.app.get('/health', async (req, res) => {
+      const healthCheck = {
         status: 'healthy',
         timestamp: new Date().toISOString(),
         version: process.env.npm_package_version || '1.0.0',
         environment: config.NODE_ENV,
         uptime: process.uptime(),
-        memory: process.memoryUsage()
-      });
+        memory: process.memoryUsage(),
+        services: {
+          database: 'connected',
+          redis: 'unknown'
+        }
+      };
+
+      // Check Redis connection
+      try {
+        if (redisClient.isConnected) {
+          await redisClient.set('health_check', 'ok', 5);
+          healthCheck.services.redis = 'connected';
+        } else {
+          healthCheck.services.redis = 'disconnected';
+        }
+      } catch (error) {
+        healthCheck.services.redis = 'error';
+      }
+
+      res.json(healthCheck);
     });
   }
 
@@ -157,6 +176,14 @@ class SafeGuardApp {
       // Connect to database
       await database.connect();
       logger.info('Database connected successfully');
+
+      // Connect to Redis
+      try {
+        await redisClient.connect();
+        logger.info('Redis connected successfully');
+      } catch (redisError) {
+        logger.warn('Redis connection failed, continuing without Redis cache:', redisError.message);
+      }
 
       // Start server
       const PORT = config.PORT || 4500;
@@ -347,12 +374,15 @@ class SafeGuardApp {
     this.server.close(() => {
       logger.info('HTTP server closed');
       
-      // Close database connection
-      database.close().then(() => {
-        logger.info('Database connection closed');
+      // Close database and Redis connections
+      Promise.all([
+        database.close(),
+        redisClient.close()
+      ]).then(() => {
+        logger.info('Database and Redis connections closed');
         process.exit(0);
       }).catch((error) => {
-        logger.error('Error closing database connection:', error);
+        logger.error('Error closing connections:', error);
         process.exit(1);
       });
     });

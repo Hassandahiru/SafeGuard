@@ -4,6 +4,7 @@ import { AuthenticationError, AuthorizationError } from '../utils/errors/index.j
 import { USER_ROLES } from '../utils/constants.js';
 import User from '../models/User.js';
 import config from '../config/environment.js';
+import redisClient from '../config/redis.js';
 
 /**
  * Middleware to authenticate JWT token
@@ -17,6 +18,20 @@ const authenticate = async (req, res, next) => {
     }
 
     const token = authHeader.substring(7);
+
+    // Check if token is blacklisted
+    try {
+      const isBlacklisted = await redisClient.exists(`blacklist:${token}`);
+      if (isBlacklisted) {
+        throw AuthenticationError.invalidToken();
+      }
+    } catch (redisError) {
+      // If Redis is down, log warning but continue (don't block authentication)
+      auth.warn('Redis check failed during authentication', {
+        error: redisError.message,
+        ip: req.ip
+      });
+    }
 
     // Verify token
     let decoded;

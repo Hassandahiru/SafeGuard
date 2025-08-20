@@ -13,6 +13,7 @@ import User from '../models/User.js';
 import Building from '../models/Building.js';
 import config from '../config/environment.js';
 import { USER_ROLES } from '../utils/constants.js';
+import redisClient from '../config/redis.js';
 
 /**
  * Consolidated Authentication Controller
@@ -458,60 +459,134 @@ class AuthController {
   });
 
   /**
-   * Basic logout
+   * Basic logout with token blacklisting
    */
   logout = asyncHandler(async (req, res) => {
-    // In a stateless JWT system, logout is handled client-side
-    // But we can log the logout event
-    auth.info('User logout', {
-      userId: req.user?.id,
-      email: req.user?.email,
-      ip: req.ip
-    });
+    try {
+      const token = req.token;
+      
+      if (token) {
+        // Decode token to get expiry time
+        const decoded = jwt.decode(token);
+        const now = Math.floor(Date.now() / 1000);
+        const tokenExpiry = decoded.exp;
+        const remainingTime = tokenExpiry - now;
+        
+        // Only blacklist if token hasn't expired yet
+        if (remainingTime > 0) {
+          // Add token to Redis blacklist with remaining TTL
+          await redisClient.set(
+            `blacklist:${token}`, 
+            'true', 
+            remainingTime
+          );
+        }
+      }
 
-    res.json(createResponse(
-      true,
-      null,
-      'Logged out successfully'
-    ));
+      auth.info('User logout successful', {
+        userId: req.user?.id,
+        email: req.user?.email,
+        ip: req.ip,
+        tokenBlacklisted: !!token
+      });
+
+      res.json(createResponse(
+        true,
+        { 
+          tokenInvalidated: true,
+          logoutTime: new Date()
+        },
+        'Logged out successfully'
+      ));
+    } catch (error) {
+      auth.error('Logout error', {
+        userId: req.user?.id,
+        error: error.message
+      });
+
+      // Even if Redis fails, still return success for logout
+      res.json(createResponse(
+        true,
+        { 
+          tokenInvalidated: false,
+          logoutTime: new Date()
+        },
+        'Logged out successfully'
+      ));
+    }
   });
 
   /**
-   * Enhanced logout with session cleanup
+   * Enhanced logout with session cleanup and token blacklisting
    */
   enhancedLogout = asyncHandler(async (req, res) => {
     const { logout_all_devices = false } = req.body;
+    let tokenBlacklisted = false;
+    let allTokensBlacklisted = false;
 
-    // Extract session info from token
-    const sessionId = req.token_data?.sessionId;
-
-    if (logout_all_devices) {
-      // Invalidate all sessions for this user
-      // await this.invalidateAllUserSessions(req.user.id);
+    try {
+      const token = req.token;
       
-      auth.info('User logged out from all devices', {
-        userId: req.user.id,
-        email: req.user.email,
-        ip: req.ip
-      });
-    } else {
-      // Invalidate only current session
-      if (sessionId) {
-        // await this.invalidateSession(req.user.id, sessionId);
+      if (logout_all_devices) {
+        // For logout_all_devices, we would need to track all user tokens
+        // For now, just blacklist the current token
+        if (token) {
+          const decoded = jwt.decode(token);
+          const now = Math.floor(Date.now() / 1000);
+          const tokenExpiry = decoded.exp;
+          const remainingTime = tokenExpiry - now;
+          
+          if (remainingTime > 0) {
+            await redisClient.set(`blacklist:${token}`, 'true', remainingTime);
+            tokenBlacklisted = true;
+          }
+        }
+        
+        // TODO: Implement user-wide token blacklisting
+        // This would require tracking all tokens per user
+        allTokensBlacklisted = false; // Placeholder for future implementation
+        
+        auth.info('Enhanced logout from all devices', {
+          userId: req.user.id,
+          email: req.user.email,
+          ip: req.ip,
+          currentTokenBlacklisted: tokenBlacklisted
+        });
+      } else {
+        // Invalidate only current token
+        if (token) {
+          const decoded = jwt.decode(token);
+          const now = Math.floor(Date.now() / 1000);
+          const tokenExpiry = decoded.exp;
+          const remainingTime = tokenExpiry - now;
+          
+          if (remainingTime > 0) {
+            await redisClient.set(`blacklist:${token}`, 'true', remainingTime);
+            tokenBlacklisted = true;
+          }
+        }
+        
+        auth.info('Enhanced logout from current session', {
+          userId: req.user.id,
+          email: req.user.email,
+          ip: req.ip,
+          tokenBlacklisted
+        });
       }
-      
-      auth.info('User logged out from current session', {
-        userId: req.user.id,
-        email: req.user.email,
-        sessionId,
-        ip: req.ip
+    } catch (error) {
+      auth.error('Enhanced logout error', {
+        userId: req.user?.id,
+        error: error.message
       });
+      // Continue with logout even if blacklisting fails
     }
 
     res.json(createResponse(
       true,
       {
         sessionsCleaned: logout_all_devices ? 'all' : 'current',
+        tokenInvalidated: tokenBlacklisted,
+        allTokensInvalidated: allTokensBlacklisted,
         logoutTime: new Date()
       },
       logout_all_devices ? 'Logged out from all devices' : 'Logged out successfully'

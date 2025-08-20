@@ -45,6 +45,7 @@ class VisitorBanController {
 
     const banData = {
       user_id: userId,
+      building_id: req.user.building_id,
       name: name.trim(),
       phone,
       reason: reason.trim(),
