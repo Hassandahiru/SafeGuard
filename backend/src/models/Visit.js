@@ -471,44 +471,16 @@ class Visit extends BaseModel {
    * @returns {Promise<Object>} Entry scan result
    */
   async processEntryQRScan(qrCode, securityOfficerId, gateNumber = null, location = null) {
-    try {
-      // Find visit by QR code
-      const visit = await this.findByQRCode(qrCode);
-      if (!visit) {
-        throw new QRCodeError('Invalid QR code');
-      }
+    const result = await this.query(`
+      SELECT * FROM process_qr_entry_exit_scan($1, $2, $3, $4, $5)
+    `, [qrCode, 'entry', securityOfficerId, gateNumber, location]);
 
-      // Check if visit can be entered
-      if (visit.entry) {
-        throw new QRCodeError('Visit has already been entered');
-      }
-
-      if (!['pending', 'confirmed'].includes(visit.status)) {
-        throw new QRCodeError('Visit is not in a valid state for entry');
-      }
-
-      // Update visit for entry
-      const updatedVisit = await this.update(visit.id, {
-        entry: true,
-        status: 'active',
-        actual_start: new Date(),
-        updated_at: new Date()
-      });
-
-      // Log the entry
-      await this.query(`
-        INSERT INTO visit_logs (visit_id, action, officer_id, location, timestamp, notes)
-        VALUES ($1, $2, $3, $4, NOW(), $5)
-      `, [visit.id, 'entered', securityOfficerId, JSON.stringify(location), `Entry at gate ${gateNumber || 'unknown'}`]);
-
-      return {
-        success: true,
-        message: 'Entry recorded successfully',
-        visit_data: updatedVisit
-      };
-    } catch (error) {
-      throw new QRCodeError(`Entry scan failed: ${error.message}`);
+    const scanResult = result.rows[0];
+    if (!scanResult.success) {
+      throw new QRCodeError(scanResult.message);
     }
+
+    return scanResult;
   }
 
   /**
@@ -520,48 +492,16 @@ class Visit extends BaseModel {
    * @returns {Promise<Object>} Exit scan result
    */
   async processExitQRScan(qrCode, securityOfficerId, gateNumber = null, location = null) {
-    try {
-      // Find visit by QR code
-      const visit = await this.findByQRCode(qrCode);
-      if (!visit) {
-        throw new QRCodeError('Invalid QR code');
-      }
+    const result = await this.query(`
+      SELECT * FROM process_qr_entry_exit_scan($1, $2, $3, $4, $5)
+    `, [qrCode, 'exit', securityOfficerId, gateNumber, location]);
 
-      // Check if visit can be exited
-      if (!visit.entry) {
-        throw new QRCodeError('Visit has not entered yet');
-      }
-
-      if (visit.exit) {
-        throw new QRCodeError('Visit has already been exited');
-      }
-
-      if (visit.status !== 'active') {
-        throw new QRCodeError('Visit is not in active state for exit');
-      }
-
-      // Update visit for exit
-      const updatedVisit = await this.update(visit.id, {
-        exit: true,
-        status: 'completed',
-        actual_end: new Date(),
-        updated_at: new Date()
-      });
-
-      // Log the exit
-      await this.query(`
-        INSERT INTO visit_logs (visit_id, action, officer_id, location, timestamp, notes)
-        VALUES ($1, $2, $3, $4, NOW(), $5)
-      `, [visit.id, 'exited', securityOfficerId, JSON.stringify(location), `Exit at gate ${gateNumber || 'unknown'}`]);
-
-      return {
-        success: true,
-        message: 'Exit recorded successfully',
-        visit_data: updatedVisit
-      };
-    } catch (error) {
-      throw new QRCodeError(`Exit scan failed: ${error.message}`);
+    const scanResult = result.rows[0];
+    if (!scanResult.success) {
+      throw new QRCodeError(scanResult.message);
     }
+
+    return scanResult;
   }
 
   /**
@@ -912,50 +852,16 @@ class Visit extends BaseModel {
   // =============================================
 
   /**
-   * Get visit with visitors data using direct query (not database function)
+   * Get visit with visitors using database function
    * @param {string} visitId - Visit ID
    * @returns {Promise<Object>} Visit with visitors data
    */
   async getVisitWithVisitors(visitId) {
-    try {
-      const query = `
-        SELECT 
-          v.*,
-          u.first_name || ' ' || u.last_name as host_name,
-          u.apartment_number,
-          u.phone as host_phone,
-          u.email as host_email,
-          b.name as building_name,
-          COALESCE(
-            jsonb_agg(
-              jsonb_build_object(
-                'id', vis.id,
-                'name', vis.name,
-                'phone', vis.phone,
-                'email', vis.email,
-                'company', vis.company,
-                'status', vv.status,
-                'arrival_time', vv.arrival_time,
-                'departure_time', vv.departure_time,
-                'added_at', vv.added_at
-              )
-            ) FILTER (WHERE vis.id IS NOT NULL),
-            '[]'::jsonb
-          ) as visitors
-        FROM ${this.tableName} v
-        JOIN users u ON v.host_id = u.id
-        JOIN buildings b ON v.building_id = b.id
-        LEFT JOIN visit_visitors vv ON v.id = vv.visit_id
-        LEFT JOIN visitors vis ON vv.visitor_id = vis.id
-        WHERE v.id = $1
-        GROUP BY v.id, u.first_name, u.last_name, u.apartment_number, u.phone, u.email, b.name
-      `;
+    const result = await this.query(`
+      SELECT * FROM visit_visitors($1)
+    `, [visitId]);
 
-      const result = await this.query(query, [visitId]);
-      return result.rows[0] || null;
-    } catch (error) {
-      throw new DatabaseError(`Failed to get visit with visitors: ${error.message}`);
-    }
+    return result.rows[0]?.visit_data || null;
   }
 
   /**
@@ -973,55 +879,18 @@ class Visit extends BaseModel {
   }
 
   /**
-   * Process QR scan using direct query (not database function)
+   * Process QR scan using database function
    * @param {string} qrCode - QR code
    * @param {string} securityOfficerId - Security officer ID
    * @param {string} action - Scan action
    * @returns {Promise<Object>} Scan result
    */
   async processQRScanWithFunction(qrCode, securityOfficerId, action) {
-    try {
-      // Find visit by QR code
-      const visit = await this.findByQRCode(qrCode);
-      if (!visit) {
-        return { success: false, message: 'Invalid QR code', visit_data: null };
-      }
+    const result = await this.query(`
+      SELECT * FROM process_visit_qr_scan($1, $2, $3)
+    `, [qrCode, securityOfficerId, action]);
 
-      // Check visit status
-      if (['cancelled', 'expired', 'completed'].includes(visit.status)) {
-        return { success: false, message: 'Visit is not active', visit_data: visit };
-      }
-
-      // Process based on action
-      let updateData = {};
-      let logAction = '';
-      let message = '';
-
-      if (action === 'entry' && !visit.entry) {
-        updateData = { entry: true, status: 'active', actual_start: new Date() };
-        logAction = 'entered';
-        message = 'Entry recorded successfully';
-      } else if (action === 'exit' && visit.entry && !visit.exit) {
-        updateData = { exit: true, status: 'completed', actual_end: new Date() };
-        logAction = 'exited';
-        message = 'Exit recorded successfully';
-      } else {
-        return { success: false, message: 'Invalid scan action or already processed', visit_data: visit };
-      }
-
-      // Update visit
-      const updatedVisit = await this.update(visit.id, updateData);
-
-      // Log the action
-      await this.query(`
-        INSERT INTO visit_logs (visit_id, action, officer_id, timestamp, notes)
-        VALUES ($1, $2, $3, NOW(), $4)
-      `, [visit.id, logAction, securityOfficerId, `QR scan ${action}`]);
-
-      return { success: true, message, visit_data: updatedVisit };
-    } catch (error) {
-      throw new DatabaseError(`Failed to process QR scan: ${error.message}`);
-    }
+    return result.rows[0];
   }
 
   /**
@@ -1030,30 +899,11 @@ class Visit extends BaseModel {
    * @returns {Promise<Array>} Visit history
    */
   async getVisitHistoryById(visitId) {
-    try {
-      const query = `
-        SELECT 
-          vl.id as log_id,
-          vl.visit_id,
-          vl.action,
-          vl.security_officer,
-          vl.location,
-          vl.timestamp,
-          vl.notes,
-          vl.gate_number,
-          u.first_name || ' ' || u.last_name as officer_name,
-          u.role as officer_role
-        FROM visit_logs vl
-        LEFT JOIN users u ON vl.security_officer = u.id
-        WHERE vl.visit_id = $1
-        ORDER BY vl.timestamp DESC
-      `;
+    const result = await this.query(`
+      SELECT * FROM get_visit_history($1)
+    `, [visitId]);
 
-      const result = await this.query(query, [visitId]);
-      return result.rows;
-    } catch (error) {
-      throw new DatabaseError(`Failed to get visit history: ${error.message}`);
-    }
+    return result.rows;
   }
 
   /**

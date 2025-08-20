@@ -14,13 +14,9 @@ import {
 const router = express.Router();
 
 // Apply authentication to all routes
-router.use(authenticate);
-
 // Apply input sanitization to all routes
-router.use(sanitizeInputs);
-
 // Apply resident access requirement to all routes
-router.use(requireResidentAccess);
+router.use(authenticate, sanitizeInputs, requireResidentAccess);
 
 /**
  * @route   POST /api/frequent-visitors
@@ -40,15 +36,6 @@ router.post('/',
 router.get('/',
   paginationValidations.paginate,
   frequentVisitorController.getFrequentVisitors
-);
-
-/**
- * @route   GET /api/frequent-visitors/available
- * @desc    Get available visitors to add to frequent list
- * @access  Resident, Building Admin, Super Admin
- */
-router.get('/available',
-  frequentVisitorController.getAvailableVisitors
 );
 
 /**
