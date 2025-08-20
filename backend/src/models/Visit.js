@@ -650,6 +650,27 @@ class Visit extends BaseModel {
   }
 
   /**
+   * Get upcoming visits for resident dashboard (visits not yet entered)
+   * @param {string} hostId - Host user ID
+   * @returns {Promise<Array>} Upcoming visits where entry is false
+   */
+  async getUpcomingVisitsForResident(hostId) {
+    const query = `
+      SELECT v.*, COUNT(vv.visitor_id) as visitor_count
+      FROM ${this.tableName} v
+      LEFT JOIN visit_visitors vv ON v.id = vv.visit_id
+      WHERE v.host_id = $1 
+        AND v.entry = false
+        AND v.status NOT IN ($2, $3)
+      GROUP BY v.id
+      ORDER BY v.expected_start ASC
+    `;
+
+    const result = await this.query(query, [hostId, VISIT_STATUS.CANCELLED, VISIT_STATUS.EXPIRED]);
+    return result.rows;
+  }
+
+  /**
    * Get today's scanned visits for security dashboard
    * @param {string} buildingId - Building ID
    * @param {Date} startOfDay - Start of day
@@ -665,19 +686,19 @@ class Visit extends BaseModel {
                   WHEN v.entry = true AND v.exit = true THEN 'completed'
                   ELSE 'pending'
              END as visit_status,
-             vl.action_time as last_scan_time,
+             vl.timestamp as last_scan_time,
              vl.notes as scan_notes
       FROM ${this.tableName} v
       JOIN users u ON v.host_id = u.id
       LEFT JOIN visit_visitors vv ON v.id = vv.visit_id
       LEFT JOIN visit_logs vl ON v.id = vl.visit_id 
-        AND vl.action_time >= $2 AND vl.action_time < $3
+        AND vl.timestamp >= $2 AND vl.timestamp < $3
         AND vl.action IN ('qr_scanned', 'entered', 'exited')
       WHERE v.building_id = $1 
         AND (v.entry = true OR v.exit = true)
-        AND (v.updated_at >= $2 OR vl.action_time IS NOT NULL)
-      GROUP BY v.id, u.first_name, u.last_name, u.apartment_number, vl.action_time, vl.notes
-      ORDER BY COALESCE(vl.action_time, v.updated_at) DESC
+        AND (v.updated_at >= $2 OR vl.timestamp IS NOT NULL)
+      GROUP BY v.id, u.first_name, u.last_name, u.apartment_number, vl.timestamp, vl.notes
+      ORDER BY COALESCE(vl.timestamp, v.updated_at) DESC
     `;
 
     const result = await this.query(query, [buildingId, startOfDay, endOfDay]);
@@ -770,7 +791,7 @@ class Visit extends BaseModel {
       SELECT COUNT(*) as count FROM visit_logs vl
       JOIN ${this.tableName} v ON vl.visit_id = v.id
       WHERE v.building_id = $1 
-        AND vl.action_time >= $2 AND vl.action_time < $3
+        AND vl.timestamp >= $2 AND vl.timestamp < $3
         AND vl.action IN ('qr_scanned', 'entered', 'exited')
     `, [buildingId, startOfDay, endOfDay]);
 

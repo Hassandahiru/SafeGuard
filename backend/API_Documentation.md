@@ -642,7 +642,7 @@ SafeGuard uses a **visit-centric approach** where QR codes are generated per vis
 
 #### 1. Create Visit with Visitors
 ```http
-POST /api/visitors
+POST /api/visitors/invitations
 Authorization: Bearer <access-token>
 Content-Type: application/json
 
@@ -652,7 +652,6 @@ Content-Type: application/json
   "visit_type": "group",
   "expected_start": "2024-01-20T15:00:00Z",
   "expected_end": "2024-01-20T22:00:00Z",
-  "max_visitors": 10,
   "visitors": [
     {
       "name": "John Doe",
@@ -678,50 +677,55 @@ Content-Type: application/json
       "title": "Birthday Party",
       "qr_code": "SG_ABC123DEF456",
       "status": "pending",
-      "current_visitors": 2,
-      "max_visitors": 10
+      "visitor_count": 2
     },
-    "visitors": [
-      {
-        "id": "visitor-uuid-1",
-        "name": "John Doe",
-        "phone": "+2348123456789",
-        "status": "expected"
-      },
-      {
-        "id": "visitor-uuid-2", 
-        "name": "Jane Smith",
-        "phone": "+2348987654321",
-        "status": "expected"
-      }
-    ]
+    "qr_code": "SG_ABC123DEF456",
+    "visitor_count": 2,
+    "expires_at": "2024-01-20T22:00:00Z"
   },
-  "message": "Visit created successfully"
+  "message": "Visitor invitation created successfully"
 }
 ```
 
-#### 2. Get User's Visits
+#### 2. Get User's Visitor Invitations
 ```http
-GET /api/visitors?status=active&limit=20&offset=0
+GET /api/visitors/invitations?status=active&limit=20&offset=0
 Authorization: Bearer <access-token>
 ```
 
-#### 3. Update Visit Details
+#### 3. Get Specific Visitor Invitation Details
 ```http
-PUT /api/visitors/{visit_id}
+GET /api/visitors/invitations/{visitId}
+Authorization: Bearer <access-token>
+```
+
+#### 4. Update Visitor Invitation
+```http
+PUT /api/visitors/invitations/{visitId}
 Authorization: Bearer <access-token>
 Content-Type: application/json
 
 {
   "title": "Updated Birthday Party",
   "expected_end": "2024-01-20T23:00:00Z",
-  "max_visitors": 15
+  "visitors": [...]
 }
 ```
 
-#### 4. Cancel Visit
+#### 5. Cancel Visitor Invitation
 ```http
-DELETE /api/visitors/{visit_id}
+DELETE /api/visitors/invitations/{visitId}
+Authorization: Bearer <access-token>
+Content-Type: application/json
+
+{
+  "reason": "Plans changed"
+}
+```
+
+#### 6. Get Visitor History
+```http
+GET /api/visitors/invitations/{visitId}/history
 Authorization: Bearer <access-token>
 ```
 
@@ -1569,6 +1573,170 @@ GET /api/docs/swagger.json
 - **v1.x → v2.0**: Visit-centric architecture changes
 - **Breaking Changes**: Visitor QR codes → Visit QR codes
 - **Migration Path**: Update client logic to handle visit-based QR codes
+
+---
+
+## 📂 Complete Route Reference
+
+### Authentication Routes (`/api/auth`)
+
+#### Basic Authentication
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - Basic user login
+- `POST /api/auth/refresh-token` - Refresh access token
+- `POST /api/auth/logout` - Basic logout
+- `GET /api/auth/profile` - Get current user profile
+- `PUT /api/auth/profile` - Update user profile
+- `POST /api/auth/change-password` - Change user password
+- `POST /api/auth/request-password-reset` - Request password reset
+- `POST /api/auth/reset-password` - Reset password with token
+- `POST /api/auth/verify-email` - Verify email address
+- `POST /api/auth/resend-verification` - Resend email verification
+- `GET /api/auth/check` - Check authentication status
+- `GET /api/auth/permissions` - Get user permissions
+
+#### Enhanced Authentication
+- `POST /api/auth/enhanced/login` - Enhanced login with security features
+- `POST /api/auth/enhanced/refresh` - Enhanced token refresh
+- `POST /api/auth/enhanced/logout` - Enhanced logout with session cleanup
+- `POST /api/auth/enhanced/change-password` - Enhanced password change
+- `GET /api/auth/enhanced/sessions` - Get active sessions
+- `DELETE /api/auth/enhanced/sessions/:session_id` - Revoke specific session
+- `POST /api/auth/enhanced/enable-2fa` - Enable two-factor authentication
+- `POST /api/auth/enhanced/disable-2fa` - Disable two-factor authentication
+- `GET /api/auth/enhanced/security-settings` - Get security settings
+- `POST /api/auth/enhanced/update-security-settings` - Update security settings
+- `GET /api/auth/enhanced/login-history` - Get login history
+- `POST /api/auth/enhanced/report-suspicious` - Report suspicious activity
+- `POST /api/auth/enhanced/lock-account` - Lock account for security
+- `GET /api/auth/enhanced/check-session` - Check session validity
+
+### User Registration Routes (`/api/registration`)
+
+#### Public Registration
+- `POST /api/registration/validate` - Validate registration eligibility
+- `POST /api/registration/complete` - Complete user registration
+- `POST /api/registration/self-register` - Resident self-registration
+
+#### Authenticated Registration (Admin Only)
+- `POST /api/registration/building-admin` - Register building administrator
+- `POST /api/registration/security` - Register security personnel
+- `POST /api/registration/bulk` - Bulk user registration (CSV import)
+- `GET /api/registration/stats/:building_id` - Get registration statistics
+- `GET /api/registration/templates` - Get registration templates
+- `POST /api/registration/validate-bulk` - Validate bulk registration data
+
+### Visitor Management Routes (`/api/visitors`)
+
+#### Visitor Invitations
+- `POST /api/visitors/invitations` - Create visitor invitation
+- `GET /api/visitors/invitations` - Get user's visitor invitations
+- `GET /api/visitors/invitations/:visitId` - Get specific invitation details
+- `PUT /api/visitors/invitations/:visitId` - Update visitor invitation
+- `DELETE /api/visitors/invitations/:visitId` - Cancel visitor invitation
+- `GET /api/visitors/invitations/:visitId/history` - Get visitor history
+
+#### QR Code Scanning (Security Only)
+- `POST /api/visitors/scan/entry` - Scan QR code for building entry
+- `POST /api/visitors/scan/exit` - Scan QR code for building exit
+- `POST /api/visitors/scan` - Legacy QR code scan
+
+#### Visitor Operations
+- `GET /api/visitors/stats` - Get building visitor statistics
+- `GET /api/visitors/search` - Search visitors
+- `GET /api/visitors/active` - Get active visits for building
+- `GET /api/visitors/checkin-status/:visitId` - Get visitor check-in status
+
+### Frequent Visitors Routes (`/api/frequent-visitors`)
+- `POST /api/frequent-visitors` - Add frequent visitor
+- `GET /api/frequent-visitors` - Get user's frequent visitors
+- `GET /api/frequent-visitors/search` - Search frequent visitors
+- `GET /api/frequent-visitors/categories` - Get categories with counts
+- `GET /api/frequent-visitors/stats` - Get frequent visitor statistics
+- `GET /api/frequent-visitors/most-visited` - Get most visited frequent visitors
+- `GET /api/frequent-visitors/recently-visited` - Get recently visited
+- `GET /api/frequent-visitors/tags` - Get all user tags
+- `GET /api/frequent-visitors/relationship/:relationship` - Get by relationship
+- `GET /api/frequent-visitors/category/:category` - Get by category
+- `GET /api/frequent-visitors/export` - Export frequent visitors
+- `GET /api/frequent-visitors/:frequentVisitorId` - Get specific frequent visitor
+- `PUT /api/frequent-visitors/:frequentVisitorId` - Update frequent visitor
+- `DELETE /api/frequent-visitors/:frequentVisitorId` - Remove frequent visitor
+- `POST /api/frequent-visitors/:frequentVisitorId/quick-invite` - Create quick invitation
+- `POST /api/frequent-visitors/:frequentVisitorId/tags` - Add tags
+- `DELETE /api/frequent-visitors/:frequentVisitorId/tags` - Remove tags
+- `POST /api/frequent-visitors/import` - Import from contact list
+
+### Visitor Ban Routes (`/api/visitor-bans`)
+- `POST /api/visitor-bans` - Ban a visitor
+- `GET /api/visitor-bans` - Get user's banned visitors
+- `GET /api/visitor-bans/search` - Search banned visitors
+- `GET /api/visitor-bans/stats` - Get ban statistics
+- `GET /api/visitor-bans/building-stats` - Get building ban statistics (admin)
+- `GET /api/visitor-bans/recently-banned` - Get recently banned visitors
+- `GET /api/visitor-bans/expiring` - Get expiring temporary bans
+- `GET /api/visitor-bans/export` - Export ban list
+- `GET /api/visitor-bans/severity/:severity` - Get visitors by severity
+- `GET /api/visitor-bans/check/:phone` - Check if visitor is banned
+- `GET /api/visitor-bans/building-check/:phone` - Check building-wide bans
+- `GET /api/visitor-bans/history/:phone` - Get visitor ban history
+- `GET /api/visitor-bans/:banId` - Get specific banned visitor
+- `PUT /api/visitor-bans/:banId` - Update ban details
+- `POST /api/visitor-bans/:banId/unban` - Unban visitor by ID
+- `POST /api/visitor-bans/unban-by-phone` - Unban visitor by phone
+- `POST /api/visitor-bans/automatic` - Create automatic ban (admin)
+
+### Admin Routes (`/api/admin`)
+
+#### System Setup
+- `POST /api/admin/initial-setup` - Initial system setup (public)
+- `POST /api/admin/register-building` - Self-service building registration (public)
+
+#### Building Management
+- `POST /api/admin/buildings` - Register new building (super admin)
+- `GET /api/admin/buildings` - Get all buildings (super admin)
+- `GET /api/admin/buildings/:buildingId` - Get building details
+
+#### Admin Management
+- `POST /api/admin/building-admins` - Create building admin
+
+#### License Management
+- `POST /api/admin/buildings/:buildingId/licenses` - Allocate license
+- `GET /api/admin/licenses` - Get all licenses
+- `GET /api/admin/licenses/:licenseId/stats` - Get license statistics
+- `PUT /api/admin/licenses/:licenseId/extend` - Extend license
+- `PUT /api/admin/licenses/:licenseId/suspend` - Suspend license
+- `PUT /api/admin/licenses/:licenseId/activate` - Activate license
+
+#### Dashboard
+- `GET /api/admin/dashboard` - Get system dashboard statistics
+
+### Resident Approval Routes (`/api/resident-approval`)
+- `GET /api/resident-approval/pending/:building_id` - Get pending approvals
+- `POST /api/resident-approval/:approval_id/process` - Process approval
+- `GET /api/resident-approval/:approval_id` - Get approval details
+- `GET /api/resident-approval/dashboard/:building_id` - Get approval dashboard
+- `POST /api/resident-approval/bulk-process` - Bulk process approvals
+- `GET /api/resident-approval/all/pending` - Get all pending (super admin)
+- `GET /api/resident-approval/health` - Health check
+
+### Admin Approval Routes (`/api/admin-approval`)
+- `POST /api/admin-approval/register-building-admin` - Register building admin
+- `GET /api/admin-approval/pending` - Get pending admin approvals
+- `POST /api/admin-approval/:approvalId/process` - Process admin approval
+- `GET /api/admin-approval/:approvalId` - Get approval details
+- `GET /api/admin-approval/dashboard/notifications` - Get notification dashboard
+- `GET /api/admin-approval/buildings/search` - Search buildings by email
+
+### Dashboard Routes (`/api/dashboard`)
+- `GET /api/dashboard` - Get dashboard data (role-based)
+- `GET /api/dashboard/admin` - Get admin dashboard (admin only)
+- `GET /api/dashboard/resident` - Get resident dashboard (resident only)
+- `GET /api/dashboard/security` - Get security dashboard (security only)
+
+### System Routes
+- `GET /health` - System health check
+- `GET /api` - API information
 
 ---
 

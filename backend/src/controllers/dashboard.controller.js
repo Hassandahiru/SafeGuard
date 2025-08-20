@@ -72,11 +72,14 @@ class DashboardController {
 
   /**
    * Get Resident dashboard data
-   * Data: latest visits, banned visitors, frequent visitors
+   * Data: latest visits, banned visitors, frequent visitors, upcoming visits
    */
   async getResidentDashboard(user) {
     // Get resident's latest visits
     const latestVisits = await Visit.getLatestVisitsForResident(user.id, 15);
+
+    // Get upcoming visits (visits where entry is false)
+    const upcomingVisits = await Visit.getUpcomingVisitsForResident(user.id);
 
     // Get banned visitors
     const bannedVisitors = await VisitorBan.getBannedVisitorsForResident(user.id);
@@ -93,6 +96,7 @@ class DashboardController {
     return {
       user_role: user.role,
       latest_visits: latestVisits,
+      upcoming_visits: upcomingVisits,
       banned_visitors: bannedVisitors,
       frequent_visitors: frequentVisitors,
       statistics: stats
