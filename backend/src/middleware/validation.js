@@ -387,8 +387,8 @@ const visitorValidations = {
  */
 const frequentVisitorValidations = {
   create: [
-    commonValidations.name('name'),
-    commonValidations.phone(),
+    commonValidations.name('name').optional(), // Name is now optional - will be populated from visitors table
+    commonValidations.phone(), // Phone is required - used to find visitor data
     commonValidations.email().optional(),
     commonValidations.enum('relationship', Object.values(VISITOR_RELATIONSHIPS)).optional(),
     body('category')
