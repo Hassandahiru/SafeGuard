@@ -15,12 +15,12 @@ import NotificationService from '../services/notification.service.js';
 
 class FrequentVisitorController {
   /**
-   * Add a visitor to frequent visitors list
+   * Add a visitor to frequent visitors list using phone number
    */
   addFrequentVisitor = asyncHandler(async (req, res) => {
     const { 
-      name, 
       phone, 
+      name, 
       email, 
       relationship = 'other',
       category = 'friends',
@@ -30,9 +30,9 @@ class FrequentVisitorController {
     
     const userId = req.user.id;
 
-    // Validate required fields
-    if (!name || !phone) {
-      throw new ValidationError('Name and phone number are required');
+    // Validate required fields - phone is required, name will be pulled from visitors table if not provided
+    if (!phone) {
+      throw new ValidationError('Phone number is required');
     }
 
     // Validate relationship
@@ -42,8 +42,8 @@ class FrequentVisitorController {
 
     const frequentVisitorData = {
       user_id: userId,
-      name: name.trim(),
       phone,
+      name: name?.trim() || null,
       email: email?.trim() || null,
       relationship,
       category: category.toLowerCase(),
@@ -51,6 +51,7 @@ class FrequentVisitorController {
       tags: Array.isArray(tags) ? tags : []
     };
 
+    // Create frequent visitor - the model will auto-populate name/email from visitors table
     const frequentVisitor = await FrequentVisitor.create(frequentVisitorData);
 
     visitorLogger.info('Frequent visitor added', {
@@ -526,6 +527,24 @@ class FrequentVisitorController {
       true, 
       visitors, 
       `Frequent visitors in category '${category}' retrieved successfully`
+    ));
+  });
+
+  /**
+   * Get available visitors to add to frequent visitors
+   */
+  getAvailableVisitors = asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { limit = 20 } = req.query;
+
+    const availableVisitors = await FrequentVisitor.getAvailableVisitorsForFrequent(userId, {
+      limit: parseInt(limit)
+    });
+
+    res.json(createResponse(
+      true, 
+      availableVisitors, 
+      'Available visitors for frequent list retrieved successfully'
     ));
   });
 }

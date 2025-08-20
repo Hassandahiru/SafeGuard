@@ -43,6 +43,15 @@ router.get('/',
 );
 
 /**
+ * @route   GET /api/frequent-visitors/available
+ * @desc    Get available visitors to add to frequent list
+ * @access  Resident, Building Admin, Super Admin
+ */
+router.get('/available',
+  frequentVisitorController.getAvailableVisitors
+);
+
+/**
  * @route   GET /api/frequent-visitors/search
  * @desc    Search frequent visitors by name, phone, or relationship
  * @access  Resident, Building Admin, Super Admin

@@ -8,7 +8,7 @@ class FrequentVisitor extends BaseModel {
   }
 
   /**
-   * Add a visitor to frequent visitors list
+   * Add a visitor to frequent visitors list using phone number
    * @param {Object} frequentVisitorData - Frequent visitor data
    * @returns {Promise<Object>} Created frequent visitor
    */
@@ -29,6 +29,19 @@ class FrequentVisitor extends BaseModel {
       throw new ConflictError('Visitor is already in your frequent visitors list');
     }
 
+    // Get visitor data from visitors table if not provided
+    if (frequentVisitorData.phone && !frequentVisitorData.name) {
+      const visitorData = await this.getVisitorDataByPhone(
+        frequentVisitorData.user_id, 
+        frequentVisitorData.phone
+      );
+      
+      if (visitorData) {
+        frequentVisitorData.name = visitorData.name;
+        frequentVisitorData.email = visitorData.email;
+      }
+    }
+
     // Set default values
     const data = {
       is_active: true,
@@ -36,10 +49,52 @@ class FrequentVisitor extends BaseModel {
       last_visited: null,
       notes: '',
       tags: [],
+      category: 'friends',
       ...frequentVisitorData
     };
 
     return await super.create(data);
+  }
+
+  /**
+   * Get visitor data by phone number from visitors table
+   * @param {string} userId - User ID (created_by)
+   * @param {string} phone - Phone number
+   * @returns {Promise<Object|null>} Visitor data
+   */
+  async getVisitorDataByPhone(userId, phone) {
+    const query = `
+      SELECT name, email, company, photo_url, visit_count, last_visit
+      FROM visitors 
+      WHERE created_by = $1 AND phone = $2
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
+    
+    const result = await this.query(query, [userId, phone]);
+    return result.rows[0] || null;
+  }
+
+  /**
+   * Get available visitors that can be added to frequent visitors
+   * @param {string} userId - User ID
+   * @param {Object} options - Query options
+   * @returns {Promise<Array>} Available visitors
+   */
+  async getAvailableVisitorsForFrequent(userId, options = {}) {
+    const query = `
+      SELECT DISTINCT v.phone, v.name, v.email, v.company, v.visit_count, v.last_visit
+      FROM visitors v
+      LEFT JOIN frequent_visitors fv ON (fv.phone = v.phone AND fv.user_id = v.created_by AND fv.is_active = true)
+      WHERE v.created_by = $1 
+      AND fv.id IS NULL
+      AND v.visit_count > 0
+      ORDER BY v.visit_count DESC, v.last_visit DESC
+      ${options.limit ? `LIMIT ${options.limit}` : ''}
+    `;
+    
+    const result = await this.query(query, [userId]);
+    return result.rows;
   }
 
   /**
@@ -58,11 +113,36 @@ class FrequentVisitor extends BaseModel {
       conditions.category = options.category;
     }
 
-    return await this.findAll(conditions, {
+    if (options.relationship) {
+      conditions.relationship = options.relationship;
+    }
+
+    // Get basic frequent visitors first
+    const frequentVisitors = await this.findAll(conditions, {
       orderBy: options.orderBy || 'visit_count DESC, last_visited DESC',
       limit: options.limit,
       offset: options.offset
     });
+
+    // Enrich with visitor data from visitors table
+    for (const fv of frequentVisitors) {
+      if (fv.phone) {
+        const visitorData = await this.getVisitorDataByPhone(userId, fv.phone);
+        if (visitorData) {
+          fv.visitor_info = {
+            company: visitorData.company,
+            photo_url: visitorData.photo_url,
+            total_visits: visitorData.visit_count,
+            last_building_visit: visitorData.last_visit
+          };
+          // Update name and email if not set in frequent_visitors
+          if (!fv.name && visitorData.name) fv.name = visitorData.name;
+          if (!fv.email && visitorData.email) fv.email = visitorData.email;
+        }
+      }
+    }
+
+    return frequentVisitors;
   }
 
   /**
