@@ -26,7 +26,7 @@ class VisitorController {
       expected_start, 
       expected_end, 
       visitors, 
-      visit_type = 'single',
+      visit_type,
       notes 
     } = req.body;
     
@@ -283,32 +283,24 @@ class VisitorController {
       throw new ConflictError('Visitor invitation is already completed or cancelled');
     }
 
-    // Cancel visit using database function
-    const result = await Visit.raw(`
-      SELECT * FROM cancel_visit($1, $2, $3)
-    `, [visitId, userId, reason || 'Cancelled by host']);
+    // Cancel visit using model method
+    const cancelledVisit = await Visit.cancelVisit(visitId, reason);
 
-    const cancelResult = result.rows[0];
+    // Release building license
+    await Building.updateLicenseUsage(visit.building_id, -1);
 
-    if (cancelResult.success) {
-      // Release building license
-      await Building.updateLicenseUsage(visit.building_id, -1);
+    visitorLogger.info('Visitor invitation cancelled', {
+      visitId,
+      userId,
+      reason: reason || 'No reason provided'
+    });
 
-      visitorLogger.info('Visitor invitation cancelled', {
-        visitId,
-        userId,
-        reason: reason || 'No reason provided'
-      });
-
-      res.json(createResponse(true, {
-        visit_id: visitId,
-        status: 'cancelled',
-        cancelled_at: new Date(),
-        reason: reason || 'Cancelled by host'
-      }, 'Visitor invitation cancelled successfully'));
-    } else {
-      throw new ValidationError(cancelResult.message || 'Failed to cancel visitor invitation');
-    }
+    res.json(createResponse(true, {
+      visit_id: visitId,
+      status: cancelledVisit.status,
+      cancelled_at: cancelledVisit.actual_end,
+      reason: reason || 'Cancelled by host'
+    }, 'Visitor invitation cancelled successfully'));
   });
 
   /**

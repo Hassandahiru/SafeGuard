@@ -15,13 +15,10 @@ import {
 const router = express.Router();
 
 // Apply authentication to all routes
-router.use(authenticate);
-
 // Apply input sanitization to all routes
-router.use(sanitizeInputs);
-
 // Apply resident access requirement to most routes
-router.use(requireResidentAccess);
+router.use(authenticate, sanitizeInputs, requireResidentAccess);
+
 
 /**
  * @route   POST /api/visitor-bans

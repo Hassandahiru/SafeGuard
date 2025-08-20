@@ -1,20 +1,24 @@
-# SafeGuard API Documentation
+# SafeGuard API Documentation v2.0
+**Updated: 2025-08-20** | **Version: 2.0**
 
 ## 📋 Table of Contents
 - [Overview](#overview)
+- [What's New in v2.0](#whats-new-in-v20)
 - [Authentication](#authentication)
 - [Base URLs and Environment](#base-urls-and-environment)
 - [Response Format](#response-format)
 - [Error Handling](#error-handling)
+- [QR Code Entry/Exit System](#qr-code-entryexit-system)
+- [Dashboard System](#dashboard-system)
 - [Core API Endpoints](#core-api-endpoints)
 - [Resident Approval System](#resident-approval-system)
 - [User Management](#user-management)
 - [Visitor Management](#visitor-management)
 - [Building Management](#building-management)
-- [Dashboard System](#dashboard-system)
 - [Real-time Features](#real-time-features)
 - [Rate Limiting](#rate-limiting)
 - [WebSocket Events](#websocket-events)
+- [Postman Testing](#postman-testing)
 - [Testing](#testing)
 
 ---
@@ -25,9 +29,45 @@ The SafeGuard API is a comprehensive visitor management system designed for gate
 
 ### Key Features
 - **Visit-Centric Architecture**: QR codes are generated per visit, not per visitor
+- **Entry/Exit Tracking**: Boolean flags track visitor movement through building gates
+- **Security Role Authorization**: Only security personnel can scan QR codes
+- **Role-based Dashboards**: Customized data views for Admin, Resident, and Security
 - **Resident Approval Workflow**: New residents require admin approval before activation
 - **Real-time Communications**: Socket.io for instant updates and notifications
 - **Multi-building Support**: Single platform managing multiple buildings
+
+---
+
+## 🆕 What's New in v2.0
+
+### QR Code Entry/Exit System
+- **Entry/Exit Tracking**: Visits now have boolean `entry` and `exit` flags
+- **Security Authorization**: Only users with `security` role can scan QR codes
+- **Automatic Status Updates**: Visit status changes based on entry/exit scanning
+- **Comprehensive Logging**: All scan events logged with officer, timestamp, location
+
+### Dashboard System
+- **Admin Dashboard**: Building-wide statistics, user management, latest visits
+- **Resident Dashboard**: Personal visit history, frequent visitors, banned visitors
+- **Security Dashboard**: Daily scans, active visitors inside, pending entries
+- **Real-time Updates**: All dashboards update automatically via Socket.io
+
+### Enhanced Database Functions
+- **`process_qr_entry_exit_scan()`**: Handle QR scanning with validation
+- **`create_visit_with_visitors()`**: Atomic visit creation with multiple visitors
+- **`get_building_analytics()`**: Generate comprehensive visit analytics
+- **Dashboard-specific functions**: Optimized queries for role-based data
+
+### Improved Error Handling
+- **Fixed Database Functions**: All missing functions created and validated
+- **Model-based Queries**: All database operations moved to model classes
+- **Comprehensive Testing**: Complete Postman collection with automated tests
+
+### API Enhancements
+- **New QR Scanning Endpoints**: Entry and exit scanning with validation
+- **Dashboard Endpoints**: Role-specific data retrieval endpoints
+- **Enhanced Visit Status**: Entry/exit status checking endpoints
+- **Comprehensive Documentation**: Updated API docs with all new features
 - **Advanced Security**: JWT authentication with role-based access control
 - **Visitor Ban System**: Personal and building-wide visitor restrictions
 

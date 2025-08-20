@@ -1793,4 +1793,21 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - dashnoards should contain the following data: Admin: All visists by latest, all users in theri building and basic info, all other admin, and security guards. Residents: latest visists, banned visistors, frequest visistors. Security: all visists scanned for that day, all residents and basic info. 
 - create controllers for all these functionalities. 
 
+
+# Version 4
+
+- fix the error: '{
+    "success": false,
+    "error": {
+        "code": "DATABASE_ERROR",
+        "message": "Database operation failed: function cancel_visit(unknown, unknown, unknown) does not exist"
+    },
+    "timestamp": "2025-08-20T11:40:33.049Z"
+}'
+
+- make sure that all queries are derived or created in the model 'backend/src/models'. 
+- make a complete postmal testing file collections and environment settings. have the right routes. 
+- update all changes to the files 'Documentation.md', 'backend/database/db-documentation.md', 'backend/API_Documentation.md'. make sure that the enire application is in accordance with the app.  
+
+
 **Built with ❤️ for safer communities**
