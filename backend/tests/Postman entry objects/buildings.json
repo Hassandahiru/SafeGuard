@@ -5,6 +5,11 @@
   "password": "Qwerty@123",
   "device_name": "Building Admin Client"
   },
+    {
+  "adminEmail": "admin@palmsprings.com",
+  "adminPassword": "ColdDay@1975",
+  "device_name": "Building Admin Client"
+  },
   {
   "email": "lv@lakeviewhomes.com",
   "password": "Qwerty@123",
@@ -26,6 +31,20 @@
   "adminLastName": "Danjuma",
   "adminPhone": "+2347078651490",
   "adminApartment": "ADMIN-PG01"
+},
+{
+  "name": "Palm Springs Estates",
+  "address": "Murtala Muhammad expressway, or kubwa road",
+  "city": "Abuja",
+  "state": "FCT",
+  "country": "Nigeria",
+  "totalLicenses": 200,
+  "adminEmail": "admin@palmsprings.com",
+  "adminPassword": "ColdDay@1975",
+  "adminFirstName": "Saffuyan",
+  "adminLastName": "Peters",
+  "adminPhone": "+2347078611490",
+  "adminApartment": "ADMIN-PS01"
 },
 {
     "name": "Lake View",

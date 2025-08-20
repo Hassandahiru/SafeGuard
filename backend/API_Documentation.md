@@ -38,6 +38,32 @@ The SafeGuard API is a comprehensive visitor management system designed for gate
 
 ---
 
+## 🆕 What's New in v2.1.0
+
+### Critical Bug Fixes & Architecture Improvements (2025-08-20)
+
+#### Database Function Stability
+- **Fixed visit_type enum casting error**: Resolved database type casting issues that prevented visit creation
+- **Fixed unique constraint violations**: Corrected ON CONFLICT specifications in database functions
+- **Eliminated missing function errors**: All database functions now properly exist and are accessible
+
+#### Model-Based Query Architecture
+- **Complete controller refactoring**: Moved all hardcoded SQL queries from controllers to models
+- **15+ new model methods**: Enhanced Visit, Building, User, and Visitor models with dedicated methods
+- **Improved separation of concerns**: Database logic now properly encapsulated in model layer
+- **Enhanced error handling**: Comprehensive error types and validation at all levels
+
+#### API Reliability Improvements
+- **visit_type validation**: Comprehensive enum validation with proper defaults
+- **Database connection stability**: Enhanced connection pooling and error recovery
+- **Input validation enhancements**: Stricter validation with better error messages
+- **Performance optimizations**: Reduced N+1 queries and improved database access patterns
+
+#### Testing & Documentation
+- **Updated Postman collections**: Complete test coverage for all endpoints with automated token management
+- **Comprehensive documentation**: All API changes and new features fully documented
+- **Enhanced error responses**: Improved error messages with detailed context for debugging
+
 ## 🆕 What's New in v2.0
 
 ### QR Code Entry/Exit System

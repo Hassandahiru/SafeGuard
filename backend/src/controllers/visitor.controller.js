@@ -78,11 +78,14 @@ class VisitorController {
     const result = await Visit.createWithVisitors(visitData, visitors);
 
     if (result.success) {
-      // Generate QR code for the visit
-      const qrCodeData = await QRCodeService.generateVisitQRCode({
-        ...result.visit,
-        visitor_count: result.visitor_count
-      });
+      // Generate QR code image for the database-generated QR code
+      const qrCodeImage = await QRCodeService.generateQRCodeImage(result.qr_code);
+      const qrCodeBase64 = qrCodeImage.toString('base64');
+      const qrImageUrl = `data:image/png;base64,${qrCodeBase64}`;
+
+      // Calculate expiry time
+      const expiresAt = result.visit.expected_end || 
+        new Date(Date.now() + (24 * 60 * 60 * 1000)); // Default 24 hours
 
       // Send notifications to security
       await NotificationService.sendVisitCreatedNotification(result.visit, req.user);
@@ -94,15 +97,16 @@ class VisitorController {
         visitId: result.visit.id,
         hostId: userId,
         visitorCount: result.visitor_count,
-        buildingId
+        buildingId,
+        qrCode: result.qr_code
       });
 
       res.status(HTTP_STATUS.CREATED).json(createResponse(true, {
         visit: result.visit,
-        qr_code: qrCodeData.code,
-        qr_image: qrCodeData.imageUrl,
+        qr_code: result.qr_code,
+        qr_image: qrImageUrl,
         visitor_count: result.visitor_count,
-        expires_at: qrCodeData.expiresAt
+        expires_at: expiresAt
       }, 'Visitor invitation created successfully'));
     } else {
       throw new ValidationError('Failed to create visitor invitation');

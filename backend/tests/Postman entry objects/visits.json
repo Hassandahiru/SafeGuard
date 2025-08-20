@@ -1,0 +1,50 @@
+[
+  [
+{
+  "title": "Casual Visit",
+  "description": "Meeting with potential client",
+  "expected_start": "2025-08-21T14:00:00Z",
+  "visit_type": "group",
+  "expected_end": "2025-08-21T16:00:00Z",
+  "visitors": [
+    {
+      "name": "Debbie James",
+      "phone": "+2348155742356",
+      "email": "debbie@gmail.com",
+      "company": "Musa Corporation"
+    },
+        {
+      "name": "Calford Smith",
+      "phone": "+2348125742356",
+      "email": "cal@gmail.com",
+      "company": "Musa Corporation"
+    },
+        {
+      "name": "Musa James",
+      "phone": "+2348155242356",
+      "email": "musa@gmail.com",
+      "company": "Musa Corporation"
+    } 
+  ],
+  "notes": "Visitor will need to sign NDA"
+}
+ ],
+ [
+  {
+  "title": "Business Visit",
+  "description": "Meeting with potential client",
+  "expected_start": "2025-08-26T14:00:00Z",
+  "visit_type": "group",
+  "expected_end": "2025-08-26T16:00:00Z",
+  "visitors": [
+    {
+      "name": "Bala Katakore",
+      "phone": "+2348145742356",
+      "email": "bala@gmail.com",
+      "company": "Musa Corporation"
+    }
+  ],
+  "notes": "Visitor will need to sign NDA"
+}
+ ]
+]

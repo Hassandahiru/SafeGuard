@@ -270,30 +270,51 @@ RETURNS TABLE(
 DECLARE
   v_visit_id UUID;
   v_qr_code TEXT;
+  v_qr_code_data JSONB;
+  v_qr_expires_at TIMESTAMPTZ;
   v_visitor JSON;
   v_visitor_id UUID;
   v_visitor_count INTEGER := 0;
 BEGIN
-  -- Generate QR code
-  v_qr_code := 'QR_' || upper(replace(gen_random_uuid()::text, '-', ''));
+  -- Generate unique visit ID and QR code with SG_ prefix
+  v_visit_id := gen_random_uuid();
+  v_qr_code := 'SG_' || upper(replace(gen_random_uuid()::text, '-', ''));
   
-  -- Create the visit
+  -- Calculate QR code expiry: use expected_end or default to 24 hours from now
+  v_qr_expires_at := COALESCE(p_expected_end, NOW() + INTERVAL '24 hours');
+  
+  -- Create complete QR code data structure
+  v_qr_code_data := json_build_object(
+    'code', v_qr_code,
+    'visit_id', v_visit_id,
+    'building_id', p_building_id,
+    'host_id', p_host_id,
+    'expires_at', v_qr_expires_at,
+    'generated_at', NOW(),
+    'title', p_title,
+    'expected_start', p_expected_start,
+    'expected_end', p_expected_end,
+    'visit_type', p_visit_type
+  );
+  
+  -- Create the visit with QR code data and expiry
   INSERT INTO visits (
     id, building_id, host_id, title, description, expected_start, expected_end,
-    qr_code, visit_type, status, entry, exit, created_at, updated_at
+    qr_code, qr_code_data, qr_code_expires_at, visit_type, status, entry, exit, created_at, updated_at
   ) VALUES (
-    gen_random_uuid(), p_building_id, p_host_id, p_title, p_description, 
-    p_expected_start, p_expected_end, v_qr_code, p_visit_type, 'pending', 
-    FALSE, FALSE, NOW(), NOW()
-  ) RETURNING id INTO v_visit_id;
+    v_visit_id, p_building_id, p_host_id, p_title, p_description, 
+    p_expected_start, p_expected_end, v_qr_code, v_qr_code_data, v_qr_expires_at,
+    p_visit_type::visit_type, 'pending', FALSE, FALSE, NOW(), NOW()
+  );
 
   -- Process visitors
   FOR v_visitor IN SELECT * FROM json_array_elements(p_visitors)
   LOOP
     -- Create or get visitor
-    INSERT INTO visitors (id, name, phone, email, company, created_at, updated_at)
+    INSERT INTO visitors (id, building_id, name, phone, email, company, created_at, updated_at)
     VALUES (
       gen_random_uuid(),
+      p_building_id,
       (v_visitor->>'name')::TEXT,
       (v_visitor->>'phone')::TEXT,
       (v_visitor->>'email')::TEXT,
@@ -301,7 +322,7 @@ BEGIN
       NOW(),
       NOW()
     )
-    ON CONFLICT (phone) DO UPDATE SET
+    ON CONFLICT (building_id, phone) DO UPDATE SET
       name = EXCLUDED.name,
       email = EXCLUDED.email,
       company = EXCLUDED.company,
@@ -454,6 +475,39 @@ BEGIN
     AND created_at BETWEEN p_start_date AND p_end_date;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Function: update_qr_code_expiry (Trigger function)
+CREATE OR REPLACE FUNCTION update_qr_code_expiry()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- If exit is set to true, expire the QR code immediately
+  IF NEW.exit = TRUE AND OLD.exit = FALSE THEN
+    NEW.qr_code_expires_at := NOW();
+    
+  -- If 24 hours have passed after expected_end and entry is still false, expire QR code
+  ELSIF NEW.entry = FALSE AND NEW.expected_end IS NOT NULL AND NOW() > (NEW.expected_end + INTERVAL '24 hours') THEN
+    NEW.qr_code_expires_at := NEW.expected_end + INTERVAL '24 hours';
+  END IF;
+  
+  -- Update the qr_code_data with new expiry if it changed
+  IF NEW.qr_code_expires_at != OLD.qr_code_expires_at THEN
+    NEW.qr_code_data := jsonb_set(
+      COALESCE(NEW.qr_code_data, '{}'::jsonb),
+      '{expires_at}',
+      to_jsonb(NEW.qr_code_expires_at)
+    );
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger to automatically update QR code expiry
+DROP TRIGGER IF EXISTS tr_update_qr_code_expiry ON visits;
+CREATE TRIGGER tr_update_qr_code_expiry
+  BEFORE UPDATE ON visits
+  FOR EACH ROW
+  EXECUTE FUNCTION update_qr_code_expiry();
 
 -- Grant permissions
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO authenticated_users;

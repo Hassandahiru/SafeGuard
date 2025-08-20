@@ -159,7 +159,7 @@ class SafeGuardApp {
       logger.info('Database connected successfully');
 
       // Start server
-      const PORT = config.PORT || 3000;
+      const PORT = config.PORT || 4500;
       const HOST = process.env.HOST || 'localhost';
       
       this.server.listen(PORT, HOST, () => {
