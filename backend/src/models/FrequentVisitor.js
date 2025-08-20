@@ -508,6 +508,28 @@ class FrequentVisitor extends BaseModel {
       frequent_visitors: parseInt(totalFrequentVisitors.rows[0].count)
     };
   }
+
+  /**
+   * Get frequent visitor categories with counts
+   * @param {string} userId - User ID
+   * @returns {Promise<Array>} Categories with statistics
+   */
+  async getCategoriesWithStats(userId) {
+    const query = `
+      SELECT 
+        category,
+        COUNT(*) as count,
+        COUNT(*) FILTER (WHERE last_visited IS NOT NULL) as visited_count,
+        MAX(last_visited) as last_visit_in_category
+      FROM ${this.tableName}
+      WHERE user_id = $1 AND is_active = true
+      GROUP BY category
+      ORDER BY count DESC
+    `;
+
+    const result = await this.query(query, [userId]);
+    return result.rows;
+  }
 }
 
 export default new FrequentVisitor();

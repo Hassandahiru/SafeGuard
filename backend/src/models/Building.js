@@ -457,6 +457,126 @@ class Building extends BaseModel {
     const result = await this.query(query, [buildingEmail.toLowerCase()]);
     return result.rows[0] || null;
   }
+
+  /**
+   * Get all buildings with statistics and filtering for admin dashboard
+   * @param {Object} filters - Filters object
+   * @param {Object} pagination - Pagination options
+   * @returns {Promise<Object>} Buildings with pagination info
+   */
+  async getAllWithStatsForAdmin(filters = {}, pagination = {}) {
+    const { search, city, state, status = 'all' } = filters;
+    const { page = 1, limit = 20 } = pagination;
+
+    let query = `
+      SELECT 
+        b.*,
+        COUNT(DISTINCT u.id) FILTER (WHERE u.role = 'resident' AND u.is_active = true) as total_residents,
+        COUNT(DISTINCT u.id) FILTER (WHERE u.role = 'building_admin' AND u.is_active = true) as total_admins,
+        COUNT(DISTINCT u.id) FILTER (WHERE u.role = 'security' AND u.is_active = true) as total_security,
+        COUNT(DISTINCT v.id) FILTER (WHERE v.created_at >= CURRENT_DATE - INTERVAL '30 days') as visits_last_30_days,
+        COUNT(DISTINCT l.id) FILTER (WHERE l.status = 'active') as active_licenses,
+        ROUND((b.used_licenses::DECIMAL / b.total_licenses * 100), 2) as license_usage_percentage,
+        CASE 
+          WHEN EXISTS(SELECT 1 FROM licenses WHERE building_id = b.id AND status = 'active' AND expires_at > CURRENT_TIMESTAMP) THEN 'LICENSED'
+          ELSE 'UNLICENSED'
+        END as license_status
+      FROM buildings b
+      LEFT JOIN users u ON b.id = u.building_id
+      LEFT JOIN visits v ON b.id = v.building_id
+      LEFT JOIN licenses l ON b.id = l.building_id
+      WHERE 1=1
+    `;
+
+    const params = [];
+    let paramCount = 1;
+
+    // Add search filter
+    if (search) {
+      query += ` AND (b.name ILIKE $${paramCount} OR b.address ILIKE $${paramCount} OR b.city ILIKE $${paramCount})`;
+      params.push(`%${search}%`);
+      paramCount++;
+    }
+
+    // Add city filter
+    if (city) {
+      query += ` AND b.city = $${paramCount}`;
+      params.push(city);
+      paramCount++;
+    }
+
+    // Add state filter
+    if (state) {
+      query += ` AND b.state = $${paramCount}`;
+      params.push(state);
+      paramCount++;
+    }
+
+    // Add status filter
+    if (status !== 'all') {
+      query += ` AND b.is_active = $${paramCount}`;
+      params.push(status === 'active');
+      paramCount++;
+    }
+
+    query += ` GROUP BY b.id ORDER BY b.created_at DESC`;
+
+    // Add pagination
+    const offset = (page - 1) * limit;
+    query += ` LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+    params.push(limit, offset);
+
+    const result = await this.query(query, params);
+    const buildings = result.rows;
+
+    // Get total count with same filters
+    let countQuery = `
+      SELECT COUNT(DISTINCT b.id) as total
+      FROM buildings b
+      WHERE 1=1
+    `;
+
+    const countParams = [];
+    let countParamCount = 1;
+
+    // Apply same filters for count
+    if (search) {
+      countQuery += ` AND (b.name ILIKE $${countParamCount} OR b.address ILIKE $${countParamCount} OR b.city ILIKE $${countParamCount})`;
+      countParams.push(`%${search}%`);
+      countParamCount++;
+    }
+
+    if (city) {
+      countQuery += ` AND b.city = $${countParamCount}`;
+      countParams.push(city);
+      countParamCount++;
+    }
+
+    if (state) {
+      countQuery += ` AND b.state = $${countParamCount}`;
+      countParams.push(state);
+      countParamCount++;
+    }
+
+    if (status !== 'all') {
+      countQuery += ` AND b.is_active = $${countParamCount}`;
+      countParams.push(status === 'active');
+      countParamCount++;
+    }
+
+    const countResult = await this.query(countQuery, countParams);
+    const total = parseInt(countResult.rows[0].total);
+
+    return {
+      data: buildings,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    };
+  }
 }
 
 export default new Building();

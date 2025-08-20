@@ -846,6 +846,182 @@ class Visit extends BaseModel {
       currently_inside: parseInt(currentlyInside.rows[0].count)
     };
   }
+
+  // =============================================
+  // CONTROLLER QUERY METHODS
+  // =============================================
+
+  /**
+   * Get visit with visitors using database function
+   * @param {string} visitId - Visit ID
+   * @returns {Promise<Object>} Visit with visitors data
+   */
+  async getVisitWithVisitors(visitId) {
+    const result = await this.query(`
+      SELECT * FROM get_visit_with_visitors($1)
+    `, [visitId]);
+
+    return result.rows[0]?.visit_data || null;
+  }
+
+  /**
+   * Update visit visitors using database function
+   * @param {string} visitId - Visit ID
+   * @param {Array} visitors - Updated visitors array
+   * @returns {Promise<boolean>} Success status
+   */
+  async updateVisitVisitors(visitId, visitors) {
+    const result = await this.query(`
+      SELECT update_visit_visitors($1, $2)
+    `, [visitId, JSON.stringify(visitors)]);
+
+    return result.rows[0]?.update_visit_visitors || false;
+  }
+
+  /**
+   * Process QR scan using database function
+   * @param {string} qrCode - QR code
+   * @param {string} securityOfficerId - Security officer ID
+   * @param {string} action - Scan action
+   * @returns {Promise<Object>} Scan result
+   */
+  async processQRScanWithFunction(qrCode, securityOfficerId, action) {
+    const result = await this.query(`
+      SELECT * FROM process_visit_qr_scan($1, $2, $3)
+    `, [qrCode, securityOfficerId, action]);
+
+    return result.rows[0];
+  }
+
+  /**
+   * Get visit history using database function
+   * @param {string} visitId - Visit ID
+   * @returns {Promise<Array>} Visit history
+   */
+  async getVisitHistoryById(visitId) {
+    const result = await this.query(`
+      SELECT * FROM get_visit_history($1)
+    `, [visitId]);
+
+    return result.rows;
+  }
+
+  /**
+   * Get building visitor statistics using database function
+   * @param {string} buildingId - Building ID
+   * @param {Date} startDate - Start date
+   * @param {Date} endDate - End date
+   * @returns {Promise<Object>} Visitor statistics
+   */
+  async getBuildingVisitorStats(buildingId, startDate, endDate) {
+    const result = await this.query(`
+      SELECT * FROM get_building_visitor_stats($1, $2, $3)
+    `, [buildingId, startDate, endDate]);
+
+    return result.rows[0];
+  }
+
+  /**
+   * Get active building visits using database function
+   * @param {string} buildingId - Building ID
+   * @returns {Promise<Array>} Active visits
+   */
+  async getActiveBuildingVisits(buildingId) {
+    const result = await this.query(`
+      SELECT * FROM get_active_building_visits($1)
+    `, [buildingId]);
+
+    return result.rows;
+  }
+
+  /**
+   * Get visitor check-in status using database function
+   * @param {string} visitId - Visit ID
+   * @returns {Promise<Array>} Check-in status
+   */
+  async getVisitorCheckInStatus(visitId) {
+    const result = await this.query(`
+      SELECT * FROM get_visitor_checkin_status($1)
+    `, [visitId]);
+
+    return result.rows;
+  }
+
+  /**
+   * Search visits with filters and pagination
+   * @param {string} userId - User ID
+   * @param {Object} filters - Search filters
+   * @param {Object} pagination - Pagination options
+   * @returns {Promise<Object>} Search results with pagination
+   */
+  async searchVisitsWithFilters(userId, filters = {}, pagination = {}) {
+    const { status, type, search, start_date, end_date } = filters;
+    const { page = 1, limit = 10 } = pagination;
+
+    let whereConditions = ['v.host_id = $1'];
+    let params = [userId];
+    let paramCount = 1;
+
+    if (status) {
+      paramCount++;
+      whereConditions.push(`v.status = $${paramCount}`);
+      params.push(status);
+    }
+
+    if (type) {
+      paramCount++;
+      whereConditions.push(`v.visit_type = $${paramCount}`);
+      params.push(type);
+    }
+
+    if (search) {
+      paramCount++;
+      whereConditions.push(`(v.title ILIKE $${paramCount} OR v.description ILIKE $${paramCount})`);
+      params.push(`%${search}%`);
+    }
+
+    if (start_date) {
+      paramCount++;
+      whereConditions.push(`v.expected_start >= $${paramCount}`);
+      params.push(start_date);
+    }
+
+    if (end_date) {
+      paramCount++;
+      whereConditions.push(`v.expected_start <= $${paramCount}`);
+      params.push(end_date);
+    }
+
+    const searchQuery = `
+      SELECT v.*, 
+             COUNT(vv.visitor_id) as visitor_count,
+             ARRAY_AGG(
+               JSON_BUILD_OBJECT(
+                 'id', vis.id,
+                 'name', vis.name,
+                 'phone', vis.phone,
+                 'status', vv.status
+               )
+             ) as visitors
+      FROM ${this.tableName} v
+      LEFT JOIN visit_visitors vv ON v.id = vv.visit_id
+      LEFT JOIN visitors vis ON vv.visitor_id = vis.id
+      WHERE ${whereConditions.join(' AND ')}
+      GROUP BY v.id
+      ORDER BY v.created_at DESC
+      LIMIT ${limit} OFFSET ${(page - 1) * limit}
+    `;
+
+    const result = await this.query(searchQuery, params);
+    return {
+      data: result.rows,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: result.rowCount
+      }
+    };
+  }
 }
 
 export default new Visit();

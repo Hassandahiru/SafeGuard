@@ -288,21 +288,8 @@ class FrequentVisitorController {
   getFrequentVisitorCategories = asyncHandler(async (req, res) => {
     const userId = req.user.id;
 
-    // Get unique categories with counts
-    const query = `
-      SELECT 
-        category,
-        COUNT(*) as count,
-        COUNT(*) FILTER (WHERE last_visited IS NOT NULL) as visited_count,
-        MAX(last_visited) as last_visit_in_category
-      FROM frequent_visitors
-      WHERE user_id = $1 AND is_active = true
-      GROUP BY category
-      ORDER BY count DESC
-    `;
-
-    const result = await FrequentVisitor.raw(query, [userId]);
-    const categories = result.rows;
+    // Get unique categories with counts using model method
+    const categories = await FrequentVisitor.getCategoriesWithStats(userId);
 
     res.json(createResponse(
       true, 

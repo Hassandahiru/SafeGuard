@@ -305,104 +305,17 @@ class AdminController {
         throw new AuthorizationError('Only super admins can view all buildings');
       }
 
-      let query = `
-        SELECT 
-          b.*,
-          COUNT(DISTINCT u.id) FILTER (WHERE u.role = 'resident' AND u.is_active = true) as total_residents,
-          COUNT(DISTINCT u.id) FILTER (WHERE u.role = 'building_admin' AND u.is_active = true) as total_admins,
-          COUNT(DISTINCT u.id) FILTER (WHERE u.role = 'security' AND u.is_active = true) as total_security,
-          COUNT(DISTINCT v.id) FILTER (WHERE v.created_at >= CURRENT_DATE - INTERVAL '30 days') as visits_last_30_days,
-          COUNT(DISTINCT l.id) FILTER (WHERE l.status = 'active') as active_licenses,
-          ROUND((b.used_licenses::DECIMAL / b.total_licenses * 100), 2) as license_usage_percentage,
-          CASE 
-            WHEN EXISTS(SELECT 1 FROM licenses WHERE building_id = b.id AND status = 'active' AND expires_at > CURRENT_TIMESTAMP) THEN 'LICENSED'
-            ELSE 'UNLICENSED'
-          END as license_status
-        FROM buildings b
-        LEFT JOIN users u ON b.id = u.building_id
-        LEFT JOIN visits v ON b.id = v.building_id
-        LEFT JOIN licenses l ON b.id = l.building_id
-        WHERE 1=1
-      `;
+      // Use model method to get buildings with filters and pagination
+      const result = await Building.getAllWithStatsForAdmin(
+        { search, city, state, status },
+        { page: parseInt(page), limit: parseInt(limit) }
+      );
 
-      const params = [];
-      let paramCount = 1;
+      const buildings = result.data;
+      const totalCount = result.pagination.total;
+      const totalPages = result.pagination.pages;
 
-      // Add search filter
-      if (search) {
-        query += ` AND (b.name ILIKE $${paramCount} OR b.address ILIKE $${paramCount} OR b.city ILIKE $${paramCount})`;
-        params.push(`%${search}%`);
-        paramCount++;
-      }
 
-      // Add city filter
-      if (city) {
-        query += ` AND b.city = $${paramCount}`;
-        params.push(city);
-        paramCount++;
-      }
-
-      // Add state filter
-      if (state) {
-        query += ` AND b.state = $${paramCount}`;
-        params.push(state);
-        paramCount++;
-      }
-
-      // Add status filter
-      if (status !== 'all') {
-        query += ` AND b.is_active = $${paramCount}`;
-        params.push(status === 'active');
-        paramCount++;
-      }
-
-      query += ` GROUP BY b.id ORDER BY b.created_at DESC`;
-
-      // Add pagination
-      const offset = (page - 1) * limit;
-      query += ` LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
-      params.push(limit, offset);
-
-      const result = await Building.query(query, params);
-      const buildings = result.rows;
-
-      // Get total count
-      let countQuery = `
-        SELECT COUNT(DISTINCT b.id) as total
-        FROM buildings b
-        WHERE 1=1
-      `;
-
-      const countParams = [];
-      let countParamCount = 1;
-
-      if (search) {
-        countQuery += ` AND (b.name ILIKE $${countParamCount} OR b.address ILIKE $${countParamCount} OR b.city ILIKE $${countParamCount})`;
-        countParams.push(`%${search}%`);
-        countParamCount++;
-      }
-
-      if (city) {
-        countQuery += ` AND b.city = $${countParamCount}`;
-        countParams.push(city);
-        countParamCount++;
-      }
-
-      if (state) {
-        countQuery += ` AND b.state = $${countParamCount}`;
-        countParams.push(state);
-        countParamCount++;
-      }
-
-      if (status !== 'all') {
-        countQuery += ` AND b.is_active = $${countParamCount}`;
-        countParams.push(status === 'active');
-      }
-
-      const countResult = await Building.query(countQuery, countParams);
-      const totalCount = parseInt(countResult.rows[0].total);
-
-      const totalPages = Math.ceil(totalCount / limit);
 
       res.status(HTTP_STATUS.OK).json({
         success: true,
