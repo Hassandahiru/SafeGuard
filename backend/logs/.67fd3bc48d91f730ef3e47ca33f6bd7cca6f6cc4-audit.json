@@ -104,6 +104,11 @@
             "date": 1755777481180,
             "name": "logs/security-2025-08-21.log",
             "hash": "deb1d2a6340b6ab72cdfeed34b838c1c5f27be2200a3b5c08c51924f734c4e09"
+        },
+        {
+            "date": 1755857535272,
+            "name": "logs/security-2025-08-22.log",
+            "hash": "4fe9fc5ed9e599fc636d05fbe82c7685f6a6fb7243dafe305b6c2a8f9c412d2d"
         }
     ],
     "hashType": "sha256"

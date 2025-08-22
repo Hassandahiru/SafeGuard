@@ -32,6 +32,17 @@
   "emergency_contact_phone": "+1555-0203"
 },
 {
+  "email": "harrypotter@gmail.com",
+  "password": "ColdDay@1975",
+  "first_name": "Harry",
+  "last_name": "Potter",
+  "phone": "+2348144672365",
+  "building_email": "lakeview@lakeviewhomes.com",
+  "apartment_number": "18B",
+  "emergency_contact_name": "Sarah Halliru",
+  "emergency_contact_phone": "+2348188472987"
+},
+{
   "email": "amos.dauda@gmail.com",
   "password": "Qwerty@123",
   "first_name": "Dauda",

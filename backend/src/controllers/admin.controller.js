@@ -930,8 +930,7 @@ class AdminController {
       // Prepare update data - deactivate resident and mark as not using license
       const updateData = {
         is_active: false,
-        uses_license: false,  // Remove license usage
-        updated_at: new Date()
+        uses_license: false  // Remove license usage (updated_at handled automatically by BaseModel)
       };
 
       // Update the resident's status using User model method
