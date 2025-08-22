@@ -923,14 +923,38 @@ class AdminController {
         throw new ConflictError('Resident is already disengaged');
       }
 
-      // Prepare update data - only update is_active and updated_at
+      // Check if resident uses a license that needs to be returned to the pool
+      const usesLicense = resident.uses_license;
+      let licenseReturned = false;
+
+      // Prepare update data - deactivate resident and mark as not using license
       const updateData = {
         is_active: false,
+        uses_license: false,  // Remove license usage
         updated_at: new Date()
       };
 
-      // Update the resident's status
+      // Update the resident's status using User model method
       await User.update(residentId, updateData);
+
+      // Return license to building pool if resident was using one
+      if (usesLicense) {
+        // Use Building model method to decrement license usage
+        const updatedBuilding = await Building.updateLicenseUsage(resident.building_id, -1);
+        
+        if (updatedBuilding) {
+          licenseReturned = true;
+          logger.info(`License returned to pool for building`, {
+            buildingId: resident.building_id,
+            buildingName: updatedBuilding.name,
+            newUsedLicenses: updatedBuilding.used_licenses,
+            totalLicenses: updatedBuilding.total_licenses,
+            availableLicenses: updatedBuilding.total_licenses - updatedBuilding.used_licenses,
+            residentId,
+            residentEmail: resident.email
+          });
+        }
+      }
 
       // Log the action with detailed information
       logger.info(`Resident disengaged: ${residentId} by admin ${req.user.id}`, {
@@ -981,7 +1005,9 @@ class AdminController {
               email: req.user.email,
               name: `${req.user.first_name} ${req.user.last_name}`
             },
-            notification_sent: notify_resident
+            notification_sent: notify_resident,
+            license_returned: licenseReturned,
+            was_using_license: usesLicense
           }
         }
       });
