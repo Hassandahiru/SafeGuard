@@ -889,6 +889,108 @@ class AdminController {
       throw error;
     }
   }
+
+  /**
+   * Disengage (deactivate) a resident from the building
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async disengageResident(req, res) {
+    try {
+      const { residentId } = req.params;
+      const { reason, effective_date, notify_resident = true } = req.body;
+
+      // Check if resident exists and get their details
+      const resident = await User.findById(residentId);
+      if (!resident) {
+        throw new NotFoundError('Resident not found');
+      }
+
+      // Ensure the user is actually a resident
+      if (resident.role !== USER_ROLES.RESIDENT) {
+        throw new ValidationError('User is not a resident');
+      }
+
+      // Authorization check - building admins can only disengage residents from their own building
+      if (req.user.role === USER_ROLES.BUILDING_ADMIN) {
+        if (req.user.building_id !== resident.building_id) {
+          throw new AuthorizationError('You can only disengage residents from your own building');
+        }
+      }
+
+      // Check if resident is already inactive
+      if (!resident.is_active) {
+        throw new ConflictError('Resident is already disengaged');
+      }
+
+      // Prepare update data - only update is_active and updated_at
+      const updateData = {
+        is_active: false,
+        updated_at: new Date()
+      };
+
+      // Update the resident's status
+      await User.update(residentId, updateData);
+
+      // Log the action with detailed information
+      logger.info(`Resident disengaged: ${residentId} by admin ${req.user.id}`, {
+        residentId,
+        residentEmail: resident.email,
+        residentName: `${resident.first_name} ${resident.last_name}`,
+        adminId: req.user.id,
+        adminEmail: req.user.email,
+        buildingId: resident.building_id,
+        reason,
+        effective_date: effective_date ? new Date(effective_date) : new Date(),
+        notify_resident
+      });
+
+      // Get the updated resident data
+      const updatedResident = await User.findById(residentId);
+
+      // TODO: Send notification to resident if notify_resident is true
+      if (notify_resident) {
+        // This would integrate with your notification service
+        logger.info(`Notification scheduled for disengaged resident: ${residentId}`, {
+          residentEmail: resident.email,
+          residentName: `${resident.first_name} ${resident.last_name}`,
+          reason
+        });
+      }
+
+      res.status(HTTP_STATUS.OK).json({
+        success: true,
+        message: 'Resident successfully disengaged',
+        data: {
+          resident: {
+            id: updatedResident.id,
+            first_name: updatedResident.first_name,
+            last_name: updatedResident.last_name,
+            email: updatedResident.email,
+            phone: updatedResident.phone,
+            apartment_number: updatedResident.apartment_number,
+            role: updatedResident.role,
+            is_active: updatedResident.is_active,
+            updated_at: updatedResident.updated_at
+          },
+          disengagement_details: {
+            reason,
+            effective_date: effective_date || new Date(),
+            disengaged_by: {
+              id: req.user.id,
+              email: req.user.email,
+              name: `${req.user.first_name} ${req.user.last_name}`
+            },
+            notification_sent: notify_resident
+          }
+        }
+      });
+
+    } catch (error) {
+      logger.error('Error disengaging resident:', error);
+      throw error;
+    }
+  }
 }
 
 export default new AdminController();

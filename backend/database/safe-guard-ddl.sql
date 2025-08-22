@@ -1,6 +1,8 @@
--- SafeGuard Visitor Management System - PostgreSQL Schema (Visit-Based Architecture)
--- Created: 2024-01-15
--- Description: Complete database schema with visit-based system, triggers, functions, and indexes
+-- SafeGuard Database Schema DDL
+-- Generated: 2025-08-21
+-- Version: 2.0
+-- Total Tables: 19 core tables + views
+-- Visit-Centric Architecture with Entry/Exit Tracking
 
 -- Enable UUID extension for unique identifiers
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -140,6 +142,9 @@ CREATE TABLE visits (
     recurring_pattern JSONB, -- For recurring visits (daily, weekly, etc.)
     parent_visit_id UUID REFERENCES visits(id), -- For recurring visits
     metadata JSONB DEFAULT '{}',
+    -- New Entry/Exit Tracking Fields (v2.0)
+    entry BOOLEAN DEFAULT false,
+    exit BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -369,6 +374,10 @@ CREATE INDEX idx_visits_expected_start ON visits(expected_start);
 CREATE INDEX idx_visits_qr_code ON visits(qr_code);
 CREATE INDEX idx_visits_created_at ON visits(created_at);
 CREATE INDEX idx_visits_type ON visits(visit_type);
+-- New Entry/Exit indexes (v2.0)
+CREATE INDEX idx_visits_entry ON visits(entry);
+CREATE INDEX idx_visits_exit ON visits(exit);
+CREATE INDEX idx_visits_entry_exit ON visits(entry, exit);
 
 -- Visit visitors indexes
 CREATE INDEX idx_visit_visitors_visit_id ON visit_visitors(visit_id);

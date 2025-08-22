@@ -161,6 +161,21 @@ router.put('/licenses/:licenseId/activate',
 );
 
 // =============================================
+// RESIDENT MANAGEMENT ROUTES
+// =============================================
+
+/**
+ * @route   PUT /api/admin/residents/disengage/:residentId
+ * @desc    Disengage (deactivate) a resident from the building
+ * @access  Building Admin (own building only) or Super Admin
+ */
+router.put('/residents/disengage/:residentId',
+  authorize([USER_ROLES.BUILDING_ADMIN, USER_ROLES.SUPER_ADMIN]),
+  adminValidations.disengageResident,
+  asyncHandler(AdminController.disengageResident)
+);
+
+// =============================================
 // DASHBOARD AND ANALYTICS ROUTES
 // =============================================
 

@@ -999,6 +999,33 @@ const adminValidations = {
       .isBoolean()
       .withMessage('Expiring only must be true or false'),
     handleValidationErrors
+  ],
+
+  disengageResident: [
+    param('residentId')
+      .isUUID()
+      .withMessage('Resident ID must be a valid UUID'),
+    commonValidations.uuid('residentId'),
+    body('reason')
+      .notEmpty()
+      .withMessage('Reason is required')
+      .isLength({ min: 10, max: 500 })
+      .withMessage('Reason must be between 10 and 500 characters'),
+    body('effective_date')
+      .optional()
+      .isISO8601()
+      .withMessage('Effective date must be a valid ISO 8601 date')
+      .custom((value) => {
+        if (value && new Date(value) < new Date()) {
+          throw new Error('Effective date cannot be in the past');
+        }
+        return true;
+      }),
+    body('notify_resident')
+      .optional()
+      .isBoolean()
+      .withMessage('Notify resident must be true or false'),
+    handleValidationErrors
   ]
 };
 
