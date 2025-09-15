@@ -1,0 +1,725 @@
+{
+  "info": {
+    "name": "SafeGuard Notification Testing",
+    "description": "Complete collection for testing the SafeGuard notification service including visitor notifications, admin approvals, emergency alerts, and real-time Socket.io events.",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "api_version",
+      "value": "api",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "your_jwt_token_here",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "123e4567-e89b-12d3-a456-426614174000",
+      "type": "string"
+    },
+    {
+      "key": "building_id",
+      "value": "123e4567-e89b-12d3-a456-426614174000",
+      "type": "string"
+    },
+    {
+      "key": "visitor_id",
+      "value": "123e4567-e89b-12d3-a456-426614174000",
+      "type": "string"
+    },
+    {
+      "key": "approval_id",
+      "value": "123e4567-e89b-12d3-a456-426614174000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Authentication",
+      "item": [
+        {
+          "name": "Login - Resident",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.to.have.status(200)) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('jwt_token', jsonData.data.token);",
+                  "    pm.collectionVariables.set('user_id', jsonData.data.user.id);",
+                  "    pm.collectionVariables.set('building_id', jsonData.data.user.building_id);",
+                  "    console.log('Token set:', jsonData.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"resident@test.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/{{api_version}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login - Building Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@building.com\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/{{api_version}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login - Security",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"security@building.com\",\n  \"password\": \"security123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/{{api_version}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥 Visitor Notifications",
+      "item": [
+        {
+          "name": "Create Visitor (Triggers Security Notification)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.to.have.status(201)) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('visitor_id', jsonData.data.visitor.id);",
+                  "    console.log('✅ Visitor created, should trigger notification to security');",
+                  "    console.log('Visitor ID:', jsonData.data.visitor.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Test Visitor\",\n  \"phone\": \"+1234567890\",\n  \"purpose\": \"Testing notification service\",\n  \"expected_start\": \"{{$isoTimestamp}}\",\n  \"expected_end\": \"2024-12-31T18:00:00Z\",\n  \"visitor_type\": \"guest\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/{{api_version}}/visitors",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "visitors"]
+            }
+          }
+        },
+        {
+          "name": "QR Scan - Entry (Triggers Arrival Notification)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.to.have.status(200)) {",
+                  "    console.log('✅ QR scanned for entry, should trigger visitor arrival notification to host');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitor_id\": \"{{visitor_id}}\",\n  \"scan_type\": \"entry\",\n  \"location\": \"Main Gate\",\n  \"scanned_by\": \"{{user_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/{{api_version}}/visits/scan-qr",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "visits", "scan-qr"]
+            }
+          }
+        },
+        {
+          "name": "QR Scan - Exit (Triggers Exit Notification)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.to.have.status(200)) {",
+                  "    console.log('✅ QR scanned for exit, should trigger visitor exit notification to host');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitor_id\": \"{{visitor_id}}\",\n  \"scan_type\": \"exit\",\n  \"location\": \"Main Gate\",\n  \"scanned_by\": \"{{user_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/{{api_version}}/visits/scan-qr",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "visits", "scan-qr"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏢 Admin Approval Notifications",
+      "item": [
+        {
+          "name": "Process Approval - Approve (Triggers Notification)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.to.have.status(200)) {",
+                  "    console.log('✅ Resident approved, should trigger approval notification');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approved\": true,\n  \"notes\": \"Testing notification service - resident approved for building access\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/{{api_version}}/resident-approval/{{approval_id}}/process",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "resident-approval", "{{approval_id}}", "process"]
+            }
+          }
+        },
+        {
+          "name": "Process Approval - Reject (Triggers Notification)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.to.have.status(200)) {",
+                  "    console.log('✅ Resident rejected, should trigger rejection notification');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approved\": false,\n  \"reason\": \"Documentation incomplete - missing proof of residence\",\n  \"notes\": \"Testing notification service - please resubmit with complete documents\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/{{api_version}}/resident-approval/{{approval_id}}/process",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "resident-approval", "{{approval_id}}", "process"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🚨 Emergency & Security Notifications",
+      "item": [
+        {
+          "name": "Create Emergency Alert",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.to.have.status(201)) {",
+                  "    console.log('🚨 Emergency alert created, should trigger notifications to all building residents and super admins');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emergency_type\": \"fire\",\n  \"location\": \"Main Lobby - Ground Floor\",\n  \"description\": \"Testing emergency notification system - Fire alarm activated\",\n  \"severity\": \"high\",\n  \"reporter_contact\": \"+1234567890\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/{{api_version}}/emergency/alert",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "emergency", "alert"]
+            }
+          }
+        },
+        {
+          "name": "Create Security Alert",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.to.have.status(201)) {",
+                  "    console.log('🔒 Security alert created, should trigger notifications to security and building admins');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"alert_type\": \"unauthorized_access\",\n  \"location\": \"Parking Garage Level B1\",\n  \"description\": \"Testing security notification - Unauthorized access detected\",\n  \"priority\": \"high\",\n  \"camera_id\": \"CAM_B1_03\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/{{api_version}}/security/alert",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "security", "alert"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👤 Resident Management Notifications",
+      "item": [
+        {
+          "name": "Disengage Resident (Triggers Notification)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.to.have.status(200)) {",
+                  "    console.log('✅ Resident disengaged, should trigger notification about account deactivation');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Testing notification service - Resident has moved out and requested account deactivation\",\n  \"effective_date\": \"{{$isoTimestamp}}\",\n  \"notify_resident\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/{{api_version}}/admin/residents/disengage/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "admin", "residents", "disengage", "{{user_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Ban Visitor (Triggers Notification)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.to.have.status(201)) {",
+                  "    console.log('🚫 Visitor banned, should trigger notification to resident');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitor_name\": \"Unwanted Visitor\",\n  \"visitor_phone\": \"+9876543210\",\n  \"reason\": \"Testing notification service - Inappropriate behavior\",\n  \"severity\": \"medium\",\n  \"expires_at\": \"2025-01-15T23:59:59Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/{{api_version}}/visitor-bans",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "visitor-bans"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔔 Notification Management",
+      "item": [
+        {
+          "name": "Get User Notifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.to.have.status(200)) {",
+                  "    var jsonData = pm.response.json();",
+                  "    console.log('📋 User notifications:', jsonData.data.notifications.length);",
+                  "    if (jsonData.data.notifications.length > 0) {",
+                  "        pm.collectionVariables.set('notification_id', jsonData.data.notifications[0].id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{api_version}}/notifications?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "notifications"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Notification Counts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.to.have.status(200)) {",
+                  "    var jsonData = pm.response.json();",
+                  "    console.log('📊 Notification counts - Total:', jsonData.data.total, 'Unread:', jsonData.data.unread);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{api_version}}/notifications/counts",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "notifications", "counts"]
+            }
+          }
+        },
+        {
+          "name": "Mark Notification as Read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.to.have.status(200)) {",
+                  "    console.log('✅ Notification marked as read, should trigger real-time update');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{base_url}}/{{api_version}}/notifications/{{notification_id}}/read",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "notifications", "{{notification_id}}", "read"]
+            }
+          }
+        },
+        {
+          "name": "Mark All Notifications as Read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.to.have.status(200)) {",
+                  "    var jsonData = pm.response.json();",
+                  "    console.log('✅ All notifications marked as read. Count:', jsonData.data.marked_count);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{base_url}}/{{api_version}}/notifications/read-all",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "notifications", "read-all"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔧 Notification Service Health & Testing",
+      "item": [
+        {
+          "name": "Notification Service Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.to.have.status(200)) {",
+                  "    var jsonData = pm.response.json();",
+                  "    console.log('✅ Notification service is healthy');",
+                  "    console.log('Socket handler connected:', jsonData.data.socket_handler_connected);",
+                  "    console.log('Test notification sent:', jsonData.data.test_notification.id);",
+                  "} else {",
+                  "    console.log('❌ Notification service health check failed');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/{{api_version}}/test/notifications/health",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "test", "notifications", "health"]
+            }
+          }
+        },
+        {
+          "name": "Test System Notification",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.to.have.status(200)) {",
+                  "    console.log('✅ System notification sent successfully');",
+                  "} else {",
+                  "    console.log('❌ System notification failed');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"System Test Notification\",\n  \"message\": \"This is a test system notification to verify the notification service is working properly.\",\n  \"priority\": \"medium\",\n  \"data\": {\n    \"test_type\": \"system_notification\",\n    \"timestamp\": \"{{$isoTimestamp}}\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/{{api_version}}/test/notifications/system",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "test", "notifications", "system"]
+            }
+          }
+        },
+        {
+          "name": "Test Building-wide Notification",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.to.have.status(200)) {",
+                  "    var jsonData = pm.response.json();",
+                  "    console.log('✅ Building-wide notification sent to', jsonData.data.notification_count, 'users');",
+                  "} else {",
+                  "    console.log('❌ Building-wide notification failed');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"building_id\": \"{{building_id}}\",\n  \"title\": \"Building Announcement\",\n  \"message\": \"Testing building-wide notification system. This message should reach all residents, admins, and security in the building.\",\n  \"priority\": \"medium\",\n  \"exclude_roles\": [],\n  \"data\": {\n    \"test_type\": \"building_notification\",\n    \"timestamp\": \"{{$isoTimestamp}}\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/{{api_version}}/test/notifications/building",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "test", "notifications", "building"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global pre-request script",
+          "console.log('🚀 Testing notification service...');"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test script",
+          "pm.test('Response time is less than 5000ms', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+          "});",
+          "",
+          "pm.test('Response has proper structure', function () {",
+          "    const jsonData = pm.response.json();",
+          "    pm.expect(jsonData).to.have.property('success');",
+          "    pm.expect(jsonData).to.have.property('timestamp');",
+          "});"
+        ]
+      }
+    }
+  ]
+}

@@ -14,12 +14,13 @@
 9. [Authentication & Security](#authentication--security)
 10. [Models & Database Functions](#models--database-functions)
 11. [Real-time Communication](#real-time-communication)
-12. [Admin Approval Workflow](#admin-approval-workflow)
-13. [Postman Testing](#postman-testing)
-14. [Installation & Setup](#installation--setup)
-15. [Testing](#testing)
-16. [Deployment](#deployment)
-17. [Development Guide](#development-guide)
+12. [Notification System Architecture](#notification-system-architecture)
+13. [Admin Approval Workflow](#admin-approval-workflow)
+14. [Postman Testing](#postman-testing)
+15. [Installation & Setup](#installation--setup)
+16. [Testing](#testing)
+17. [Deployment](#deployment)
+18. [Development Guide](#development-guide)
 
 ## Project Overview
 
@@ -712,6 +713,285 @@ RETURNS TABLE(
 'alert:security'       // Security alert (emergency)
 'alert:system'         // System-wide alert
 ```
+
+## 🔔 Notification System Architecture
+
+### System Overview
+
+The SafeGuard notification system is built with a **hybrid approach** combining:
+- **Database persistence** for reliability
+- **Real-time Socket.io delivery** for instant updates
+- **Multi-target broadcasting** for different user groups
+
+### Core Components
+
+#### 1. NotificationService (Central Hub)
+```javascript
+// Singleton service that manages all notifications
+class NotificationService {
+  constructor() {
+    this.socketHandler = null; // Connected to Socket.io for real-time
+  }
+}
+```
+
+#### 2. Database Model (Notification.js)
+```javascript
+// Persists all notifications to PostgreSQL
+class Notification extends BaseModel {
+  // Fields: id, user_id, building_id, type, title, message, 
+  //         data, priority, is_read, expires_at, created_at
+}
+```
+
+#### 3. Socket Handler (socketHandler.js)
+```javascript
+// Manages real-time WebSocket connections
+class SocketHandler {
+  // Maps: user_id -> socket_id, building_id -> socket_ids[]
+  // Handles authentication, connection management, real-time delivery
+}
+```
+
+### Notification Flow
+
+#### Step 1: Trigger Event
+```javascript
+// Example: Visitor arrives at gate
+await NotificationService.sendVisitorArrivalNotification(visitData, visitorData);
+```
+
+#### Step 2: Database Storage
+```javascript
+// 1. Create notification record in PostgreSQL
+const notification = await Notification.create({
+  user_id: userId,
+  type: NOTIFICATION_TYPE.VISITOR_ARRIVAL,
+  title: 'Visitor Arrived',
+  message: `${visitorData.name} has arrived at the gate`,
+  priority: PRIORITY_LEVELS.HIGH,
+  data: { visit_id, visitor_name, arrival_time }
+});
+```
+
+#### Step 3: Real-time Delivery
+```javascript
+// 2. Send via Socket.io (if user is online)
+if (realTime && this.socketHandler) {
+  this.socketHandler.emitToUser(userId, SOCKET_EVENTS.NOTIFICATION_NEW, {
+    notification: notification,
+    timestamp: new Date()
+  });
+}
+```
+
+### Delivery Methods
+
+#### Single User
+```javascript
+// Send to specific user
+await NotificationService.sendToUser(userId, notificationData);
+```
+
+#### Multiple Users
+```javascript
+// Send to array of users
+await NotificationService.sendToUsers([userId1, userId2], notificationData);
+```
+
+#### Building-wide
+```javascript
+// Send to all users in a building (excluding certain roles)
+await NotificationService.sendToBuilding(buildingId, notificationData, excludeRoles);
+```
+
+#### Role-based
+```javascript
+// Send to users with specific role
+await NotificationService.sendToRole(USER_ROLES.SECURITY, notificationData, buildingId);
+```
+
+### Notification Types
+
+```javascript
+const NOTIFICATION_TYPE = {
+  VISIT_CREATED: 'visit_created',      // → Security team
+  VISITOR_ARRIVAL: 'visitor_arrival',  // → Host resident
+  VISITOR_ENTERED: 'visitor_entered',  // → Host resident
+  VISITOR_EXITED: 'visitor_exited',   // → Host resident
+  EMERGENCY: 'emergency',             // → All building + Super admins
+  SECURITY_ALERT: 'security_alert',   // → Security + Building admins
+  SYSTEM: 'system'                    // → Various recipients
+};
+```
+
+### Socket Events
+
+```javascript
+const SOCKET_EVENTS = {
+  NOTIFICATION_NEW: 'notification:new',     // New notification
+  NOTIFICATION_READ: 'notification:read',   // Marked as read
+  NOTIFICATION_CLEAR: 'notification:clear', // All cleared
+  EMERGENCY_ALERT: 'emergency:alert',       // Emergency broadcast
+  SECURITY_ALERT: 'security:alert'          // Security alert
+};
+```
+
+### Integration Points
+
+#### Visitor System
+```javascript
+// visitor.controller.js
+await NotificationService.sendVisitCreatedNotification(result.visit, req.user);
+// → Notifies security when resident creates visitor invitation
+
+await NotificationService.sendVisitorArrivalNotification(visitData, visitorData);
+// → Notifies host when visitor scans QR at gate
+```
+
+#### Admin Approval System
+```javascript
+// adminApproval.controller.js
+await NotificationService.notifyAdminForApproval(superAdminId, adminUserId);
+// → Notifies super admin of new admin registration
+
+await NotificationService.notifyApprovalDecision(adminUserId, approved, approvedBy);
+// → Notifies admin of approval/rejection decision
+```
+
+#### Emergency System
+```javascript
+await NotificationService.sendEmergencyAlert(emergencyData, reporterData);
+// → Broadcasts to entire building + super admins
+```
+
+#### Visitor Ban System
+```javascript
+// visitorBan.controller.js
+await NotificationService.sendVisitorBannedNotification(visitorBan, req.user);
+// → Notifies resident about visitor ban confirmation
+```
+
+### Socket.io Connection Management
+
+#### Authentication
+```javascript
+// Client connects with JWT token
+const socket = io('http://localhost:3000', {
+  auth: { token: 'jwt-token-here' }
+});
+
+// Server authenticates and maps user to socket
+socket.user = authenticatedUser;
+this.userSockets.set(user.id, socket.id);
+```
+
+#### Room Management
+```javascript
+// Users automatically join rooms based on:
+- User ID room (individual notifications)
+- Building ID room (building-wide broadcasts)  
+- Role-based rooms (role-specific notifications)
+```
+
+### Priority System
+
+```javascript
+const PRIORITY_LEVELS = {
+  LOW: 'low',        // General info, visitor exits
+  MEDIUM: 'medium',  // Visit created, approvals
+  HIGH: 'high',      // Visitor arrivals, security alerts
+  CRITICAL: 'critical' // Emergency alerts
+};
+```
+
+### Database Schema
+
+```sql
+CREATE TABLE notifications (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id),
+  building_id UUID REFERENCES buildings(id),
+  type VARCHAR(50) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  data JSONB,                    -- Additional structured data
+  priority VARCHAR(20) DEFAULT 'medium',
+  is_read BOOLEAN DEFAULT FALSE,
+  expires_at TIMESTAMP,          -- Optional expiration
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### Complete Example Flow
+
+#### Scenario: Visitor Arrives at Gate
+
+1. **Security scans QR code**
+   ```javascript
+   POST /api/visits/scan-qr
+   { "visitor_id": "uuid", "scan_type": "entry" }
+   ```
+
+2. **Controller processes scan**
+   ```javascript
+   // visitor.controller.js - scanQR method
+   await NotificationService.sendVisitorArrivalNotification(visitData, visitorData);
+   ```
+
+3. **NotificationService handles delivery**
+   ```javascript
+   // 1. Save to database
+   const notification = await Notification.create({
+     user_id: visitData.host_id,  // Resident who invited
+     type: 'visitor_arrival',
+     title: 'Visitor Arrived',
+     message: 'John Doe has arrived at the gate'
+   });
+
+   // 2. Send real-time notification
+   socketHandler.emitToUser(visitData.host_id, 'notification:new', notification);
+   ```
+
+4. **Resident receives notification**
+   ```javascript
+   // Client-side
+   socket.on('notification:new', (data) => {
+     showNotification(data.notification);
+     updateNotificationBadge();
+   });
+   ```
+
+### Management Features
+
+#### Read Status
+```javascript
+await NotificationService.markAsRead(notificationId, userId);
+await NotificationService.markAllAsRead(userId, type);
+```
+
+#### Retrieval
+```javascript
+await NotificationService.getRecentNotifications(userId, 10);
+await NotificationService.getNotificationCounts(userId);
+await NotificationService.getUserNotifications(userId, { page: 1, limit: 20 });
+```
+
+#### Cleanup
+```javascript
+await NotificationService.cleanupOldNotifications(30); // Delete 30+ day old notifications
+```
+
+### Key Benefits
+
+1. **Reliable**: Database persistence ensures no notifications are lost
+2. **Real-time**: Socket.io provides instant delivery for online users
+3. **Scalable**: Role-based and building-wide broadcasts
+4. **Flexible**: Rich data payloads and priority system
+5. **Robust**: Offline users receive notifications when they reconnect
+
+The system ensures that whether users are online or offline, they'll always receive important notifications about visitor activity, security alerts, and administrative actions!
 
 ### Socket Authentication
 ```javascript

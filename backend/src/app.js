@@ -25,6 +25,8 @@ import adminRoutes from './routes/admin.routes.js';
 import adminApprovalRoutes from './routes/adminApproval.routes.js';
 import residentApprovalRoutes from './routes/residentApproval.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
+import settingsRoutes from './routes/settings.routes.js';
+import testingRoutes from './routes/testing.routes.js';
 import AdminController from './controllers/admin.controller.js';
 import { adminValidations } from './middleware/validation.js';
 import { asyncHandler } from './middleware/errorHandler.js';
@@ -129,7 +131,9 @@ class SafeGuardApp {
           visitors: '/api/visitors',
           admin: '/api/admin',
           adminApproval: '/api/admin-approval',
-          residentApproval: '/api/resident-approval'
+          residentApproval: '/api/resident-approval',
+          dashboard: '/api/dashboard',
+          settings: '/api/settings'
         }
       });
     });
@@ -144,6 +148,8 @@ class SafeGuardApp {
     this.app.use('/api/admin-approval', adminApprovalRoutes);
     this.app.use('/api/resident-approval', residentApprovalRoutes);
     this.app.use('/api/dashboard', dashboardRoutes);
+    this.app.use('/api/settings', settingsRoutes);
+    this.app.use('/api/test', testingRoutes);
     
     // Public building registration endpoint (separate from admin routes to avoid auth middleware)
     this.app.post('/api/register-building', 

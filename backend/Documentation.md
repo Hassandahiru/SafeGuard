@@ -491,6 +491,308 @@ All database operations are logged with:
 - Enhanced dashboard functionality
 - Improved error handling
 
+## ⚙️ Settings Management System
+
+### Overview
+
+The Settings Management system provides comprehensive user and building configuration capabilities with role-based access control. This feature was implemented to allow different user types (Admin, Resident, Security) to manage their profiles, preferences, and system configurations according to their role permissions.
+
+### Key Features
+
+#### Role-Based Settings Access
+- **Admin Users**: Complete building and user management capabilities
+- **Resident Users**: Personal profile and notification preferences
+- **Security Users**: Profile management and security-specific preferences
+- **Building-Scope Restrictions**: Users limited to their assigned building
+
+#### Comprehensive Configuration Options
+- **Profile Management**: Names, contact info, avatars, emergency contacts
+- **Building Configuration**: Logos, contact information, operational settings
+- **User Management**: Admin ability to view and manage building users
+- **License Management**: Request additional building licenses
+- **Notification Preferences**: Customizable alerts and communication settings
+- **Security Preferences**: Security-specific operational configurations
+
+### Architecture Implementation
+
+#### Controller Structure (`src/controllers/settings.controller.js`)
+
+The settings controller implements role-based methods for different user types:
+
+```javascript
+class SettingsController {
+  // Main endpoints
+  getSettings()     // Role-based settings retrieval
+  updateSettings()  // Role-based settings updates
+  
+  // Admin-only endpoints
+  deleteUser()           // User management
+  requestLicenses()      // License requests
+  deleteBuildingAccount() // Building deletion (Super Admin only)
+  
+  // Role-specific handlers
+  getAdminSettings()     // Admin dashboard settings
+  getResidentSettings()  // Resident personal settings  
+  getSecuritySettings()  // Security operational settings
+}
+```
+
+#### Validation Layer (`src/validators/settings.validator.js`)
+
+Comprehensive input validation for all settings operations:
+
+```javascript
+// Profile validation
+profileSchema = {
+  first_name: 2-100 chars, letters/spaces/hyphens/apostrophes
+  last_name: 2-100 chars, letters/spaces/hyphens/apostrophes
+  phone: International format validation
+  apartment_number: Max 20 characters
+  avatar_url: Valid HTTP/HTTPS URLs only
+  emergency_contact: Optional nested object validation
+}
+
+// Building validation (Admin only)
+buildingSchema = {
+  name: 2-200 characters
+  address: Max 500 characters
+  logo_url: Valid HTTP/HTTPS URLs
+  contact_info: Email and phone validation
+  settings: Boolean and numeric constraints
+}
+```
+
+#### Route Protection (`src/routes/settings.routes.js`)
+
+Multi-layered security with role-based middleware:
+
+```javascript
+// Authentication middleware for all routes
+router.use(authenticate)
+
+// Role-specific access control
+checkSettingsAccess    // All authenticated users
+checkAdminAccess      // Building Admin + Super Admin
+checkSuperAdminAccess // Super Admin only
+
+// Building-scope validation
+// Users restricted to their assigned building
+// Cross-building access returns 403 Forbidden
+```
+
+### Database Integration
+
+#### Model Updates Required
+
+The settings system integrates with existing User and Building models:
+
+**User Model Extensions**:
+- Enhanced `preferences` JSON field for user-specific settings
+- Support for nested notification and security preferences
+- Emergency contact information storage
+
+**Building Model Extensions**:
+- Enhanced `settings` JSON field for building configurations
+- Logo URL and contact information management
+- License tracking and request capabilities
+
+#### Settings Data Structure
+
+```javascript
+// User preferences structure
+preferences: {
+  notifications: {
+    visitor_arrival: boolean,
+    visitor_departure: boolean,
+    qr_code_generated: boolean,
+    security_alerts: boolean,
+    email_notifications: boolean,
+    sms_notifications: boolean
+  },
+  security: {
+    scan_sound_enabled: boolean,
+    auto_scan_mode: boolean,
+    alert_level: 'low' | 'medium' | 'high',
+    shift_notifications: boolean
+  },
+  theme: 'light' | 'dark' | 'auto',
+  language: string
+}
+
+// Building settings structure
+settings: {
+  visitor_approval_required: boolean,
+  max_visitors_per_resident: number,
+  visit_duration_limit_hours: number,
+  qr_code_expiry_minutes: number,
+  security_level: 'low' | 'medium' | 'high',
+  allow_recurring_visits: boolean,
+  require_visitor_photo: boolean,
+  enable_geofencing: boolean,
+  auto_checkin_enabled: boolean
+}
+```
+
+### Security Implementation
+
+#### Access Control Matrix
+
+| Feature | Super Admin | Building Admin | Resident | Security |
+|---------|-------------|----------------|----------|----------|
+| Change Profile Image | ✅ | ✅ | ✅ | ✅ |
+| Update Personal Info | ✅ | ✅ | ✅ | ✅ |
+| Delete Users | ✅ | ✅ (own building) | ❌ | ❌ |
+| Request Licenses | ✅ | ✅ | ❌ | ❌ |
+| Change Building Logo | ✅ | ✅ | ❌ | ❌ |
+| Delete Building | ✅ | ❌ | ❌ | ❌ |
+| View User List | ✅ | ✅ (own building) | ❌ | ❌ |
+| Manage Building Settings | ✅ | ✅ | ❌ | ❌ |
+
+#### Validation Security Features
+
+```javascript
+// Input sanitization and validation
+- XSS prevention through input encoding
+- SQL injection prevention via parameterized queries
+- File upload validation for avatar/logo URLs
+- Rate limiting on settings update endpoints
+- CSRF protection on state-changing operations
+
+// Authorization checks
+- JWT token validation on all endpoints
+- Role-based access control enforcement
+- Building ownership verification
+- Cross-building access prevention
+```
+
+### API Endpoints
+
+#### Core Settings Endpoints
+
+```javascript
+GET    /api/settings              // Get user settings by role
+PUT    /api/settings              // Update user settings
+DELETE /api/settings/users/:id    // Delete user (Admin only)
+POST   /api/settings/licenses/request  // Request licenses (Admin only)
+DELETE /api/settings/building     // Delete building (Super Admin only)
+```
+
+#### Response Capabilities Structure
+
+Each user receives different capabilities based on their role:
+
+```javascript
+// Admin capabilities
+capabilities: {
+  canChangeProfileImage: true,
+  canDeleteBuildingAccount: true, // Super Admin only
+  canManageUsers: true,
+  canRequestLicenses: true,
+  canChangeBuildingLogo: true,
+  canManageBuilding: true,
+  canViewAnalytics: true,
+  canManageSecuritySettings: true
+}
+
+// Resident capabilities  
+capabilities: {
+  canChangeProfileImage: true,
+  canUpdatePersonalInfo: true,
+  canChangePassword: true,
+  canSetEmergencyContact: true,
+  canManageNotifications: true,
+  canViewVisitorHistory: true
+}
+```
+
+### Error Handling
+
+#### Custom Error Types
+
+The settings system uses specialized error handling:
+
+```javascript
+// Authentication errors
+AUTHENTICATION_ERROR - "No token provided"
+AUTHORIZATION_ERROR  - "Access denied. Admin privileges required"
+
+// Validation errors  
+VALIDATION_ERROR - "Settings validation failed: [details]"
+NOT_FOUND_ERROR  - "User not found" / "Building not found"
+
+// Business logic errors
+CONFLICT_ERROR - "Cannot delete super admin users"
+```
+
+#### Error Response Format
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Settings validation failed: First name must be at least 2 characters"
+  },
+  "timestamp": "2025-09-15T11:30:00Z"
+}
+```
+
+### Testing Integration
+
+#### Postman Testing
+
+The settings endpoints are included in the comprehensive Postman collection:
+
+```javascript
+// Test scenarios covered
+- Role-based access control validation
+- Input validation boundary testing  
+- Cross-building access prevention
+- Profile update workflows
+- Building configuration changes
+- License request workflows
+- User management operations
+```
+
+### Performance Considerations
+
+#### Database Query Optimization
+
+```javascript
+// Optimized queries for settings retrieval
+- Single query to get user with building information
+- Lazy loading of user lists for admin dashboard
+- Efficient JSON field updates for preferences
+- Indexed queries on user_id and building_id
+```
+
+#### Caching Strategy
+
+```javascript
+// Redis caching for frequently accessed settings
+- User preferences cached for 15 minutes
+- Building settings cached for 1 hour  
+- User capabilities cached for 30 minutes
+- Cache invalidation on settings updates
+```
+
+### Migration Notes
+
+#### Upgrading to Settings System
+
+For existing installations:
+
+1. **Database Updates**: No schema changes required - utilizes existing `preferences` JSON fields
+2. **API Integration**: New endpoints available at `/api/settings/*`
+3. **Frontend Updates**: Settings capabilities available in all user context responses
+4. **Backwards Compatibility**: Existing user and building update endpoints remain functional
+
+#### Version Compatibility
+
+- **v2.2+**: Full settings management available
+- **v2.1**: Partial settings via existing user endpoints
+- **v2.0**: Basic profile updates only
+
 ## 📚 Additional Resources
 
 ### Related Files
@@ -521,6 +823,6 @@ npm start
 
 ---
 
-*Last Updated: August 18, 2025*
-*Version: 2.0*
+*Last Updated: September 15, 2025*
+*Version: 2.2*
 *Maintainer: SafeGuard Development Team*

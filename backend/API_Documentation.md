@@ -1,5 +1,5 @@
-# SafeGuard API Documentation v2.0
-**Updated: 2025-08-20** | **Version: 2.0**
+# SafeGuard API Documentation v2.2
+**Updated: 2025-09-15** | **Version: 2.2**
 
 ## 📋 Table of Contents
 - [Overview](#overview)
@@ -14,6 +14,7 @@
 - [Resident Approval System](#resident-approval-system)
 - [User Management](#user-management)
 - [Visitor Management](#visitor-management)
+- [Settings Management](#settings-management)
 - [Building Management](#building-management)
 - [Real-time Features](#real-time-features)
 - [Rate Limiting](#rate-limiting)
@@ -37,6 +38,32 @@ The SafeGuard API is a comprehensive visitor management system designed for gate
 - **Multi-building Support**: Single platform managing multiple buildings
 
 ---
+
+## 🆕 What's New in v2.2.0
+
+### Settings Management System (2025-09-15)
+
+#### Comprehensive User Settings
+- **Role-based Settings**: Different capabilities for Admin, Resident, and Security users
+- **Profile Management**: Update personal information, avatars, emergency contacts
+- **Building Configuration**: Admin control over building settings and logos
+- **User Management**: Admin ability to manage building users (view, delete)
+- **License Management**: Request additional building licenses
+- **Notification Preferences**: Customizable notification settings per user
+- **Security Preferences**: Security-specific configuration options
+
+#### New Settings Endpoints
+- **`GET /api/settings`**: Retrieve user settings based on role
+- **`PUT /api/settings`**: Update user settings with validation
+- **`DELETE /api/settings/users/:userId`**: Delete users (Admin only)
+- **`POST /api/settings/licenses/request`**: Request additional licenses (Admin only)
+- **`DELETE /api/settings/building`**: Delete building account (Super Admin only)
+
+#### Enhanced Access Control
+- **Building-scope restrictions**: Users limited to their building's settings
+- **Role-based permissions**: Different capabilities per user type
+- **Comprehensive validation**: Input validation for all settings fields
+- **Security-first design**: All endpoints require authentication and authorization
 
 ## 🆕 What's New in v2.1.0
 
@@ -1088,6 +1115,398 @@ Authorization: Bearer <building-admin-token>
 - **Temporary Bans**: Auto-expire based on `expires_at` field
 - **Escalation**: Severity increases with repeated incidents
 - **Phone Formatting**: Automatic standardization for consistency
+
+---
+
+## ⚙️ Settings Management
+
+The Settings API provides comprehensive user and building configuration management with role-based access control. Different user types (Admin, Resident, Security) have different capabilities and settings available to them.
+
+### Key Features
+- **Role-based Settings**: Different settings capabilities per user role
+- **Profile Management**: Update personal information, avatars, emergency contacts
+- **Building Configuration**: Admin control over building settings and logos
+- **User Management**: Admin ability to manage building users
+- **License Management**: Request additional building licenses
+- **Notification Preferences**: Customizable notification settings
+- **Security Preferences**: Security-specific configuration options
+
+### User Role Capabilities
+
+#### Admin Users (Building Admin & Super Admin)
+- ✅ Change profile image and personal information
+- ✅ Manage building users (view, delete)
+- ✅ Request additional licenses
+- ✅ Change building logo and contact information
+- ✅ Configure building-wide settings
+- ✅ View building analytics and statistics
+- ✅ Delete building account (Super Admin only)
+
+#### Resident Users
+- ✅ Change profile image and personal information
+- ✅ Update apartment/flat number
+- ✅ Set emergency contact information
+- ✅ Configure notification preferences
+- ✅ Change password and security settings
+
+#### Security Users
+- ✅ Change profile image and personal information
+- ✅ Set emergency contact information
+- ✅ Configure security-specific preferences
+- ✅ Set scan sounds and alert levels
+- ✅ Configure shift notifications
+
+### Settings Endpoints
+
+#### 1. Get User Settings
+```http
+GET /api/settings
+Authorization: Bearer <access-token>
+```
+
+**Response (Admin User):**
+```json
+{
+  "success": true,
+  "data": {
+    "capabilities": {
+      "canChangeProfileImage": true,
+      "canDeleteBuildingAccount": true,
+      "canManageUsers": true,
+      "canRequestLicenses": true,
+      "canChangeBuildingLogo": true,
+      "canManageBuilding": true,
+      "canViewAnalytics": true,
+      "canManageSecuritySettings": true
+    },
+    "profile": {
+      "id": "user-uuid",
+      "first_name": "Admin",
+      "last_name": "User",
+      "email": "admin@building.com",
+      "phone": "+1234567890",
+      "avatar_url": "https://example.com/avatar.jpg",
+      "preferences": {},
+      "emergency_contact": {
+        "name": "Emergency Contact",
+        "phone": "+1234567890",
+        "relationship": "Spouse"
+      }
+    },
+    "building": {
+      "id": "building-uuid",
+      "name": "Luxury Apartments",
+      "address": "123 Main Street",
+      "logo_url": "https://example.com/logo.jpg",
+      "total_licenses": 100,
+      "used_licenses": 45,
+      "available_licenses": 55,
+      "settings": {
+        "visitor_approval_required": true,
+        "max_visitors_per_resident": 5,
+        "qr_code_expiry_minutes": 60
+      },
+      "contact_info": {
+        "phone": "+1234567890",
+        "email": "info@building.com"
+      }
+    },
+    "users": {
+      "total_residents": 45,
+      "total_security": 3,
+      "total_admins": 2,
+      "residents": [...],
+      "security": [...],
+      "admins": [...]
+    }
+  },
+  "message": "Settings retrieved successfully"
+}
+```
+
+**Response (Resident User):**
+```json
+{
+  "success": true,
+  "data": {
+    "capabilities": {
+      "canChangeProfileImage": true,
+      "canUpdatePersonalInfo": true,
+      "canChangePassword": true,
+      "canSetEmergencyContact": true,
+      "canManageNotifications": true,
+      "canViewVisitorHistory": true
+    },
+    "profile": {
+      "id": "user-uuid",
+      "first_name": "John",
+      "last_name": "Doe",
+      "email": "john@example.com",
+      "phone": "+1234567890",
+      "apartment_number": "A101",
+      "avatar_url": "https://example.com/avatar.jpg",
+      "emergency_contact": {
+        "name": "Jane Doe",
+        "phone": "+1234567891",
+        "relationship": "Spouse"
+      }
+    },
+    "notifications": {
+      "visitor_arrival": true,
+      "visitor_departure": true,
+      "qr_code_generated": true,
+      "security_alerts": true,
+      "email_notifications": true,
+      "sms_notifications": false
+    }
+  },
+  "message": "Settings retrieved successfully"
+}
+```
+
+**Response (Security User):**
+```json
+{
+  "success": true,
+  "data": {
+    "capabilities": {
+      "canChangeProfileImage": true,
+      "canUpdatePersonalInfo": true,
+      "canChangePassword": true,
+      "canSetEmergencyContact": true,
+      "canManageNotifications": true,
+      "canViewScanHistory": true
+    },
+    "profile": {
+      "id": "user-uuid",
+      "first_name": "Security",
+      "last_name": "Officer",
+      "email": "security@building.com",
+      "phone": "+1234567890",
+      "avatar_url": "https://example.com/avatar.jpg"
+    },
+    "security_preferences": {
+      "scan_sound_enabled": true,
+      "auto_scan_mode": false,
+      "alert_level": "medium",
+      "shift_notifications": true
+    }
+  },
+  "message": "Settings retrieved successfully"
+}
+```
+
+#### 2. Update User Settings
+```http
+PUT /api/settings
+Authorization: Bearer <access-token>
+Content-Type: application/json
+
+{
+  "profile": {
+    "first_name": "Updated Name",
+    "phone": "+1234567890",
+    "apartment_number": "B205",
+    "avatar_url": "https://example.com/new-avatar.jpg",
+    "emergency_contact": {
+      "name": "Updated Contact",
+      "phone": "+1234567891",
+      "relationship": "Parent",
+      "email": "contact@example.com"
+    }
+  },
+  "notifications": {
+    "visitor_arrival": true,
+    "email_notifications": false,
+    "sms_notifications": true
+  },
+  "building": {
+    "name": "Updated Building Name",
+    "logo_url": "https://example.com/new-logo.jpg",
+    "contact_info": {
+      "phone": "+1234567890",
+      "email": "updated@building.com"
+    }
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "user-uuid",
+      "first_name": "Updated Name",
+      "last_name": "Doe",
+      "phone": "+1234567890",
+      "apartment_number": "B205",
+      "avatar_url": "https://example.com/new-avatar.jpg",
+      "updated_at": "2024-01-15T10:30:00Z"
+    },
+    "building": {
+      "id": "building-uuid",
+      "name": "Updated Building Name",
+      "logo_url": "https://example.com/new-logo.jpg",
+      "updated_at": "2024-01-15T10:30:00Z"
+    },
+    "message": "Settings updated successfully"
+  },
+  "message": "Settings updated successfully"
+}
+```
+
+### Admin-Only Endpoints
+
+#### 3. Delete User
+```http
+DELETE /api/settings/users/{user_id}
+Authorization: Bearer <admin-token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "deleted_user_id": "user-uuid"
+  },
+  "message": "User deleted successfully"
+}
+```
+
+#### 4. Request Additional Licenses
+```http
+POST /api/settings/licenses/request
+Authorization: Bearer <admin-token>
+Content-Type: application/json
+
+{
+  "additional_licenses": 25,
+  "reason": "Building expansion - new residents moving in"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "license_request": {
+      "building_id": "building-uuid",
+      "requested_by": "admin-user-uuid",
+      "additional_licenses": 25,
+      "reason": "Building expansion - new residents moving in",
+      "status": "pending",
+      "created_at": "2024-01-15T10:30:00Z"
+    }
+  },
+  "message": "License request submitted successfully"
+}
+```
+
+### Super Admin-Only Endpoints
+
+#### 5. Delete Building Account
+```http
+DELETE /api/settings/building
+Authorization: Bearer <super-admin-token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "deleted_building_id": "building-uuid"
+  },
+  "message": "Building account deleted successfully"
+}
+```
+
+### Settings Validation
+
+#### Profile Settings
+- **Name fields**: 2-100 characters, letters/spaces/hyphens/apostrophes only
+- **Phone numbers**: International format validation
+- **Apartment numbers**: Max 20 characters
+- **Avatar URLs**: Valid HTTP/HTTPS URLs only
+- **Emergency contacts**: Optional but validated when provided
+
+#### Building Settings (Admin Only)
+- **Building name**: 2-200 characters
+- **Address**: Max 500 characters
+- **Logo URL**: Valid HTTP/HTTPS URLs
+- **Contact info**: Email and phone validation
+- **Settings**: Boolean and numeric constraints
+
+#### Notification Preferences
+- **All preferences**: Boolean values
+- **Backwards compatible**: Defaults provided for missing preferences
+- **User-specific**: Each user maintains individual notification settings
+
+#### Security Preferences
+- **Alert levels**: "low", "medium", "high" only
+- **Boolean flags**: Validated true/false values
+- **Security-specific**: Only available to security role users
+
+### Access Control
+
+#### Role-Based Permissions
+- **Building Admins**: Can only manage users in their building
+- **Super Admins**: Global access across all buildings
+- **Residents**: Can only modify their own settings
+- **Security**: Can only modify their own settings
+
+#### Building Scope Restrictions
+- Users can only access settings for their assigned building
+- Cross-building access attempts return `403 Forbidden`
+- Super admins bypass building restrictions
+
+#### Validation Rules
+- All endpoints require valid JWT authentication
+- Role-based access control enforced on all operations
+- Input validation prevents malicious data entry
+- Building ownership verified for admin operations
+
+### Error Responses
+
+#### Authentication Errors
+```json
+{
+  "success": false,
+  "error": {
+    "code": "AUTHENTICATION_ERROR",
+    "message": "No token provided"
+  },
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+#### Authorization Errors
+```json
+{
+  "success": false,
+  "error": {
+    "code": "AUTHORIZATION_ERROR",
+    "message": "Access denied. Admin privileges required."
+  },
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+#### Validation Errors
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Settings validation failed: First name must be at least 2 characters, Phone number must be a valid international format"
+  },
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
 
 ---
 
