@@ -1,8 +1,8 @@
 {
   "info": {
-    "name": "SafeGuard Backend API - Complete Collection v2",
-    "description": "Complete API collection for SafeGuard Backend - Visitor Management System with QR Code Entry/Exit tracking and Dashboard functionality",
-    "version": "2.0.0",
+    "name": "SafeGuard Backend API - Complete Collection v2.2",
+    "description": "Complete API collection for SafeGuard Backend - Visitor Management System with QR Code Entry/Exit tracking, Dashboard functionality, and Settings Management",
+    "version": "2.2.0",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -971,6 +971,448 @@
               "host": ["{{base_url}}"],
               "path": ["api", "visitors", "checkin-status"]
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Settings Management",
+      "item": [
+        {
+          "name": "Get User Settings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Settings retrieved successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().success).to.be.true;",
+                  "    pm.expect(pm.response.json().data.capabilities).to.exist;",
+                  "    pm.expect(pm.response.json().data.profile).to.exist;",
+                  "});",
+                  "",
+                  "// Save capabilities for other tests",
+                  "if (pm.response.json().success) {",
+                  "    const capabilities = pm.response.json().data.capabilities;",
+                  "    pm.environment.set('can_manage_users', capabilities.canManageUsers || false);",
+                  "    pm.environment.set('can_delete_building', capabilities.canDeleteBuildingAccount || false);",
+                  "    pm.environment.set('can_request_licenses', capabilities.canRequestLicenses || false);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/settings",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings"]
+            },
+            "description": "Get user settings based on role (Admin, Resident, Security)"
+          }
+        },
+        {
+          "name": "Update User Settings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Settings updated successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().success).to.be.true;",
+                  "    pm.expect(pm.response.json().data.user || pm.response.json().data.message).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"profile\": {\n    \"first_name\": \"Updated Name\",\n    \"phone\": \"+1987654321\",\n    \"apartment_number\": \"B205\",\n    \"avatar_url\": \"https://example.com/new-avatar.jpg\",\n    \"emergency_contact\": {\n      \"name\": \"Updated Emergency Contact\",\n      \"phone\": \"+1987654321\",\n      \"relationship\": \"Parent\",\n      \"email\": \"emergency@example.com\"\n    }\n  },\n  \"notifications\": {\n    \"visitor_arrival\": true,\n    \"visitor_departure\": false,\n    \"email_notifications\": false,\n    \"sms_notifications\": true\n  },\n  \"building\": {\n    \"name\": \"Updated Building Name\",\n    \"logo_url\": \"https://example.com/new-logo.jpg\",\n    \"contact_info\": {\n      \"phone\": \"+1234567890\",\n      \"email\": \"updated@building.com\"\n    }\n  },\n  \"security_preferences\": {\n    \"scan_sound_enabled\": false,\n    \"auto_scan_mode\": true,\n    \"alert_level\": \"high\",\n    \"shift_notifications\": false\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/settings",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings"]
+            },
+            "description": "Update user settings (profile, notifications, building, security preferences)"
+          }
+        },
+        {
+          "name": "Admin - Delete User",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Only run if user has admin privileges",
+                  "if (!pm.environment.get('can_manage_users')) {",
+                  "    console.log('Skipping test - user does not have admin privileges');",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('User deleted successfully or access denied', function () {",
+                  "    const statusCode = pm.response.code;",
+                  "    pm.expect([200, 403]).to.include(statusCode);",
+                  "    ",
+                  "    if (statusCode === 200) {",
+                  "        pm.expect(pm.response.json().success).to.be.true;",
+                  "        pm.expect(pm.response.json().data.deleted_user_id).to.exist;",
+                  "    } else if (statusCode === 403) {",
+                  "        pm.expect(pm.response.json().success).to.be.false;",
+                  "        pm.expect(pm.response.json().error.code).to.eq('AUTHORIZATION_ERROR');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/settings/users/{{user_id_to_delete}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings", "users", "{{user_id_to_delete}}"]
+            },
+            "description": "Delete a user (Admin only). Set user_id_to_delete in environment variables."
+          }
+        },
+        {
+          "name": "Admin - Request Additional Licenses",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Only run if user can request licenses",
+                  "if (!pm.environment.get('can_request_licenses')) {",
+                  "    console.log('Skipping test - user cannot request licenses');",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('License request submitted or access denied', function () {",
+                  "    const statusCode = pm.response.code;",
+                  "    pm.expect([200, 403]).to.include(statusCode);",
+                  "    ",
+                  "    if (statusCode === 200) {",
+                  "        pm.expect(pm.response.json().success).to.be.true;",
+                  "        pm.expect(pm.response.json().data.license_request).to.exist;",
+                  "        pm.expect(pm.response.json().data.license_request.additional_licenses).to.eq(25);",
+                  "    } else if (statusCode === 403) {",
+                  "        pm.expect(pm.response.json().success).to.be.false;",
+                  "        pm.expect(pm.response.json().error.code).to.eq('AUTHORIZATION_ERROR');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"additional_licenses\": 25,\n  \"reason\": \"Building expansion - new residents moving in\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/settings/licenses/request",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings", "licenses", "request"]
+            },
+            "description": "Request additional licenses for the building (Admin only)"
+          }
+        },
+        {
+          "name": "Super Admin - Delete Building Account",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Only run if user can delete building",
+                  "if (!pm.environment.get('can_delete_building')) {",
+                  "    console.log('Skipping test - user cannot delete building account');",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Building deleted or access denied', function () {",
+                  "    const statusCode = pm.response.code;",
+                  "    pm.expect([200, 403]).to.include(statusCode);",
+                  "    ",
+                  "    if (statusCode === 200) {",
+                  "        pm.expect(pm.response.json().success).to.be.true;",
+                  "        pm.expect(pm.response.json().data.deleted_building_id).to.exist;",
+                  "    } else if (statusCode === 403) {",
+                  "        pm.expect(pm.response.json().success).to.be.false;",
+                  "        pm.expect(pm.response.json().error.code).to.eq('AUTHORIZATION_ERROR');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/settings/building",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings", "building"]
+            },
+            "description": "Delete entire building account (Super Admin only). WARNING: This is destructive!"
+          }
+        },
+        {
+          "name": "Test - Unauthorized Access",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Unauthorized access properly rejected', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().success).to.be.false;",
+                  "    pm.expect(pm.response.json().error.code).to.eq('AUTHENTICATION_ERROR');",
+                  "    pm.expect(pm.response.json().error.message).to.include('token');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/settings",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings"]
+            },
+            "description": "Test access without authentication token"
+          }
+        },
+        {
+          "name": "Test - Validation Error",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Validation error properly handled', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().success).to.be.false;",
+                  "    pm.expect(pm.response.json().error.code).to.eq('VALIDATION_ERROR');",
+                  "    pm.expect(pm.response.json().error.message).to.include('validation');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"profile\": {\n    \"first_name\": \"A\",\n    \"phone\": \"invalid-phone\",\n    \"avatar_url\": \"not-a-url\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/settings",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings"]
+            },
+            "description": "Test validation with invalid data"
+          }
+        },
+        {
+          "name": "Get Admin Settings (with Building Data)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Admin settings include building data', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().success).to.be.true;",
+                  "    ",
+                  "    const data = pm.response.json().data;",
+                  "    const userRole = pm.environment.get('user_role');",
+                  "    ",
+                  "    if (userRole === 'building_admin' || userRole === 'super_admin') {",
+                  "        pm.expect(data.building).to.exist;",
+                  "        pm.expect(data.users).to.exist;",
+                  "        pm.expect(data.capabilities.canManageUsers).to.be.true;",
+                  "    } else {",
+                  "        pm.expect(data.building).to.not.exist;",
+                  "        pm.expect(data.capabilities.canManageUsers).to.be.false;",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/settings",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings"]
+            },
+            "description": "Get settings and verify role-specific data (Admin should get building data)"
+          }
+        },
+        {
+          "name": "Update Resident Notification Preferences",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Notification preferences updated', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notifications\": {\n    \"visitor_arrival\": true,\n    \"visitor_departure\": false,\n    \"qr_code_generated\": true,\n    \"security_alerts\": true,\n    \"email_notifications\": false,\n    \"sms_notifications\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/settings",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings"]
+            },
+            "description": "Update notification preferences (available to all users)"
+          }
+        },
+        {
+          "name": "Update Security Operational Preferences",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Security preferences updated or not security role', function () {",
+                  "    const statusCode = pm.response.code;",
+                  "    pm.expect([200, 400]).to.include(statusCode);",
+                  "    ",
+                  "    if (statusCode === 200) {",
+                  "        pm.expect(pm.response.json().success).to.be.true;",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"security_preferences\": {\n    \"scan_sound_enabled\": false,\n    \"auto_scan_mode\": true,\n    \"alert_level\": \"high\",\n    \"shift_notifications\": false\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/settings",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings"]
+            },
+            "description": "Update security-specific operational preferences (Security role only)"
           }
         }
       ]
