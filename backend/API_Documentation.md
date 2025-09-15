@@ -15,6 +15,7 @@
 - [User Management](#user-management)
 - [Visitor Management](#visitor-management)
 - [Settings Management](#settings-management)
+  - [Image Upload Endpoints](#image-upload-endpoints)
 - [Building Management](#building-management)
 - [Real-time Features](#real-time-features)
 - [Rate Limiting](#rate-limiting)
@@ -48,6 +49,14 @@ The SafeGuard API is a comprehensive visitor management system designed for gate
 - **Profile Management**: Update personal information, avatars, emergency contacts
 - **Building Configuration**: Admin control over building settings and logos
 - **User Management**: Admin ability to manage building users (view, delete)
+
+#### Threaded Image Upload System
+- **Worker Thread Processing**: Non-blocking image uploads using Node.js worker threads
+- **Profile Pictures**: All users can upload and manage profile pictures (400x400px)
+- **Building Logos**: Admins can upload and manage building logos (800x400px)
+- **Image Optimization**: Automatic resize and compression using Sharp library
+- **File Validation**: Comprehensive validation (5MB limit, JPEG/PNG/GIF/WebP support)
+- **Health Monitoring**: Admin-accessible image service health endpoints
 - **License Management**: Request additional building licenses
 - **Notification Preferences**: Customizable notification settings per user
 - **Security Preferences**: Security-specific configuration options
@@ -1424,6 +1433,194 @@ Authorization: Bearer <super-admin-token>
   "message": "Building account deleted successfully"
 }
 ```
+
+### Image Upload Endpoints
+
+The SafeGuard API supports threaded image upload functionality using Node.js worker threads to ensure non-blocking file processing. This system handles profile pictures for all users and building logos for administrators.
+
+#### Key Features
+- **Worker Thread Processing**: Non-blocking image processing using Sharp library
+- **Image Optimization**: Automatic resize and compression
+- **Role-Based Access**: Profile pictures for all users, building logos for admins only
+- **File Validation**: MIME type, size, and extension validation
+- **Error Handling**: Comprehensive error handling with cleanup
+
+#### Supported Formats
+- **File Types**: JPEG, PNG, GIF, WebP
+- **Maximum Size**: 5MB per file
+- **Profile Pictures**: Resized to 400x400 pixels
+- **Building Logos**: Resized to 800x400 pixels (maintaining aspect ratio)
+
+#### 1. Upload Profile Picture
+```http
+POST /api/settings/profile-picture
+Authorization: Bearer <access-token>
+Content-Type: multipart/form-data
+
+Form Data:
+profilePicture: [image-file]
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "fileName": "profile_user-uuid_1642248000000.jpg",
+    "filePath": "uploads/profiles/profile_user-uuid_1642248000000.jpg",
+    "originalName": "my-profile.jpg",
+    "size": 125432,
+    "mimeType": "image/jpeg",
+    "processedAt": "2024-01-15T10:30:00Z"
+  },
+  "message": "Profile picture uploaded successfully"
+}
+```
+
+#### 2. Upload Building Logo (Admin Only)
+```http
+POST /api/settings/building-logo
+Authorization: Bearer <admin-token>
+Content-Type: multipart/form-data
+
+Form Data:
+buildingLogo: [image-file]
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "fileName": "building_building-uuid_1642248000000.png",
+    "filePath": "uploads/buildings/building_building-uuid_1642248000000.png",
+    "originalName": "company-logo.png",
+    "size": 256789,
+    "mimeType": "image/png",
+    "processedAt": "2024-01-15T10:30:00Z"
+  },
+  "message": "Building logo uploaded successfully"
+}
+```
+
+#### 3. Delete Profile Picture
+```http
+DELETE /api/settings/profile-picture
+Authorization: Bearer <access-token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "deletedFile": "uploads/profiles/profile_user-uuid_1642248000000.jpg"
+  },
+  "message": "Profile picture deleted successfully"
+}
+```
+
+#### 4. Delete Building Logo (Admin Only)
+```http
+DELETE /api/settings/building-logo
+Authorization: Bearer <admin-token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "deletedFile": "uploads/buildings/building_building-uuid_1642248000000.png"
+  },
+  "message": "Building logo deleted successfully"
+}
+```
+
+#### 5. Image Service Health Check (Admin Only)
+```http
+GET /api/settings/image-service/health
+Authorization: Bearer <admin-token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "status": "healthy",
+    "activeWorkers": 0,
+    "maxWorkers": 3,
+    "workerPath": "/path/to/workers/imageProcessor.js",
+    "timestamp": "2024-01-15T10:30:00Z"
+  },
+  "message": "Image service is healthy"
+}
+```
+
+#### Image Upload Error Responses
+
+**File Size Exceeded:**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "File size exceeds 5MB limit"
+  },
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+**Invalid File Type:**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed"
+  },
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+**Access Denied (Building Logo):**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "AUTHORIZATION_ERROR",
+    "message": "Only building administrators can upload building logos"
+  },
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+**Worker Thread Limit Reached:**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "EXTERNAL_SERVICE_ERROR",
+    "message": "Maximum number of image processing workers reached. Please try again later."
+  },
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+#### Image Upload Validation
+- **File size**: Maximum 5MB per upload
+- **MIME types**: image/jpeg, image/jpg, image/png, image/gif, image/webp
+- **File extensions**: .jpg, .jpeg, .png, .gif, .webp
+- **File names**: Maximum 255 characters
+- **Processing timeout**: 30 seconds per image
+- **Concurrent workers**: Maximum 3 worker threads
+
+#### Access Control
+- **Profile pictures**: All authenticated users can upload/delete their own
+- **Building logos**: Only building admins and super admins
+- **Health monitoring**: Only admin users can check service health
+- **File cleanup**: Automatic cleanup on upload failures
 
 ### Settings Validation
 

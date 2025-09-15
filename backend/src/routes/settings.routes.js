@@ -3,6 +3,13 @@ import SettingsController from '../controllers/settings.controller.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { validateSettingsUpdate, validateLicenseRequest, validateUserId } from '../validators/settings.validator.js';
+import { 
+  uploadProfilePicture, 
+  uploadBuildingLogo, 
+  validateImageUploadPermissions,
+  handleImageUploadError,
+  logImageUpload 
+} from '../middleware/imageUpload.middleware.js';
 import { USER_ROLES } from '../utils/constants.js';
 import { AuthorizationError } from '../utils/errors/index.js';
 
@@ -105,6 +112,71 @@ router.post('/licenses/request',
   checkAdminAccess,
   validateLicenseRequest,
   settingsController.requestLicenses
+);
+
+// =============================================
+// IMAGE UPLOAD ROUTES
+// =============================================
+
+/**
+ * @route   POST /api/settings/profile-picture
+ * @desc    Upload profile picture for user
+ * @access  Private (All authenticated users)
+ */
+router.post('/profile-picture',
+  authenticate,
+  checkSettingsAccess,
+  uploadProfilePicture,
+  validateImageUploadPermissions,
+  handleImageUploadError,
+  settingsController.uploadProfilePicture
+);
+
+/**
+ * @route   DELETE /api/settings/profile-picture
+ * @desc    Delete user's profile picture
+ * @access  Private (All authenticated users)
+ */
+router.delete('/profile-picture',
+  authenticate,
+  checkSettingsAccess,
+  settingsController.deleteProfilePicture
+);
+
+/**
+ * @route   POST /api/settings/building-logo
+ * @desc    Upload building logo
+ * @access  Private (Admin only)
+ */
+router.post('/building-logo',
+  authenticate,
+  checkAdminAccess,
+  uploadBuildingLogo,
+  validateImageUploadPermissions,
+  handleImageUploadError,
+  settingsController.uploadBuildingLogo
+);
+
+/**
+ * @route   DELETE /api/settings/building-logo
+ * @desc    Delete building logo
+ * @access  Private (Admin only)
+ */
+router.delete('/building-logo',
+  authenticate,
+  checkAdminAccess,
+  settingsController.deleteBuildingLogo
+);
+
+/**
+ * @route   GET /api/settings/image-service/health
+ * @desc    Get image processing service health status
+ * @access  Private (Admin only)
+ */
+router.get('/image-service/health',
+  authenticate,
+  checkAdminAccess,
+  settingsController.getImageServiceHealth
 );
 
 // =============================================

@@ -1,5 +1,6 @@
 import User from '../models/User.js';
 import Building from '../models/Building.js';
+import imageUploadService from '../services/imageUpload.service.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { createResponse } from '../utils/helpers.js';
 import { USER_ROLES } from '../utils/constants.js';
@@ -472,6 +473,251 @@ class SettingsController {
       true,
       { deleted_building_id: user.building_id },
       'Building account deleted successfully'
+    ));
+  });
+
+  /**
+   * Upload profile picture
+   */
+  uploadProfilePicture = asyncHandler(async (req, res) => {
+    const { user } = req;
+    const file = req.file;
+    
+    if (!file) {
+      throw new ValidationError('No file uploaded');
+    }
+
+    try {
+      // Get current user data to check for existing profile picture
+      const currentUser = await User.findById(user.id);
+      if (!currentUser) {
+        throw new NotFoundError('User not found');
+      }
+
+      // Process the image using worker thread
+      const processResult = await imageUploadService.processProfilePicture(file, user.id);
+      
+      if (!processResult.success) {
+        throw new ValidationError('Failed to process profile picture');
+      }
+
+      // Delete old profile picture if exists
+      if (currentUser.profile_picture) {
+        await imageUploadService.deleteOldImage(currentUser.profile_picture);
+      }
+
+      // Update user record with new profile picture
+      const updatedUser = await User.update(user.id, {
+        profile_picture: processResult.data.filePath,
+        profile_picture_uploaded_at: new Date()
+      });
+
+      res.json(createResponse(
+        true,
+        {
+          user: {
+            id: updatedUser.id,
+            profile_picture: processResult.data.filePath,
+            profile_picture_uploaded_at: updatedUser.profile_picture_uploaded_at
+          },
+          upload_info: {
+            original_name: processResult.data.originalName,
+            file_size: processResult.data.size,
+            processed_at: processResult.data.processedAt
+          }
+        },
+        'Profile picture uploaded successfully'
+      ));
+
+    } catch (error) {
+      // Clean up file if processing failed
+      if (file) {
+        try {
+          await imageUploadService.deleteOldImage(file.path);
+        } catch (cleanupError) {
+          // Log but don't throw cleanup errors
+          console.error('Failed to cleanup file after error:', cleanupError);
+        }
+      }
+      throw error;
+    }
+  });
+
+  /**
+   * Upload building logo (Admin only)
+   */
+  uploadBuildingLogo = asyncHandler(async (req, res) => {
+    const { user } = req;
+    const file = req.file;
+    
+    // Check admin permissions
+    const adminRoles = [USER_ROLES.SUPER_ADMIN, USER_ROLES.BUILDING_ADMIN];
+    if (!adminRoles.includes(user.role)) {
+      throw new AuthorizationError('Only building administrators can upload building logos');
+    }
+
+    if (!file) {
+      throw new ValidationError('No file uploaded');
+    }
+
+    try {
+      // Get current building data to check for existing logo
+      const currentBuilding = await Building.findById(user.building_id);
+      if (!currentBuilding) {
+        throw new NotFoundError('Building not found');
+      }
+
+      // Process the image using worker thread
+      const processResult = await imageUploadService.processBuildingLogo(file, user.building_id);
+      
+      if (!processResult.success) {
+        throw new ValidationError('Failed to process building logo');
+      }
+
+      // Delete old building logo if exists
+      if (currentBuilding.building_logo) {
+        await imageUploadService.deleteOldImage(currentBuilding.building_logo);
+      }
+
+      // Update building record with new logo
+      const updatedBuilding = await Building.update(user.building_id, {
+        building_logo: processResult.data.filePath,
+        building_logo_uploaded_at: new Date()
+      });
+
+      res.json(createResponse(
+        true,
+        {
+          building: {
+            id: updatedBuilding.id,
+            building_logo: processResult.data.filePath,
+            building_logo_uploaded_at: updatedBuilding.building_logo_uploaded_at
+          },
+          upload_info: {
+            original_name: processResult.data.originalName,
+            file_size: processResult.data.size,
+            processed_at: processResult.data.processedAt
+          }
+        },
+        'Building logo uploaded successfully'
+      ));
+
+    } catch (error) {
+      // Clean up file if processing failed
+      if (file) {
+        try {
+          await imageUploadService.deleteOldImage(file.path);
+        } catch (cleanupError) {
+          // Log but don't throw cleanup errors
+          console.error('Failed to cleanup file after error:', cleanupError);
+        }
+      }
+      throw error;
+    }
+  });
+
+  /**
+   * Delete profile picture
+   */
+  deleteProfilePicture = asyncHandler(async (req, res) => {
+    const { user } = req;
+    
+    // Get current user data
+    const currentUser = await User.findById(user.id);
+    if (!currentUser) {
+      throw new NotFoundError('User not found');
+    }
+
+    if (!currentUser.profile_picture) {
+      throw new ValidationError('No profile picture to delete');
+    }
+
+    try {
+      // Delete the image file
+      await imageUploadService.deleteOldImage(currentUser.profile_picture);
+
+      // Update user record to remove profile picture
+      const updatedUser = await User.update(user.id, {
+        profile_picture: null,
+        profile_picture_uploaded_at: null
+      });
+
+      res.json(createResponse(
+        true,
+        {
+          user: {
+            id: updatedUser.id,
+            profile_picture: null,
+            profile_picture_uploaded_at: null
+          }
+        },
+        'Profile picture deleted successfully'
+      ));
+
+    } catch (error) {
+      throw error;
+    }
+  });
+
+  /**
+   * Delete building logo (Admin only)
+   */
+  deleteBuildingLogo = asyncHandler(async (req, res) => {
+    const { user } = req;
+    
+    // Check admin permissions
+    const adminRoles = [USER_ROLES.SUPER_ADMIN, USER_ROLES.BUILDING_ADMIN];
+    if (!adminRoles.includes(user.role)) {
+      throw new AuthorizationError('Only building administrators can delete building logos');
+    }
+
+    // Get current building data
+    const currentBuilding = await Building.findById(user.building_id);
+    if (!currentBuilding) {
+      throw new NotFoundError('Building not found');
+    }
+
+    if (!currentBuilding.building_logo) {
+      throw new ValidationError('No building logo to delete');
+    }
+
+    try {
+      // Delete the image file
+      await imageUploadService.deleteOldImage(currentBuilding.building_logo);
+
+      // Update building record to remove logo
+      const updatedBuilding = await Building.update(user.building_id, {
+        building_logo: null,
+        building_logo_uploaded_at: null
+      });
+
+      res.json(createResponse(
+        true,
+        {
+          building: {
+            id: updatedBuilding.id,
+            building_logo: null,
+            building_logo_uploaded_at: null
+          }
+        },
+        'Building logo deleted successfully'
+      ));
+
+    } catch (error) {
+      throw error;
+    }
+  });
+
+  /**
+   * Get image upload service health status
+   */
+  getImageServiceHealth = asyncHandler(async (req, res) => {
+    const healthStatus = imageUploadService.getHealthStatus();
+    
+    res.json(createResponse(
+      true,
+      healthStatus,
+      'Image service health status retrieved'
     ));
   });
 }

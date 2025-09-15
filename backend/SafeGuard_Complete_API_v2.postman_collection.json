@@ -1414,6 +1414,228 @@
             },
             "description": "Update security-specific operational preferences (Security role only)"
           }
+        },
+        {
+          "name": "Upload Profile Picture",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Profile picture uploaded successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().success).to.be.true;",
+                  "    ",
+                  "    const data = pm.response.json().data;",
+                  "    pm.expect(data.filePath).to.exist;",
+                  "    pm.expect(data.fileName).to.exist;",
+                  "    pm.expect(data.size).to.be.a('number');",
+                  "    ",
+                  "    // Store filename for cleanup",
+                  "    pm.environment.set('uploaded_profile_picture', data.fileName);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "profilePicture",
+                  "type": "file",
+                  "src": "test-profile.jpg",
+                  "description": "Test profile picture file (use any JPEG/PNG file under 5MB)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/settings/profile-picture",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings", "profile-picture"]
+            },
+            "description": "Upload a profile picture (JPEG/PNG, max 5MB). All authenticated users can upload profile pictures."
+          }
+        },
+        {
+          "name": "Upload Building Logo (Admin Only)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Building logo upload or admin access required', function () {",
+                  "    const statusCode = pm.response.code;",
+                  "    const userRole = pm.environment.get('user_role');",
+                  "    ",
+                  "    if (userRole === 'building_admin' || userRole === 'super_admin') {",
+                  "        pm.expect(statusCode).to.equal(200);",
+                  "        pm.expect(pm.response.json().success).to.be.true;",
+                  "        ",
+                  "        const data = pm.response.json().data;",
+                  "        pm.expect(data.filePath).to.exist;",
+                  "        pm.expect(data.fileName).to.exist;",
+                  "        ",
+                  "        // Store filename for cleanup",
+                  "        pm.environment.set('uploaded_building_logo', data.fileName);",
+                  "    } else {",
+                  "        pm.expect(statusCode).to.equal(403);",
+                  "        pm.expect(pm.response.json().error.code).to.equal('AUTHORIZATION_ERROR');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "buildingLogo",
+                  "type": "file",
+                  "src": "test-logo.png",
+                  "description": "Test building logo file (use any JPEG/PNG file under 5MB)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/settings/building-logo",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings", "building-logo"]
+            },
+            "description": "Upload a building logo (JPEG/PNG, max 5MB). Only building admins and super admins can upload building logos."
+          }
+        },
+        {
+          "name": "Get Image Service Health (Admin Only)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Image service health check or admin access required', function () {",
+                  "    const statusCode = pm.response.code;",
+                  "    const userRole = pm.environment.get('user_role');",
+                  "    ",
+                  "    if (userRole === 'building_admin' || userRole === 'super_admin') {",
+                  "        pm.expect(statusCode).to.equal(200);",
+                  "        pm.expect(pm.response.json().success).to.be.true;",
+                  "        ",
+                  "        const data = pm.response.json().data;",
+                  "        pm.expect(data.status).to.exist;",
+                  "        pm.expect(data.activeWorkers).to.be.a('number');",
+                  "        pm.expect(data.maxWorkers).to.be.a('number');",
+                  "    } else {",
+                  "        pm.expect(statusCode).to.equal(403);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/settings/image-service/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings", "image-service", "health"]
+            },
+            "description": "Get image processing service health status. Only admins can access this endpoint."
+          }
+        },
+        {
+          "name": "Delete Profile Picture",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Profile picture deleted successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().success).to.be.true;",
+                  "    pm.expect(pm.response.json().message).to.include('deleted');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/settings/profile-picture",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings", "profile-picture"]
+            },
+            "description": "Delete the current user's profile picture. All authenticated users can delete their own profile pictures."
+          }
+        },
+        {
+          "name": "Delete Building Logo (Admin Only)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Building logo deletion or admin access required', function () {",
+                  "    const statusCode = pm.response.code;",
+                  "    const userRole = pm.environment.get('user_role');",
+                  "    ",
+                  "    if (userRole === 'building_admin' || userRole === 'super_admin') {",
+                  "        pm.expect(statusCode).to.equal(200);",
+                  "        pm.expect(pm.response.json().success).to.be.true;",
+                  "        pm.expect(pm.response.json().message).to.include('deleted');",
+                  "    } else {",
+                  "        pm.expect(statusCode).to.equal(403);",
+                  "        pm.expect(pm.response.json().error.code).to.equal('AUTHORIZATION_ERROR');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/settings/building-logo",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings", "building-logo"]
+            },
+            "description": "Delete the building logo. Only building admins and super admins can delete building logos."
+          }
         }
       ]
     }
