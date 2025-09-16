@@ -1,5 +1,6 @@
 import User from '../models/User.js';
 import Building from '../models/Building.js';
+import ApartmentChangeRequest from '../models/ApartmentChangeRequest.js';
 import imageUploadService from '../services/imageUpload.service.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { createResponse } from '../utils/helpers.js';
@@ -289,14 +290,36 @@ class SettingsController {
    * Update Resident settings
    */
   async updateResidentSettings(user, updates) {
-    const allowedUpdates = ['first_name', 'last_name', 'phone', 'apartment_number', 'avatar_url', 'emergency_contact'];
+    const allowedUpdates = ['first_name', 'last_name', 'phone', 'avatar_url', 'emergency_contact'];
     
     const userUpdates = {};
+    let apartmentChangeRequest = null;
+    
+    // Handle regular profile updates
     allowedUpdates.forEach(field => {
       if (updates.profile && updates.profile[field] !== undefined) {
         userUpdates[field] = updates.profile[field];
       }
     });
+    
+    // Handle apartment number change separately - requires approval
+    if (updates.profile && updates.profile.apartment_number !== undefined) {
+      const requestedApartment = updates.profile.apartment_number;
+      const changeReason = updates.profile.apartment_change_reason || 'Resident requested apartment number change';
+      
+      // Check if user already has a pending request
+      const existingRequest = await ApartmentChangeRequest.getCurrentByUser(user.id);
+      if (existingRequest) {
+        throw new ValidationError('You already have a pending apartment change request. Please wait for admin approval or contact support.');
+      }
+      
+      // Create apartment change request
+      apartmentChangeRequest = await ApartmentChangeRequest.create(
+        user.id,
+        requestedApartment,
+        changeReason
+      );
+    }
     
     // Handle preferences separately
     if (updates.profile && updates.profile.preferences) {
@@ -317,15 +340,30 @@ class SettingsController {
       };
     }
     
+    // Update user profile (excluding apartment number)
     let updatedUser = user;
     if (Object.keys(userUpdates).length > 0) {
       updatedUser = await User.update(user.id, userUpdates);
     }
     
-    return {
+    const response = {
       user: updatedUser,
       message: 'Resident settings updated successfully'
     };
+    
+    // Include apartment change request info if created
+    if (apartmentChangeRequest) {
+      response.apartment_change_request = {
+        id: apartmentChangeRequest.request_id,
+        requested_apartment: updates.profile.apartment_number,
+        status: 'pending',
+        expires_at: apartmentChangeRequest.expires_at,
+        message: 'Apartment number change requires admin approval. Request has been submitted.'
+      };
+      response.message = 'Settings updated. Apartment number change request submitted for admin approval.';
+    }
+    
+    return response;
   }
 
   /**
@@ -718,6 +756,144 @@ class SettingsController {
       true,
       healthStatus,
       'Image service health status retrieved'
+    ));
+  });
+
+  // ============= APARTMENT CHANGE APPROVAL ENDPOINTS =============
+
+  /**
+   * Get pending apartment change requests (Admin only)
+   */
+  getPendingApartmentChanges = asyncHandler(async (req, res) => {
+    const { user } = req;
+    const { limit = 20, offset = 0 } = req.query;
+    
+    if (!['building_admin', 'super_admin'].includes(user.role)) {
+      throw new AuthorizationError('Only building administrators can view apartment change requests');
+    }
+    
+    const result = await ApartmentChangeRequest.getPendingByBuilding(
+      user.building_id,
+      parseInt(limit),
+      parseInt(offset)
+    );
+    
+    res.json(createResponse(
+      true,
+      result,
+      'Pending apartment change requests retrieved successfully'
+    ));
+  });
+
+  /**
+   * Process apartment change approval (Admin only)
+   */
+  processApartmentChangeApproval = asyncHandler(async (req, res) => {
+    const { user } = req;
+    const { requestId } = req.params;
+    const { approved, reason } = req.body;
+    
+    if (!['building_admin', 'super_admin'].includes(user.role)) {
+      throw new AuthorizationError('Only building administrators can approve apartment changes');
+    }
+    
+    if (typeof approved !== 'boolean') {
+      throw new ValidationError('Approved field must be true or false');
+    }
+    
+    const result = await ApartmentChangeRequest.processApproval(
+      requestId,
+      user.id,
+      approved,
+      reason
+    );
+    
+    res.json(createResponse(
+      true,
+      result,
+      approved ? 'Apartment change approved successfully' : 'Apartment change rejected'
+    ));
+  });
+
+  /**
+   * Get apartment change request details (Admin only)
+   */
+  getApartmentChangeRequest = asyncHandler(async (req, res) => {
+    const { user } = req;
+    const { requestId } = req.params;
+    
+    if (!['building_admin', 'super_admin'].includes(user.role)) {
+      throw new AuthorizationError('Only building administrators can view apartment change requests');
+    }
+    
+    const request = await ApartmentChangeRequest.findById(requestId);
+    
+    // Verify request belongs to admin's building
+    if (user.role !== USER_ROLES.SUPER_ADMIN && request.building_id !== user.building_id) {
+      throw new AuthorizationError('Access denied to this apartment change request');
+    }
+    
+    res.json(createResponse(
+      true,
+      { request },
+      'Apartment change request details retrieved successfully'
+    ));
+  });
+
+  /**
+   * Get apartment change dashboard (Admin only)
+   */
+  getApartmentChangeDashboard = asyncHandler(async (req, res) => {
+    const { user } = req;
+    
+    if (!['building_admin', 'super_admin'].includes(user.role)) {
+      throw new AuthorizationError('Only building administrators can view apartment change dashboard');
+    }
+    
+    const [pendingRequests, stats] = await Promise.all([
+      ApartmentChangeRequest.getPendingByBuilding(user.building_id, 5, 0),
+      ApartmentChangeRequest.getDashboardStats(user.building_id)
+    ]);
+    
+    res.json(createResponse(
+      true,
+      {
+        statistics: stats,
+        recent_requests: pendingRequests.requests,
+        pending_count: pendingRequests.statistics.pending_count
+      },
+      'Apartment change dashboard retrieved successfully'
+    ));
+  });
+
+  /**
+   * Get user's apartment change history
+   */
+  getUserApartmentChangeHistory = asyncHandler(async (req, res) => {
+    const { user } = req;
+    const { limit = 10 } = req.query;
+    
+    const history = await ApartmentChangeRequest.getHistoryByUser(user.id, parseInt(limit));
+    
+    res.json(createResponse(
+      true,
+      { history },
+      'Apartment change history retrieved successfully'
+    ));
+  });
+
+  /**
+   * Get current apartment change request for user
+   */
+  getCurrentApartmentChangeRequest = asyncHandler(async (req, res) => {
+    const { user } = req;
+    
+    const currentRequest = await ApartmentChangeRequest.getCurrentByUser(user.id);
+    
+    res.json(createResponse(
+      true,
+      { current_request: currentRequest },
+      currentRequest ? 'Current apartment change request found' : 'No pending apartment change request'
     ));
   });
 }

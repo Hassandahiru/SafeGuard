@@ -194,4 +194,74 @@ router.delete('/building',
   settingsController.deleteBuildingAccount
 );
 
+// =============================================
+// APARTMENT CHANGE APPROVAL ROUTES
+// =============================================
+
+/**
+ * @route   GET /api/settings/apartment-changes/pending
+ * @desc    Get pending apartment change requests
+ * @access  Private (Admin only)
+ */
+router.get('/apartment-changes/pending',
+  authenticate,
+  checkAdminAccess,
+  settingsController.getPendingApartmentChanges
+);
+
+/**
+ * @route   POST /api/settings/apartment-changes/:requestId/process
+ * @desc    Process apartment change approval
+ * @access  Private (Admin only)
+ */
+router.post('/apartment-changes/:requestId/process',
+  authenticate,
+  checkAdminAccess,
+  settingsController.processApartmentChangeApproval
+);
+
+/**
+ * @route   GET /api/settings/apartment-changes/:requestId
+ * @desc    Get apartment change request details
+ * @access  Private (Admin only)
+ */
+router.get('/apartment-changes/:requestId',
+  authenticate,
+  checkAdminAccess,
+  settingsController.getApartmentChangeRequest
+);
+
+/**
+ * @route   GET /api/settings/apartment-changes/dashboard
+ * @desc    Get apartment change dashboard
+ * @access  Private (Admin only)
+ */
+router.get('/apartment-changes/dashboard',
+  authenticate,
+  checkAdminAccess,
+  settingsController.getApartmentChangeDashboard
+);
+
+/**
+ * @route   GET /api/settings/apartment-changes/history
+ * @desc    Get user's apartment change history
+ * @access  Private (All authenticated users)
+ */
+router.get('/apartment-changes/history',
+  authenticate,
+  checkSettingsAccess,
+  settingsController.getUserApartmentChangeHistory
+);
+
+/**
+ * @route   GET /api/settings/apartment-changes/current
+ * @desc    Get user's current apartment change request
+ * @access  Private (All authenticated users)
+ */
+router.get('/apartment-changes/current',
+  authenticate,
+  checkSettingsAccess,
+  settingsController.getCurrentApartmentChangeRequest
+);
+
 export default router;

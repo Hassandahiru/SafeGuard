@@ -2,7 +2,7 @@ import multer from 'multer';
 import path from 'path';
 import { logger } from '../utils/logger.js';
 import imageUploadService from '../services/imageUpload.service.js';
-import { ValidationError } from '../utils/errors/index.js';
+import { ValidationError, FileUploadError } from '../utils/errors/index.js';
 
 /**
  * Image Upload Middleware
@@ -24,7 +24,7 @@ const fileFilter = (req, file, cb) => {
         mimeType: file.mimetype,
         size: file.size
       });
-      return cb(new ValidationError(validation.error), false);
+      return cb(new FileUploadError(validation.error), false);
     }
 
     // Log successful validation
@@ -38,7 +38,7 @@ const fileFilter = (req, file, cb) => {
 
   } catch (error) {
     logger.error('File filter error:', error);
-    cb(new ValidationError('File validation failed'), false);
+    cb(new FileUploadError('File validation failed'), false);
   }
 };
 
@@ -66,19 +66,19 @@ export const uploadProfilePicture = (req, res, next) => {
       if (error instanceof multer.MulterError) {
         switch (error.code) {
           case 'LIMIT_FILE_SIZE':
-            return next(new ValidationError('File size exceeds 5MB limit'));
+            return next(new FileUploadError('File size exceeds 5MB limit'));
           case 'LIMIT_FILE_COUNT':
-            return next(new ValidationError('Only one file allowed'));
+            return next(new FileUploadError('Only one file allowed'));
           case 'LIMIT_UNEXPECTED_FILE':
-            return next(new ValidationError('Unexpected field. Use "profilePicture" field name'));
+            return next(new FileUploadError('Unexpected field. Use "profilePicture" field name'));
           case 'LIMIT_FIELD_KEY':
-            return next(new ValidationError('Field name too long'));
+            return next(new FileUploadError('Field name too long'));
           case 'LIMIT_FIELD_VALUE':
-            return next(new ValidationError('Field value too large'));
+            return next(new FileUploadError('Field value too large'));
           case 'LIMIT_FIELD_COUNT':
-            return next(new ValidationError('Too many fields'));
+            return next(new FileUploadError('Too many fields'));
           default:
-            return next(new ValidationError(`Upload error: ${error.message}`));
+            return next(new FileUploadError(`Upload error: ${error.message}`));
         }
       }
       return next(error);
@@ -86,7 +86,7 @@ export const uploadProfilePicture = (req, res, next) => {
 
     // Check if file was uploaded
     if (!req.file) {
-      return next(new ValidationError('No file uploaded. Please select a profile picture.'));
+      return next(new FileUploadError('No file uploaded. Please select a profile picture.'));
     }
 
     // Add upload metadata to request

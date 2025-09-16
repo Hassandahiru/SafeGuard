@@ -2,6 +2,7 @@ import { Worker } from 'worker_threads';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { logger } from '../utils/logger.js';
+import { ExternalServiceError } from '../utils/errors/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,7 +59,7 @@ class ImageUploadService {
   async executeInWorker(type, data) {
     // Check worker limit
     if (this.activeWorkers.size >= this.maxWorkers) {
-      throw new Error('Maximum number of image processing workers reached. Please try again later.');
+      throw new ExternalServiceError('Maximum number of image processing workers reached. Please try again later.');
     }
 
     const worker = await this.createWorker();
@@ -66,7 +67,7 @@ class ImageUploadService {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         worker.terminate();
-        reject(new Error('Image processing timeout'));
+        reject(new ExternalServiceError('Image processing timeout'));
       }, 30000); // 30 second timeout
 
       worker.once('message', (message) => {
@@ -76,7 +77,7 @@ class ImageUploadService {
         if (message.success) {
           resolve(message.result);
         } else {
-          reject(new Error(message.error?.message || 'Image processing failed'));
+          reject(new ExternalServiceError(message.error?.message || 'Image processing failed'));
         }
       });
 

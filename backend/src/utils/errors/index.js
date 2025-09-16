@@ -6,6 +6,10 @@ import DatabaseError from './DatabaseError.js';
 import NotFoundError from './NotFoundError.js';
 import ConflictError from './ConflictError.js';
 import QRCodeError from './QRCodeError.js';
+import FileUploadError from './FileUploadError.js';
+import ExternalServiceError from './ExternalServiceError.js';
+import PaymentError from './PaymentError.js';
+import RateLimitError from './RateLimitError.js';
 
 export {
   AppError,
@@ -15,5 +19,9 @@ export {
   DatabaseError,
   NotFoundError,
   ConflictError,
-  QRCodeError
+  QRCodeError,
+  FileUploadError,
+  ExternalServiceError,
+  PaymentError,
+  RateLimitError
 };

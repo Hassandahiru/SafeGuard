@@ -1,11 +1,11 @@
 # SafeGuard Backend Documentation
 
-**Version**: 2.2.0  
-**Last Updated**: 2025-09-15
+**Version**: 2.2.1  
+**Last Updated**: 2025-09-16
 
 ## 📋 Overview
 
-This document provides comprehensive technical documentation for the SafeGuard backend system, including database schema fixes, route updates, architectural decisions, and the threaded image upload system implementation made during development.
+This document provides comprehensive technical documentation for the SafeGuard backend system, including database schema fixes, route updates, architectural decisions, the threaded image upload system implementation, and enhanced error handling with custom error classes made during development.
 
 ## 🛠️ Recent Database Schema Fixes
 
@@ -820,19 +820,49 @@ export const uploadBuildingLogo = upload.single('buildingLogo');
 
 #### Error Handling & Monitoring
 
-**Comprehensive Error Management**:
-```javascript
-// Worker thread errors
-- Processing timeouts (30 seconds)
-- Memory limitations
-- Sharp processing failures
-- File system errors
+**Enhanced Error Management with Custom Error Classes**:
 
-// HTTP-level errors  
-- File size exceeded (413 Payload Too Large)
-- Invalid file types (422 Unprocessable Entity)
-- Worker limit reached (503 Service Unavailable)
-- Authorization failures (403 Forbidden)
+The image upload system uses specific error classes for different failure scenarios:
+
+```javascript
+// FileUploadError - For file-related issues
+class FileUploadError extends AppError {
+  constructor(message, statusCode = 400, errorCode = 'FILE_UPLOAD_ERROR') {
+    super(message, statusCode, errorCode);
+    this.name = 'FileUploadError';
+  }
+}
+
+// ExternalServiceError - For worker thread and service failures
+class ExternalServiceError extends AppError {
+  constructor(message, statusCode = 503, errorCode = 'EXTERNAL_SERVICE_ERROR') {
+    super(message, statusCode, errorCode);
+    this.name = 'ExternalServiceError';
+  }
+}
+```
+
+**Error Categories**:
+
+```javascript
+// FileUploadError scenarios
+- File size exceeded (5MB limit)
+- Invalid MIME types (not JPEG/PNG/GIF/WebP)
+- Invalid file extensions
+- Multer upload failures
+- Missing file uploads
+
+// ExternalServiceError scenarios  
+- Worker thread limit reached (max 3 concurrent)
+- Image processing timeouts (30 seconds)
+- Sharp library processing failures
+- File system write/read errors
+- Worker thread creation failures
+
+// ValidationError scenarios
+- Missing required fields
+- Invalid field formats
+- Authorization failures
 ```
 
 **Health Monitoring**:
@@ -997,6 +1027,111 @@ For existing installations:
 - **v2.1**: Partial settings via existing user endpoints
 - **v2.0**: Basic profile updates only
 
+## 🚨 Enhanced Error Handling System
+
+### Custom Error Classes Architecture
+
+The SafeGuard backend implements a comprehensive error handling system with custom error classes for different failure scenarios. This provides better error categorization, improved debugging, and enhanced user experience.
+
+#### Base Error Class (`src/utils/errors/AppError.js`)
+
+```javascript
+class AppError extends Error {
+  constructor(message, statusCode, errorCode = null, isOperational = true) {
+    super(message);
+    this.statusCode = statusCode;
+    this.errorCode = errorCode;
+    this.isOperational = isOperational;
+    this.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
+    this.timestamp = new Date().toISOString();
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
+```
+
+#### Specialized Error Classes
+
+**FileUploadError** (`src/utils/errors/FileUploadError.js`):
+- **Purpose**: File upload and validation failures
+- **Default Status**: 400 Bad Request
+- **Use Cases**: File size exceeded, invalid MIME types, upload failures
+- **Error Code**: `FILE_UPLOAD_ERROR`
+
+**ExternalServiceError** (`src/utils/errors/ExternalServiceError.js`):
+- **Purpose**: Third-party service failures and worker thread issues
+- **Default Status**: 503 Service Unavailable  
+- **Use Cases**: Worker thread failures, API timeouts, service unavailability
+- **Error Code**: `EXTERNAL_SERVICE_ERROR`
+
+**PaymentError** (`src/utils/errors/PaymentError.js`):
+- **Purpose**: Paystack integration and payment processing failures
+- **Default Status**: 400 Bad Request
+- **Use Cases**: Payment failures, invalid payment data, transaction errors
+- **Error Code**: `PAYMENT_ERROR`
+
+**RateLimitError** (`src/utils/errors/RateLimitError.js`):
+- **Purpose**: API rate limiting violations
+- **Default Status**: 429 Too Many Requests
+- **Use Cases**: Exceeding rate limits, throttling responses
+- **Error Code**: `RATE_LIMIT_ERROR`
+
+### Error Usage in Components
+
+#### Image Upload System
+```javascript
+// FileUploadError for file validation
+if (file.size > maxSize) {
+  throw new FileUploadError('File size exceeds 5MB limit');
+}
+
+// ExternalServiceError for worker thread issues
+if (this.activeWorkers.size >= this.maxWorkers) {
+  throw new ExternalServiceError('Maximum number of image processing workers reached. Please try again later.');
+}
+```
+
+#### Middleware Integration
+```javascript
+// Image upload middleware uses FileUploadError
+case 'LIMIT_FILE_SIZE':
+  return next(new FileUploadError('File size exceeds 5MB limit'));
+
+// Service layer uses ExternalServiceError  
+catch (error) {
+  throw new ExternalServiceError(`Image processing failed: ${error.message}`);
+}
+```
+
+### Error Response Format
+
+All custom errors follow a consistent response format:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "FILE_UPLOAD_ERROR",
+    "message": "File size exceeds 5MB limit"
+  },
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+### Error Logging and Monitoring
+
+Each error type is logged to appropriate log files for monitoring and debugging:
+
+```javascript
+// Error categorization in logging
+if (err.name === 'FileUploadError') {
+  logger.error('File Upload Error', errorLog);
+} else if (err.name === 'ExternalServiceError') {
+  logger.error('External Service Error', errorLog);
+} else if (err.name === 'PaymentError') {
+  logger.error('Payment Error', errorLog);
+}
+```
+
 ## 📚 Additional Resources
 
 ### Related Files
@@ -1005,6 +1140,7 @@ For existing installations:
 - **Database Schema**: `database/safe-guard-ddl.sql`
 - **Postman Collection**: `SafeGuard_Complete_API.postman_collection.json`
 - **Environment Config**: `src/config/environment.js`
+- **Error Classes**: `src/utils/errors/` directory
 
 ### Development Commands
 

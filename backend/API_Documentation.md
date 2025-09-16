@@ -1,5 +1,5 @@
-# SafeGuard API Documentation v2.2
-**Updated: 2025-09-15** | **Version: 2.2**
+# SafeGuard API Documentation v2.2.1
+**Updated: 2025-09-16** | **Version: 2.2.1**
 
 ## 📋 Table of Contents
 - [Overview](#overview)
@@ -340,6 +340,8 @@ interface ValidationError {
 - `RATE_LIMIT_ERROR`: Too many requests
 - `DATABASE_ERROR`: Database operation failed
 - `EXTERNAL_SERVICE_ERROR`: Third-party service failure
+- `FILE_UPLOAD_ERROR`: File upload or validation failure
+- `PAYMENT_ERROR`: Payment processing failure
 
 ---
 
@@ -1603,6 +1605,18 @@ Authorization: Bearer <admin-token>
   "error": {
     "code": "EXTERNAL_SERVICE_ERROR",
     "message": "Maximum number of image processing workers reached. Please try again later."
+  },
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+**Processing Timeout:**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "EXTERNAL_SERVICE_ERROR",
+    "message": "Image processing timeout"
   },
   "timestamp": "2024-01-15T10:30:00Z"
 }
