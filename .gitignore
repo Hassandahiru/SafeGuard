@@ -25,3 +25,5 @@ logs/error.log
 uploads/temp.txt
 backend/database/safe-guard-ddl.sql
 CLAUDE.md
+backend/deployment.md
+backend/API_Documentation.md
