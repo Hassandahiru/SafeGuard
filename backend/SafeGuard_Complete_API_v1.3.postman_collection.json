@@ -1,0 +1,2048 @@
+{
+  "info": {
+    "name": "SafeGuard Complete API v1.3",
+    "description": "Comprehensive API testing collection for SafeGuard visitor management system including settings management, image upload with worker threads, and apartment change approval system.\n\n## What's New in v1.3:\n- **Apartment Change Approval System**: Complete workflow for apartment number changes requiring admin approval\n- **Enhanced Settings Management**: Updated with apartment change request handling\n- **Admin Approval Endpoints**: 6 new endpoints for managing apartment change requests\n- **Comprehensive Testing**: End-to-end testing scenarios for all features\n\n## Features Covered:\n- System Setup & Building Registration\n- User Registration & Authentication\n- Visitor Management with QR Codes\n- Entry/Exit Scanning (Security Only)\n- Settings Management (Role-based)\n- Image Upload (Profile Pictures & Building Logos)\n- Apartment Change Approval Workflow\n- Frequent Visitors Management\n- Visitor Ban System\n- Dashboard System (Role-specific)\n- Analytics & Reports\n\n## Authentication:\nAll endpoints use JWT Bearer token authentication. Tokens are automatically captured and stored as environment variables for seamless testing.\n\n**Base URL**: {{base_url}}\n**Version**: 1.3\n**Updated**: 2025-09-16",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": {
+      "major": 1,
+      "minor": 3,
+      "patch": 0
+    }
+  },
+  "item": [
+    {
+      "name": "🏗️ System Setup & Building Registration",
+      "description": "Initial system setup and building registration endpoints",
+      "item": [
+        {
+          "name": "Initial System Setup",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has success true\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});",
+                  "",
+                  "// Store building and admin data",
+                  "const jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    if (jsonData.data.building) {",
+                  "        pm.environment.set(\"building_id\", jsonData.data.building.id);",
+                  "        pm.environment.set(\"building_name\", jsonData.data.building.name);",
+                  "    }",
+                  "    if (jsonData.data.admin) {",
+                  "        pm.environment.set(\"admin_id\", jsonData.data.admin.id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dantata Building Complex\",\n  \"address\": \"123 Victoria Island, Lagos, Nigeria\",\n  \"city\": \"Lagos\",\n  \"state\": \"Lagos State\",\n  \"building_email\": \"{{building_contact_email}}\",\n  \"total_licenses\": 250,\n  \"adminEmail\": \"{{admin_email}}\",\n  \"adminPassword\": \"{{admin_password}}\",\n  \"adminFirstName\": \"Building\",\n  \"adminLastName\": \"Admin\",\n  \"adminPhone\": \"+2348012345600\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/initial-setup",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "initial-setup"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👤 User Registration & Authentication",
+      "description": "User registration, authentication and profile management",
+      "item": [
+        {
+          "name": "Resident Self-Registration",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.user) {",
+                  "    pm.environment.set(\"resident_id\", jsonData.data.user.id);",
+                  "    pm.environment.set(\"approval_request_id\", jsonData.data.approval_request.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"building_email\": \"{{building_contact_email}}\",\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\",\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"phone\": \"+2348012345700\",\n  \"apartment_number\": \"A101\",\n  \"emergency_contact_name\": \"Jane Doe\",\n  \"emergency_contact_phone\": \"+2348012345701\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/registration/self-register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "registration", "self-register"]
+            }
+          }
+        },
+        {
+          "name": "Register Security Personnel",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// This will be set after admin login"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.user) {",
+                  "    pm.environment.set(\"security_id\", jsonData.data.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{security_email}}\",\n  \"password\": \"{{security_password}}\",\n  \"first_name\": \"Security\",\n  \"last_name\": \"Officer\",\n  \"phone\": \"+2348012345800\",\n  \"role\": \"security\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/registration/security",
+              "host": ["{{base_url}}"],
+              "path": ["api", "registration", "security"]
+            }
+          }
+        },
+        {
+          "name": "Admin Enhanced Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has success true\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});",
+                  "",
+                  "// Store admin token",
+                  "const jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.accessToken) {",
+                  "    pm.environment.set(\"admin_token\", jsonData.data.accessToken);",
+                  "    pm.environment.set(\"admin_refresh_token\", jsonData.data.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\",\n  \"device_name\": \"Postman Testing\",\n  \"location\": \"Lagos, Nigeria\",\n  \"remember_me\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/enhanced/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "enhanced", "login"]
+            }
+          }
+        },
+        {
+          "name": "Security Enhanced Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Store security token",
+                  "const jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.accessToken) {",
+                  "    pm.environment.set(\"security_token\", jsonData.data.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{security_email}}\",\n  \"password\": \"{{security_password}}\",\n  \"device_name\": \"Security Scanner\",\n  \"location\": \"Main Gate\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/enhanced/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "enhanced", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "✅ Resident Approval System",
+      "description": "Resident approval workflow management",
+      "item": [
+        {
+          "name": "Get Pending Approvals (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.approvals && jsonData.data.approvals.length > 0) {",
+                  "    pm.environment.set(\"approval_request_id\", jsonData.data.approvals[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/resident-approval/pending/{{building_id}}?limit=20&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["api", "resident-approval", "pending", "{{building_id}}"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Approve Resident Registration",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Resident approved successfully\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.approval.status).to.eql(\"approved\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approved\": true,\n  \"reason\": \"Application meets all requirements\",\n  \"notes\": \"Welcome to Dantata Building Complex!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/resident-approval/{{approval_request_id}}/process",
+              "host": ["{{base_url}}"],
+              "path": ["api", "resident-approval", "{{approval_request_id}}", "process"]
+            }
+          }
+        },
+        {
+          "name": "Resident Login (After Approval)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Store resident token",
+                  "const jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.accessToken) {",
+                  "    pm.environment.set(\"resident_token\", jsonData.data.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\",\n  \"device_name\": \"Resident App\",\n  \"location\": \"Home\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/enhanced/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "enhanced", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "⚙️ Settings Management System",
+      "description": "Role-based settings management including apartment change approval workflow",
+      "item": [
+        {
+          "name": "Get Admin Settings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Admin capabilities are present\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.capabilities).to.have.property('canChangeProfileImage');",
+                  "    pm.expect(jsonData.data.capabilities).to.have.property('canManageUsers');",
+                  "    pm.expect(jsonData.data.capabilities).to.have.property('canRequestLicenses');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/settings",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings"]
+            }
+          }
+        },
+        {
+          "name": "Get Resident Settings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Resident capabilities are present\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.capabilities).to.have.property('canChangeProfileImage');",
+                  "    pm.expect(jsonData.data.capabilities).to.have.property('canUpdatePersonalInfo');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{resident_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/settings",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings"]
+            }
+          }
+        },
+        {
+          "name": "Update Resident Settings (Regular Fields)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Settings updated successfully\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.user.first_name).to.eql(\"Johnny\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{resident_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"profile\": {\n    \"first_name\": \"Johnny\",\n    \"phone\": \"+2348012345701\",\n    \"emergency_contact\": {\n      \"name\": \"Jane Doe\",\n      \"phone\": \"+2348012345702\",\n      \"relationship\": \"Spouse\",\n      \"email\": \"jane.doe@example.com\"\n    }\n  },\n  \"notifications\": {\n    \"visitor_arrival\": true,\n    \"visitor_departure\": true,\n    \"email_notifications\": true,\n    \"sms_notifications\": false\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/settings",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏠 Apartment Change Approval System",
+      "description": "Complete apartment number change approval workflow",
+      "item": [
+        {
+          "name": "Request Apartment Number Change (Resident)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Apartment change request created\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('apartment_change_request');",
+                  "    pm.expect(jsonData.data.apartment_change_request.status).to.eql('pending');",
+                  "});",
+                  "",
+                  "// Store apartment change request ID",
+                  "const jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.apartment_change_request) {",
+                  "    pm.environment.set(\"apartment_change_request_id\", jsonData.data.apartment_change_request.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{resident_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"profile\": {\n    \"apartment_number\": \"B205\",\n    \"apartment_change_reason\": \"Moving to a larger unit for family expansion\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/settings",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings"]
+            }
+          }
+        },
+        {
+          "name": "Get Current Apartment Change Request (Resident)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Current request found\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    if (jsonData.data.current_request) {",
+                  "        pm.expect(jsonData.data.current_request.status).to.eql('pending');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{resident_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/settings/apartment-changes/current",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings", "apartment-changes", "current"]
+            }
+          }
+        },
+        {
+          "name": "Get Apartment Change History (Resident)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"History retrieved\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('history');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{resident_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/settings/apartment-changes/history?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings", "apartment-changes", "history"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Pending Apartment Changes (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Pending requests retrieved\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('requests');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/settings/apartment-changes/pending?limit=20&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings", "apartment-changes", "pending"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Apartment Change Dashboard (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Dashboard data retrieved\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('statistics');",
+                  "    pm.expect(jsonData.data).to.have.property('recent_requests');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/settings/apartment-changes/dashboard",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings", "apartment-changes", "dashboard"]
+            }
+          }
+        },
+        {
+          "name": "Get Apartment Change Request Details (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Request details retrieved\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('request');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/settings/apartment-changes/{{apartment_change_request_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings", "apartment-changes", "{{apartment_change_request_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Approve Apartment Change Request (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Apartment change approved\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.message).to.contain('approved successfully');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approved\": true,\n  \"reason\": \"Request approved - unit B205 is available and resident has valid justification for the change\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/settings/apartment-changes/{{apartment_change_request_id}}/process",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings", "apartment-changes", "{{apartment_change_request_id}}", "process"]
+            }
+          }
+        },
+        {
+          "name": "Reject Apartment Change Request (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Apartment change rejected\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.message).to.contain('rejected');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approved\": false,\n  \"reason\": \"Requested unit B205 is not available. Please choose a different apartment number.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/settings/apartment-changes/{{apartment_change_request_id}}/process",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings", "apartment-changes", "{{apartment_change_request_id}}", "process"]
+            }
+          }
+        },
+        {
+          "name": "Verify Resident Apartment Updated (After Approval)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Apartment number updated in profile\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    // After approval, the apartment number should be updated",
+                  "    if (jsonData.data.profile.apartment_number) {",
+                  "        pm.expect(jsonData.data.profile.apartment_number).to.eql('B205');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{resident_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/settings",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📸 Image Upload System",
+      "description": "Threaded image upload system for profile pictures and building logos",
+      "item": [
+        {
+          "name": "Upload Profile Picture (Resident)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Profile picture uploaded successfully\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.user).to.have.property('profile_picture');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{resident_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "profilePicture",
+                  "type": "file",
+                  "src": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/settings/profile-picture",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings", "profile-picture"]
+            }
+          }
+        },
+        {
+          "name": "Upload Building Logo (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Building logo uploaded successfully\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('fileName');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "buildingLogo",
+                  "type": "file",
+                  "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/settings/building-logo",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings", "building-logo"]
+            }
+          }
+        },
+        {
+          "name": "Get Image Service Health (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Image service is healthy\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.status).to.eql('healthy');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/settings/image-service/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings", "image-service", "health"]
+            }
+          }
+        },
+        {
+          "name": "Delete Profile Picture (Resident)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Profile picture deleted successfully\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{resident_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/settings/profile-picture",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings", "profile-picture"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏠 Visitor Management",
+      "description": "Complete visitor management including QR code generation",
+      "item": [
+        {
+          "name": "Create Visitor Invitation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Visit created with QR code\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.visit).to.have.property('qr_code');",
+                  "});",
+                  "",
+                  "// Store visit and QR code for scanning tests",
+                  "const jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.visit) {",
+                  "    pm.environment.set(\"visit_id\", jsonData.data.visit.id);",
+                  "    pm.environment.set(\"qr_code\", jsonData.data.qr_code);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{resident_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Family Visit\",\n  \"description\": \"Weekend family gathering\",\n  \"visit_type\": \"group\",\n  \"expected_start\": \"2025-09-20T15:00:00Z\",\n  \"expected_end\": \"2025-09-20T22:00:00Z\",\n  \"visitors\": [\n    {\n      \"name\": \"Alice Johnson\",\n      \"phone\": \"+2348123456789\",\n      \"email\": \"alice@example.com\"\n    },\n    {\n      \"name\": \"Bob Johnson\",\n      \"phone\": \"+2348987654321\",\n      \"email\": \"bob@example.com\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/visitors/invitations",
+              "host": ["{{base_url}}"],
+              "path": ["api", "visitors", "invitations"]
+            }
+          }
+        },
+        {
+          "name": "Get Visitor Invitations (Resident)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Visit invitations retrieved\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{resident_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/visitors/invitations?status=active&limit=20&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["api", "visitors", "invitations"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "active"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔍 QR Code Scanning (Security Only)",
+      "description": "QR code entry and exit scanning - Security personnel only",
+      "item": [
+        {
+          "name": "Scan QR Code for Building Entry",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Visitor entered building successfully\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.visit.entry).to.be.true;",
+                  "    pm.expect(jsonData.data.scan_type).to.eql('entry');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{security_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_code\": \"{{qr_code}}\",\n  \"gate_number\": \"Main Gate\",\n  \"location\": {\n    \"latitude\": 6.5244,\n    \"longitude\": 3.3792,\n    \"address\": \"Main Building Entrance\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/visitors/scan/entry",
+              "host": ["{{base_url}}"],
+              "path": ["api", "visitors", "scan", "entry"]
+            }
+          }
+        },
+        {
+          "name": "Check Visitor Entry Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Visitor status shows entered\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.entry).to.be.true;",
+                  "    pm.expect(jsonData.data.can_exit).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{security_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/visitors/{{visit_id}}/checkin-status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "visitors", "{{visit_id}}", "checkin-status"]
+            }
+          }
+        },
+        {
+          "name": "Scan QR Code for Building Exit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Visitor exited building successfully\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.visit.exit).to.be.true;",
+                  "    pm.expect(jsonData.data.scan_type).to.eql('exit');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{security_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_code\": \"{{qr_code}}\",\n  \"gate_number\": \"Main Gate\",\n  \"location\": {\n    \"latitude\": 6.5244,\n    \"longitude\": 3.3792,\n    \"address\": \"Main Building Exit\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/visitors/scan/exit",
+              "host": ["{{base_url}}"],
+              "path": ["api", "visitors", "scan", "exit"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 Dashboard System",
+      "description": "Role-based dashboards with real-time data",
+      "item": [
+        {
+          "name": "Get Admin Dashboard",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Admin dashboard data present\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.user_role).to.eql('building_admin');",
+                  "    pm.expect(jsonData.data).to.have.property('latest_visits');",
+                  "    pm.expect(jsonData.data).to.have.property('building_users');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/dashboard",
+              "host": ["{{base_url}}"],
+              "path": ["api", "dashboard"]
+            }
+          }
+        },
+        {
+          "name": "Get Resident Dashboard",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Resident dashboard data present\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.user_role).to.eql('resident');",
+                  "    pm.expect(jsonData.data).to.have.property('latest_visits');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{resident_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/dashboard",
+              "host": ["{{base_url}}"],
+              "path": ["api", "dashboard"]
+            }
+          }
+        },
+        {
+          "name": "Get Security Dashboard",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Security dashboard data present\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.user_role).to.eql('security');",
+                  "    pm.expect(jsonData.data).to.have.property('todays_scanned_visits');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{security_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/dashboard",
+              "host": ["{{base_url}}"],
+              "path": ["api", "dashboard"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥 Frequent Visitors Management",
+      "description": "Manage frequent visitors for quick invitations",
+      "item": [
+        {
+          "name": "Add Frequent Visitor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Frequent visitor added\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});",
+                  "",
+                  "// Store frequent visitor ID",
+                  "const jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.environment.set(\"frequent_visitor_id\", jsonData.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{resident_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Regular Visitor\",\n  \"phone\": \"+2348111222333\",\n  \"email\": \"regular@example.com\",\n  \"relationship\": \"friend\",\n  \"nickname\": \"Regular Friend\",\n  \"notes\": \"Visits every weekend\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/frequent-visitors",
+              "host": ["{{base_url}}"],
+              "path": ["api", "frequent-visitors"]
+            }
+          }
+        },
+        {
+          "name": "Get Frequent Visitors",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Frequent visitors retrieved\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{resident_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/frequent-visitors?limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "frequent-visitors"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🚫 Visitor Ban System",
+      "description": "Personal visitor blacklist management",
+      "item": [
+        {
+          "name": "Ban a Visitor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Visitor banned successfully\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.ban.is_active).to.be.true;",
+                  "});",
+                  "",
+                  "// Store ban ID for testing",
+                  "const jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.ban) {",
+                  "    pm.environment.set(\"ban_id\", jsonData.data.ban.id);",
+                  "    pm.environment.set(\"banned_phone\", jsonData.data.ban.phone);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{resident_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Problem Visitor\",\n  \"phone\": \"+2348999888777\",\n  \"reason\": \"Inappropriate behavior during last visit\",\n  \"severity\": \"medium\",\n  \"notes\": \"Resident requested permanent ban due to security concerns\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/visitor-bans",
+              "host": ["{{base_url}}"],
+              "path": ["api", "visitor-bans"]
+            }
+          }
+        },
+        {
+          "name": "Check Visitor Ban Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Ban status checked\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.is_banned).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{resident_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/visitor-bans/check?phone={{banned_phone}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "visitor-bans", "check"],
+              "query": [
+                {
+                  "key": "phone",
+                  "value": "{{banned_phone}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Banned Visitors List",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Banned visitors list retrieved\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{resident_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/visitor-bans?status=active&limit=20&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["api", "visitor-bans"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "active"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔧 Admin Management",
+      "description": "Administrative operations and user management",
+      "item": [
+        {
+          "name": "Delete User (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"User deleted successfully\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/settings/users/{{frequent_visitor_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings", "users", "{{frequent_visitor_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Request Additional Licenses (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"License request submitted\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.license_request.status).to.eql('pending');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"additional_licenses\": 50,\n  \"reason\": \"Building expansion - new residents moving in next quarter\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/settings/licenses/request",
+              "host": ["{{base_url}}"],
+              "path": ["api", "settings", "licenses", "request"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏥 System Health & Analytics",
+      "description": "System health checks and analytics endpoints",
+      "item": [
+        {
+          "name": "System Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"System is healthy\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.status).to.eql('healthy');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "Building Analytics (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Analytics data retrieved\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('visit_statistics');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/buildings/{{building_id}}/analytics?start_date=2025-09-01&end_date=2025-09-30",
+              "host": ["{{base_url}}"],
+              "path": ["api", "buildings", "{{building_id}}", "analytics"],
+              "query": [
+                {
+                  "key": "start_date",
+                  "value": "2025-09-01"
+                },
+                {
+                  "key": "end_date",
+                  "value": "2025-09-30"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔄 End-to-End Testing Scenarios",
+      "description": "Complete workflow testing scenarios combining multiple endpoints",
+      "item": [
+        {
+          "name": "[SCENARIO] Complete Apartment Change Workflow",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// This is a documentation request showing the complete workflow",
+                  "pm.test(\"Workflow documentation available\", function () {",
+                  "    pm.expect(true).to.be.true;",
+                  "});",
+                  "",
+                  "console.log('Complete Apartment Change Workflow:');",
+                  "console.log('1. Resident requests apartment change via PUT /api/settings');",
+                  "console.log('2. Admin views pending requests via GET /api/settings/apartment-changes/pending');",
+                  "console.log('3. Admin approves/rejects via POST /api/settings/apartment-changes/{id}/process');",
+                  "console.log('4. If approved, user apartment_number is updated automatically');",
+                  "console.log('5. Resident can check history via GET /api/settings/apartment-changes/history');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "[SCENARIO] Complete Visitor Management Workflow",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// This is a documentation request showing the complete workflow",
+                  "pm.test(\"Workflow documentation available\", function () {",
+                  "    pm.expect(true).to.be.true;",
+                  "});",
+                  "",
+                  "console.log('Complete Visitor Management Workflow:');",
+                  "console.log('1. Resident creates visitor invitation with QR code');",
+                  "console.log('2. Visitor arrives at gate with QR code');",
+                  "console.log('3. Security scans QR for entry (POST /api/visitors/scan/entry)');",
+                  "console.log('4. System marks entry=true, visitor is inside building');",
+                  "console.log('5. When leaving, security scans QR for exit');",
+                  "console.log('6. System marks exit=true, visit completed');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔐 Authentication Management",
+      "description": "Token management and session operations",
+      "item": [
+        {
+          "name": "Refresh Admin Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Update token if refresh successful",
+                  "const jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.accessToken) {",
+                  "    pm.environment.set(\"admin_token\", jsonData.data.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_refresh_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/enhanced/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "enhanced", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "Admin Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Logout successful\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/enhanced/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "enhanced", "logout"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:4500"
+    },
+    {
+      "key": "building_contact_email",
+      "value": "admin@dantatagroup.com"
+    },
+    {
+      "key": "admin_email",
+      "value": "admin@dantatagroup.com"
+    },
+    {
+      "key": "admin_password",
+      "value": "AdminPass123!"
+    },
+    {
+      "key": "security_email",
+      "value": "security@dantatagroup.com"
+    },
+    {
+      "key": "security_password",
+      "value": "SecurityPass123!"
+    },
+    {
+      "key": "test_email",
+      "value": "john.doe@example.com"
+    },
+    {
+      "key": "test_password",
+      "value": "SecurePass123!"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global pre-request script for SafeGuard API v1.3",
+          "// This script runs before every request in the collection",
+          "",
+          "// Set default headers",
+          "pm.request.headers.add({",
+          "    key: 'User-Agent',",
+          "    value: 'SafeGuard-Postman-Collection-v1.3'",
+          "});",
+          "",
+          "// Log request details for debugging",
+          "console.log('🚀 Making request to: ' + pm.request.url.toString());",
+          "console.log('📝 Method: ' + pm.request.method);",
+          "",
+          "// Check if authentication token is available for protected endpoints",
+          "if (pm.request.url.toString().includes('/api/')) {",
+          "    const authHeader = pm.request.headers.get('Authorization');",
+          "    if (!authHeader && !pm.request.url.toString().includes('/health') && !pm.request.url.toString().includes('/initial-setup') && !pm.request.url.toString().includes('/self-register')) {",
+          "        console.warn('⚠️  Warning: This protected endpoint may require authentication');",
+          "    }",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global post-request script for SafeGuard API v1.3",
+          "// This script runs after every response in the collection",
+          "",
+          "// Log response details",
+          "console.log('📥 Response Status: ' + pm.response.code + ' ' + pm.response.status);",
+          "console.log('⏱️  Response Time: ' + pm.response.responseTime + 'ms');",
+          "",
+          "// Global tests that run for all requests",
+          "pm.test('Response time is acceptable', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(10000); // 10 seconds max",
+          "});",
+          "",
+          "pm.test('Response has proper JSON structure', function () {",
+          "    if (pm.response.headers.get('Content-Type') && pm.response.headers.get('Content-Type').includes('application/json')) {",
+          "        const jsonData = pm.response.json();",
+          "        pm.expect(jsonData).to.have.property('success');",
+          "        pm.expect(jsonData).to.have.property('timestamp');",
+          "        ",
+          "        if (jsonData.success) {",
+          "            pm.expect(jsonData).to.have.property('data');",
+          "        } else {",
+          "            pm.expect(jsonData).to.have.property('error');",
+          "        }",
+          "    }",
+          "});",
+          "",
+          "// Handle common error scenarios",
+          "if (pm.response.code === 401) {",
+          "    console.error('❌ Authentication failed - check token validity');",
+          "} else if (pm.response.code === 403) {",
+          "    console.error('❌ Authorization failed - insufficient permissions');",
+          "} else if (pm.response.code === 429) {",
+          "    console.error('❌ Rate limit exceeded - slow down requests');",
+          "} else if (pm.response.code >= 500) {",
+          "    console.error('❌ Server error - check server logs');",
+          "} else if (pm.response.code >= 200 && pm.response.code < 300) {",
+          "    console.log('✅ Request successful');",
+          "}"
+        ]
+      }
+    }
+  ]
+}

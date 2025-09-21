@@ -1,10 +1,11 @@
 {
-  "info": {
-    "name": "SafeGuard Backend API - Complete Collection v2.2",
-    "description": "Complete API collection for SafeGuard Backend - Visitor Management System with QR Code Entry/Exit tracking, Dashboard functionality, and Settings Management",
-    "version": "2.2.0",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
+	"info": {
+		"_postman_id": "a8f4b5c6-d7e8-4f9a-8b2c-3d4e5f6a7b8c",
+		"name": "SafeGuard Complete API v1.3",
+		"description": "Comprehensive test collection for SafeGuard visitor management system including apartment change approval workflow",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "12345678"
+	},
   "auth": {
     "type": "bearer",
     "bearer": [
