@@ -39,7 +39,7 @@ function testConfiguration() {
   log(`   DB_HOST: ${process.env.DB_HOST || 'DEFAULT (localhost)'}`, 'info');
   log(`   DB_PORT: ${process.env.DB_PORT || 'DEFAULT (5432)'}`, 'info');
   log(`   DB_NAME: ${process.env.DB_NAME || 'DEFAULT (safeguard_db)'}`, 'info');
-  log(`   DB_USER: ${process.env.DB_USER || 'DEFAULT (dahiruadoh)'}`, 'info');
+  log(`   DB_USER: ${process.env.DB_USER || 'DEFAULT (your_db_user)'}`, 'info');
   log(`   DB_PASSWORD: ${process.env.DB_PASSWORD ? '***CONFIGURED***' : 'NOT SET'}`, 'info');
   
   // JWT Configuration
