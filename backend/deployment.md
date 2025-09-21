@@ -99,9 +99,9 @@ sudo systemctl enable postgresql
 # Create database and user
 sudo -u postgres psql << EOF
 CREATE DATABASE safeguard_db;
-CREATE USER dahiruah WITH ENCRYPTED PASSWORD 'ColdDay@1975';
-GRANT ALL PRIVILEGES ON DATABASE safeguard_db TO dahiruadoh;
-ALTER USER dahiruah CREATEDB;
+CREATE USER your_db_user WITH ENCRYPTED PASSWORD 'your_secure_password';
+GRANT ALL PRIVILEGES ON DATABASE safeguard_db TO your_db_user;
+ALTER USER your_db_user CREATEDB;
 \q
 EOF
 
@@ -110,7 +110,7 @@ sudo nano /etc/postgresql/*/main/postgresql.conf
 # Uncomment and modify: listen_addresses = '*'
 
 sudo nano /etc/postgresql/*/main/pg_hba.conf
-# Add: host safeguard_db dahiruadoh 0.0.0.0/0 md5
+# Add: host safeguard_db your_db_user 0.0.0.0/0 md5
 
 # Restart PostgreSQL
 sudo systemctl restart postgresql
@@ -179,9 +179,9 @@ API_VERSION=v1
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=safeguard_db
-DB_USER=dahiruadoh
-DB_PASSWORD=ColdDay@1975
-DATABASE_URL=postgresql://dahiruadoh:ColdDay%401975@localhost:5432/safeguard_db
+DB_USER=your_db_user
+DB_PASSWORD=your_secure_password
+DATABASE_URL=postgresql://your_db_user:your_secure_password@localhost:5432/safeguard_db
 DB_POOL_MAX=20
 DB_IDLE_TIMEOUT=30000
 DB_CONNECTION_TIMEOUT=2000
@@ -252,18 +252,18 @@ sudo mkdir -p /var/safeguard/uploads
 sudo chown safeguard:safeguard /var/safeguard/uploads
 
 # Run database migrations
-PGPASSWORD='ColdDay@1975' psql -h localhost -p 5432 -U dahiruadoh -d safeguard_db -f database/migrations/001_create_new_schemas_and_tables.sql
-PGPASSWORD='ColdDay@1975' psql -h localhost -p 5432 -U dahiruadoh -d safeguard_db -f database/migrations/002_move_existing_tables_fixed.sql
-PGPASSWORD='ColdDay@1975' psql -h localhost -p 5432 -U dahiruadoh -d safeguard_db -f database/migrations/003_cleanup_old_tables.sql
-PGPASSWORD='ColdDay@1975' psql -h localhost -p 5432 -U dahiruadoh -d safeguard_db -f database/migrations/004_add_website_column_to_buildings.sql
-PGPASSWORD='ColdDay@1975' psql -h localhost -p 5432 -U dahiruadoh -d safeguard_db -f database/migrations/005_create_database_views_fixed.sql
-PGPASSWORD='ColdDay@1975' psql -h localhost -p 5432 -U dahiruadoh -d safeguard_db -f database/migrations/006_add_entry_exit_columns.sql
-PGPASSWORD='ColdDay@1975' psql -h localhost -p 5432 -U dahiruadoh -d safeguard_db -f database/migrations/007_create_missing_functions.sql
-PGPASSWORD='ColdDay@1975' psql -h localhost -p 5432 -U dahiruadoh -d safeguard_db -f database/migrations/008_update_frequent_visitors_structure.sql
+PGPASSWORD='your_secure_password' psql -h localhost -p 5432 -U your_db_user -d safeguard_db -f database/migrations/001_create_new_schemas_and_tables.sql
+PGPASSWORD='your_secure_password' psql -h localhost -p 5432 -U your_db_user -d safeguard_db -f database/migrations/002_move_existing_tables_fixed.sql
+PGPASSWORD='your_secure_password' psql -h localhost -p 5432 -U your_db_user -d safeguard_db -f database/migrations/003_cleanup_old_tables.sql
+PGPASSWORD='your_secure_password' psql -h localhost -p 5432 -U your_db_user -d safeguard_db -f database/migrations/004_add_website_column_to_buildings.sql
+PGPASSWORD='your_secure_password' psql -h localhost -p 5432 -U your_db_user -d safeguard_db -f database/migrations/005_create_database_views_fixed.sql
+PGPASSWORD='your_secure_password' psql -h localhost -p 5432 -U your_db_user -d safeguard_db -f database/migrations/006_add_entry_exit_columns.sql
+PGPASSWORD='your_secure_password' psql -h localhost -p 5432 -U your_db_user -d safeguard_db -f database/migrations/007_create_missing_functions.sql
+PGPASSWORD='your_secure_password' psql -h localhost -p 5432 -U your_db_user -d safeguard_db -f database/migrations/008_update_frequent_visitors_structure.sql
 
 # Run additional migrations from migrations folder
-PGPASSWORD='ColdDay@1975' psql -h localhost -p 5432 -U dahiruadoh -d safeguard_db -f migrations/007_add_image_columns.sql
-PGPASSWORD='ColdDay@1975' psql -h localhost -p 5432 -U dahiruadoh -d safeguard_db -f migrations/008_apartment_change_approval.sql
+PGPASSWORD='your_secure_password' psql -h localhost -p 5432 -U your_db_user -d safeguard_db -f migrations/007_add_image_columns.sql
+PGPASSWORD='your_secure_password' psql -h localhost -p 5432 -U your_db_user -d safeguard_db -f migrations/008_apartment_change_approval.sql
 ```
 
 ### 4. PM2 Process Management
